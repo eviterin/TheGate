@@ -16,6 +16,7 @@ interface GameStateData {
     enemyMaxHealth: number[];
     enemyCurrentHealth: number[];
     enemyIntents: number[];
+    enemyBlock: number[];
     hand: number[];
     deck: number[];
     draw: number[];
@@ -210,8 +211,6 @@ export function useGameState() {
                 args: [targetAddress],
             }) as any;
 
-            console.log('Raw scalar state:', state);
-
             // Get enemy data
             const [enemyTypes, enemyMaxHealth, enemyCurrentHealth, enemyIntents] = await readContract(config, {
                 address: contractConfig.address,
@@ -219,6 +218,14 @@ export function useGameState() {
                 functionName: 'getEnemyData',
                 args: [targetAddress],
             }) as [number[], number[], number[], number[]];
+
+            // Get enemy block values
+            const enemyBlock = await readContract(config, {
+                address: contractConfig.address,
+                abi: contractConfig.abi,
+                functionName: 'getEnemyBlock',
+                args: [targetAddress],
+            }) as number[];
 
             // Get player data (deck, hand, draw, discard)
             const [deck, hand, draw, discard] = await readContract(config, {
@@ -236,8 +243,6 @@ export function useGameState() {
                 args: [targetAddress],
             }) as number[];
 
-            console.log('Available rewards:', availableRewards);
-
             // Convert the responses to our interface with safe defaults
             const gameState: GameStateData = {
                 runState: Number(state[0] ?? 0),
@@ -251,6 +256,7 @@ export function useGameState() {
                 enemyMaxHealth: Array.isArray(enemyMaxHealth) ? enemyMaxHealth.map(Number) : [],
                 enemyCurrentHealth: Array.isArray(enemyCurrentHealth) ? enemyCurrentHealth.map(Number) : [],
                 enemyIntents: Array.isArray(enemyIntents) ? enemyIntents.map(Number) : [],
+                enemyBlock: Array.isArray(enemyBlock) ? enemyBlock.map(Number) : [],
                 hand: Array.isArray(hand) ? hand.map(Number) : [],
                 deck: Array.isArray(deck) ? deck.map(Number) : [],
                 draw: Array.isArray(draw) ? draw.map(Number) : [],

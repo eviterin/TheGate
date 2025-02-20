@@ -9,6 +9,7 @@ import MusicPlayer from './components/MusicPlayer'
 import LoadingIndicator from './components/LoadingIndicator'
 import Game from './components/Game'
 import { useQuickTransactions } from './hooks/QuickTransactions'
+import { useContracts } from './hooks/ContractsContext'
 
 function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
   const { enableQuickTransactions, isEnabling, error } = useQuickTransactions();

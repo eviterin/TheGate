@@ -125,7 +125,9 @@ const Game: React.FC = () => {
     });
 
     try {
-      await playCard(selectedCardIndex, targetIndex);
+      // For non-targeted cards, always use target index 0
+      const effectiveTargetIndex = card.targeted ? targetIndex : 0;
+      await playCard(selectedCardIndex, effectiveTargetIndex);
       console.log('Card played successfully');
       setSelectedCardIndex(null); // Reset selection after playing
       
@@ -155,6 +157,13 @@ const Game: React.FC = () => {
     const card = cardData.find(c => c.numericId === cardId);
     
     if (!card) return false;
+
+    // If it's an enemy, check if it's alive
+    if (entityType === 'enemy') {
+      if (!gameState?.enemyCurrentHealth[index] || gameState.enemyCurrentHealth[index] <= 0) {
+        return false;
+      }
+    }
     
     const isValid = entityType === 'enemy' ? card.targeted : !card.targeted;
     return isValid;
@@ -309,6 +318,7 @@ const Game: React.FC = () => {
                   type="enemy"
                   health={gameState.enemyCurrentHealth[index]}
                   maxHealth={gameState.enemyMaxHealth[index]}
+                  block={gameState.enemyBlock[index]}
                   position={index}
                   isValidTarget={isValidTarget('enemy', index)}
                   onEntityClick={() => handleEntityClick(index)}

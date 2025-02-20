@@ -186,21 +186,24 @@ const GameEntity: React.FC<GameEntityProps> = ({
         marginTop: '10px', 
         textAlign: 'center',
         textShadow: '1px 1px 2px rgba(0, 0, 0, 0.5)',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        padding: '4px 8px',
-        borderRadius: '4px'
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        padding: '8px 12px',
+        borderRadius: '4px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px'
       }}>
-        {health}/{maxHealth}
-        {block > 0 && (
-          <div className="entity-block" style={{ 
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            marginTop: '4px'
-          }}>
-            🛡️ {block}
-          </div>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <span>❤️ {health}/{maxHealth}</span>
+          {block > 0 && (
+            <span style={{ 
+              color: '#70ff70',
+              fontWeight: 'bold'
+            }}>
+              🛡️ {block}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
