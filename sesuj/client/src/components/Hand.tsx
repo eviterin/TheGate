@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import Card from './Card';
 import './Hand.css';
 
@@ -9,6 +9,7 @@ interface HandProps {
   selectedCardIndex?: number | null;
   cardData: any[]; // Card data from blockchain
   currentMana: number; // Add current mana prop
+  isVisible?: boolean;
 }
 
 const Hand: React.FC<HandProps> = ({ 
@@ -17,10 +18,9 @@ const Hand: React.FC<HandProps> = ({
   className = '', 
   selectedCardIndex,
   cardData,
-  currentMana 
+  currentMana,
+  isVisible = true
 }) => {
-  const [isVisible, setIsVisible] = useState(true);
-
   // Convert numeric IDs to card data
   const handCards = useMemo(() => 
     cards.map((numericId) => {
@@ -34,36 +34,27 @@ const Hand: React.FC<HandProps> = ({
   };
 
   return (
-    <>
-      <button 
-        className="hand-toggle"
-        onClick={() => setIsVisible(!isVisible)}
-      >
-        {isVisible ? 'Hide Hand' : 'Show Hand'}
-      </button>
-      
-      <div className={`hand-container ${className} ${!isVisible ? 'hidden' : ''}`}>
-        {isVisible && (
-          <div className="hand">
-            {handCards.map((card, index) => {
-              const canPlay = card.manaCost <= currentMana;
-              return (
-                <div 
-                  key={`${card.id}-${index}`}
-                  className={`hand-card ${selectedCardIndex === index ? 'selected' : ''} ${!canPlay ? 'insufficient-mana' : ''}`}
-                  onClick={() => handleCardClick(index)}
-                >
-                  <Card
-                    {...card}
-                    isSelected={selectedCardIndex === index}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </>
+    <div className={`hand-container ${className} ${!isVisible ? 'hidden' : ''}`}>
+      {isVisible && (
+        <div className="hand">
+          {handCards.map((card, index) => {
+            const canPlay = card.manaCost <= currentMana;
+            return (
+              <div 
+                key={`${card.id}-${index}`}
+                className={`hand-card ${selectedCardIndex === index ? 'selected' : ''} ${!canPlay ? 'insufficient-mana' : ''}`}
+                onClick={() => handleCardClick(index)}
+              >
+                <Card
+                  {...card}
+                  isSelected={selectedCardIndex === index}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 };
 

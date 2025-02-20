@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Level0 } from '../game/levels/Level0';
-import DebugOverlay from './DebugOverlay';
 import ResourceBar from './ResourceBar';
 import InfoBar from './InfoBar';
 import Hand from './Hand';
@@ -13,13 +11,13 @@ import { useCards } from '../hooks/CardsContext';
 import './Game.css';
 
 const Game: React.FC = () => {
-  const [currentLevel, setCurrentLevel] = useState<Level0>(new Level0());
   const [hand, setHand] = useState<number[]>([]);
   const [deck, setDeck] = useState<number[]>([]);
   const [draw, setDraw] = useState<number[]>([]);
   const [discard, setDiscard] = useState<number[]>([]);
   const [gameState, setGameState] = useState<any>(null);
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null);
+  const [isHandVisible, setIsHandVisible] = useState(true);
   const { getGameState } = useGameState();
   const { playCard } = usePlayCard();
   const { endTurn: endTurnAction } = useEndTurn();
@@ -31,7 +29,6 @@ const Game: React.FC = () => {
   const { chooseCardReward } = useChooseCardReward();
   const { skipCardReward } = useSkipCardReward();
   const { chooseRoom } = useChooseRoom();
-  const [hasChosenReward, setHasChosenReward] = useState(false);
   const [selectedReward, setSelectedReward] = useState<number | null>(null);
 
   // Fetch card data
@@ -278,15 +275,13 @@ const Game: React.FC = () => {
 
   return (
     <div className="game-wrapper">
-      <div 
-        className="game-container"
-        style={{
-          backgroundImage: `url(${getBackgroundImage()})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-      >
-        <div className="game-content">
+      <div className="game-container">
+        <div 
+          className="game-content"
+          style={{
+            backgroundImage: `url(${getBackgroundImage()})`
+          }}
+        >
           <InfoBar />
           <div className="resource-bars" style={{
             position: 'absolute',
@@ -330,8 +325,6 @@ const Game: React.FC = () => {
             </>
           )}
           
-          <DebugOverlay />
-
           {/* Show reward selection UI when in reward state */}
           {gameState?.runState === 3 && (
             <div className="reward-overlay">
@@ -369,14 +362,65 @@ const Game: React.FC = () => {
             </div>
           )}
         </div>
-        <Hand 
-          cards={hand}
-          onCardSelect={handleCardSelect}
-          className="game-hand"
-          selectedCardIndex={selectedCardIndex}
-          cardData={cardData}
-          currentMana={gameState?.currentMana || 0}
-        />
+
+        {/* New bottom area with three columns */}
+        <div className="bottom-area">
+          <div className="bottom-left">
+            <button 
+              className="menu-button"
+              onClick={toggleDeck}
+            >
+              {isDeckVisible ? 'Hide Deck' : `View Deck (${deck.length})`}
+            </button>
+            <button 
+              className="menu-button"
+              onClick={toggleDiscard}
+            >
+              {isDiscardVisible ? 'Hide Discard' : `View Discard (${discard.length})`}
+            </button>
+            <button 
+              className="menu-button"
+              onClick={toggleDraw}
+            >
+              {isDrawVisible ? 'Hide Draw' : `View Draw (${draw.length})`}
+            </button>
+            <button 
+              className="menu-button"
+              onClick={handleBackToMenu}
+            >
+              Back to Menu
+            </button>
+          </div>
+
+          <div className="bottom-center">
+            <Hand 
+              cards={hand}
+              onCardSelect={handleCardSelect}
+              selectedCardIndex={selectedCardIndex}
+              cardData={cardData}
+              currentMana={gameState?.currentMana || 0}
+              isVisible={isHandVisible}
+            />
+          </div>
+
+          <div className="bottom-right">
+            <button 
+              className="menu-button end-turn-button"
+              onClick={handleEndTurn}
+            >
+              End Turn
+            </button>
+          </div>
+        </div>
+
+        <button 
+          className="hand-toggle"
+          onClick={() => setIsHandVisible(!isHandVisible)}
+        >
+          {isHandVisible ? 'Hide Hand' : 'Show Hand'}
+        </button>
+
+        {/* Deck/Discard/Draw viewers */}
         {isDeckVisible && (
           <div className="deck-viewer">
             <h3>Your Deck ({deck.length} cards)</h3>
@@ -414,7 +458,6 @@ const Game: React.FC = () => {
         {isDrawVisible && (
           <div className="deck-viewer">
             <h3>Draw Pile ({draw.length} cards)</h3>
-            <p className="draw-notice">Cards shown here are not in their actual draw order</p>
             <div className="deck-cards">
               {draw.map((cardId, index) => {
                 const card = cardData.find(c => c.numericId === cardId);
@@ -429,36 +472,6 @@ const Game: React.FC = () => {
             </div>
           </div>
         )}
-        <button 
-          className="view-deck-button menu-button"
-          onClick={toggleDeck}
-        >
-          {isDeckVisible ? 'Hide Deck' : `View Deck (${deck.length})`}
-        </button>
-        <button 
-          className="view-discard-button menu-button"
-          onClick={toggleDiscard}
-        >
-          {isDiscardVisible ? 'Hide Discard' : `View Discard (${discard.length})`}
-        </button>
-        <button 
-          className="view-draw-button menu-button"
-          onClick={toggleDraw}
-        >
-          {isDrawVisible ? 'Hide Draw' : `View Draw (${draw.length})`}
-        </button>
-        <button 
-          className="back-to-menu menu-button"
-          onClick={handleBackToMenu}
-        >
-          Back to Menu
-        </button>
-        <button 
-          className="end-turn-button menu-button"
-          onClick={handleEndTurn}
-        >
-          End Turn
-        </button>
       </div>
     </div>
   );
