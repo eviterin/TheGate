@@ -1,0 +1,21 @@
+@font-face {
+  font-family: 'CardFont';
+  src: url('../assets/fonts/card-font.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* If you have different weights/styles */
+@font-face {
+  font-family: 'YourFontName';
+  src: url('../assets/fonts/your-font-file.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'YourFontName';
+  src: url('../assets/fonts/your-font-file-bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+} 

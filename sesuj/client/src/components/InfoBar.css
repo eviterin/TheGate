@@ -1,0 +1,32 @@
+.info-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 20px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    font-family: 'CardFont', serif;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.location-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.floor-number {
+    font-size: 1.1em;
+    color: #ffd700;
+    font-weight: bold;
+}
+
+.location-name {
+    font-size: 1.3em;
+    color: #ffffff;
+    letter-spacing: 1px;
+} 

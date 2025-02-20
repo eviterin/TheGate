@@ -1,0 +1,111 @@
+.hand-container {
+  width: 100%;
+  max-width: 500px; /* Even tighter container */
+  margin: 0 auto;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.hand {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 10px;
+  margin: 0 -30px; /* Increased negative margin */
+}
+
+.hand-card {
+  margin: 0 -25px; /* Increased negative margin for tighter overlap */
+  transition: all 0.2s ease;
+  transform-origin: bottom center;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.hand-card .card {
+  margin: 0; /* Override card's own margin */
+  transition: inherit;
+  transform-origin: inherit;
+}
+
+.hand-card:hover .card {
+  transform: translateY(-20px) scale(1.1);
+  z-index: 2;
+  filter: brightness(1.2);
+}
+
+/* Override the card's own selected state */
+.hand-card.selected .card.selected {
+  box-shadow: none;
+}
+
+.hand-card.selected .card {
+  transform: translateY(-25px) scale(1.1);
+  z-index: 3;
+  filter: brightness(1.3);
+}
+
+/* Apply glow to the card frame */
+.hand-card.selected .card-frame {
+  position: relative;
+}
+
+.hand-card.selected .card-frame::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border-radius: 10px;
+  box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.hand-toggle {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  font-family: 'CardFont', sans-serif;
+  z-index: 1000;
+}
+
+.hand-toggle:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.hand-container.hidden {
+  transform: translateY(100%);
+}
+
+.hand-card.insufficient-mana {
+  filter: grayscale(0.7) brightness(0.7);
+  cursor: not-allowed;
+}
+
+.hand-card.insufficient-mana:hover .card {
+  transform: none;
+  filter: grayscale(0.7) brightness(0.7);
+}
+
+.hand-card.insufficient-mana .card-mana-cost {
+  color: #ff4444 !important;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+} 
