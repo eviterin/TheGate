@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { readContract, writeContract, simulateContract } from '@wagmi/core';
+import { readContract, writeContract, simulateContract, waitForTransaction } from '@wagmi/core';
 import { config } from '../../wagmi';
 import { getCurrentUser } from '@happy.tech/core';
 import { useContracts } from './ContractsContext';
@@ -145,7 +145,10 @@ export function usePlayCard() {
                 abi: contractConfig.abi,
                 functionName: 'playCard',
                 args: [cardIndex, targetIndex],
-            })
+            });
+
+            // Wait for transaction to be confirmed
+            await waitForTransaction(config, { hash });
 
             console.log('Card played:', { hash });
             return hash;

@@ -138,14 +138,9 @@ contract GameState {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_ENCOUNTER, "Not in encounter");
         
-        // Clear all block values from previous turn
-        data.currentBlock = 0;
         uint enemyCount = data.enemyTypes.length;
-        for (uint i = 0; i < enemyCount; i++) {
-            data.enemyBlock[i] = 0;
-        }
 
-        // Process enemy intents
+        // Process enemy intents first
         for (uint i = 0; i < enemyCount; i++) {
             if (data.enemyCurrentHealth[i] > 0) {
                 uint16 intent = data.enemyIntents[i];
@@ -163,6 +158,9 @@ contract GameState {
         }
 
         if (checkWinCondition()) return;
+
+        // Only clear player block at end of turn
+        data.currentBlock = 0;
 
         setNewEnemyIntents();
         data.currentMana = data.maxMana;
@@ -212,6 +210,10 @@ contract GameState {
         data.enemyMaxHealth = [10, 12];
         data.enemyCurrentHealth = [10, 12];
         data.enemyBlock = new uint16[](2);
+        // Clear enemy block at start of encounter
+        for (uint i = 0; i < data.enemyBlock.length; i++) {
+            data.enemyBlock[i] = 0;
+        }
         setNewEnemyIntents();
         delete data.hand;
         delete data.discard;

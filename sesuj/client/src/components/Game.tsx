@@ -163,10 +163,11 @@ const Game: React.FC = () => {
       if (!gameState?.enemyCurrentHealth[index] || gameState.enemyCurrentHealth[index] <= 0) {
         return false;
       }
+      return card.targeted; // Only allow targeting enemies if the card is targeted
     }
-    
-    const isValid = entityType === 'enemy' ? card.targeted : !card.targeted;
-    return isValid;
+
+    // For hero, allow targeting if the card is non-targeted
+    return !card.targeted;
   };
 
   const getBackgroundImage = () => {
@@ -323,7 +324,7 @@ const Game: React.FC = () => {
                   isValidTarget={isValidTarget('enemy', index)}
                   onEntityClick={() => handleEntityClick(index)}
                   currentFloor={gameState.currentFloor}
-                  intent={gameState.enemyIntents[index]}
+                  intent={gameState.enemyCurrentHealth[index] > 0 ? gameState.enemyIntents[index] : undefined}
                 />
               ))}
             </>
