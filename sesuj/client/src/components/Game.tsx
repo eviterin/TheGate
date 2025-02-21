@@ -409,85 +409,34 @@ const Game: React.FC = () => {
   };
 
   const handleSelectReward = (cardId: number) => {
-    setSelectedReward(cardId);
+    if (!isChoosingReward) {
+      setSelectedReward(cardId);
+    }
   };
 
   const handleConfirmReward = async () => {
     if (!selectedReward || isChoosingReward) return;
     
-    let actionId: string | undefined;
-    const card = cardData.find(c => c.numericId === selectedReward);
-    if (!card) return;
-
-    if (optimisticUpdatesEnabled) {
-      actionId = Date.now().toString();
-      const newAction: PendingAction = {
-        id: actionId,
-        type: 'chooseReward',
-        description: `Adding ${card.name} to deck...`,
-        timestamp: Date.now(),
-        status: 'pending' as const,
-        cardId: selectedReward
-      };
-      setPendingActions(prev => [...prev, newAction]);
-    }
-
     try {
       setIsChoosingReward(true);
       await chooseCardReward(selectedReward);
-      
-      // Wait for game state to update
-      const maxAttempts = 10;
-      let attempts = 0;
-      while (attempts < maxAttempts) {
-        const newState = await getGameState();
-        // Check if we're no longer in reward state (runState 3)
-        if (newState?.runState !== 3) {
-          break;
-        }
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between checks
-        attempts++;
-      }
-      
       setSelectedReward(null);
     } catch (error) {
       console.error('Failed to choose reward:', error);
-      if (optimisticUpdatesEnabled && actionId) {
-        setPendingActions(prev => 
-          prev.map(a => a.id === actionId ? { ...a, status: 'failed' as const } : a)
-        );
-      }
     } finally {
       setIsChoosingReward(false);
     }
   };
 
   const handleSkipReward = async () => {
-    let actionId: string | undefined;
+    if (isChoosingReward) return;
     
-    if (optimisticUpdatesEnabled) {
-      actionId = Date.now().toString();
-      const newAction: PendingAction = {
-        id: actionId,
-        type: 'skipReward',
-        description: 'Skipping reward...',
-        timestamp: Date.now(),
-        status: 'pending' as const
-      };
-      setPendingActions(prev => [...prev, newAction]);
-    }
-
     try {
       setIsChoosingReward(true);
       await skipCardReward();
       setSelectedReward(null);
     } catch (error) {
       console.error('Failed to skip reward:', error);
-      if (optimisticUpdatesEnabled && actionId) {
-        setPendingActions(prev => 
-          prev.map(a => a.id === actionId ? { ...a, status: 'failed' as const } : a)
-        );
-      }
     } finally {
       setIsChoosingReward(false);
     }
@@ -960,34 +909,32 @@ const Game: React.FC = () => {
               <div className="reward-overlay">
                 <h2>Choose a Card</h2>
                 <div className="reward-cards">
-                  {gameState.availableCardRewards.map((cardId: number, index: number) => {
-                    const card = cardData.find(c => c.numericId === cardId);
-                    if (!card) return null;
-                    return (
-                      <div 
-                        key={`reward-${index}`}
-                        onClick={() => !isChoosingReward && handleSelectReward(cardId)}
-                        className={`reward-card-container ${selectedReward === cardId ? 'selected' : ''} ${isChoosingReward ? 'disabled' : ''}`}
+                  {cardData
+                    .filter(card => gameState.availableCardRewards.includes(card.numericId))
+                    .map(card => (
+                      <div
+                        key={card.numericId}
+                        className={`reward-card-container ${selectedReward === card.numericId ? 'selected' : ''}`}
+                        onClick={() => handleSelectReward(card.numericId)}
                       >
                         <Card {...card} />
                       </div>
-                    );
-                  })}
+                    ))}
                 </div>
                 <div className="reward-buttons">
                   <button 
-                    className="skip-reward-button menu-button"
+                    className="menu-button skip-reward-button"
                     onClick={handleSkipReward}
                     disabled={isChoosingReward}
                   >
                     Skip
                   </button>
-                  <button 
-                    className={`continue-button menu-button ${!selectedReward || isChoosingReward ? 'disabled' : ''}`}
+                  <button
+                    className={`menu-button continue-button ${!selectedReward || isChoosingReward ? 'disabled' : ''}`}
                     onClick={handleConfirmReward}
                     disabled={!selectedReward || isChoosingReward}
                   >
-                    Continue
+                    {isChoosingReward ? 'Adding to deck...' : 'Continue'}
                   </button>
                 </div>
               </div>

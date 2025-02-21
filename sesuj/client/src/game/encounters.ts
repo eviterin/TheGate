@@ -141,8 +141,8 @@ export const encounters: Encounter[] = [
       },
     },
     clientData: {
-      heroPosition: BASE_POSITIONS.HERO.RIGHT,
-      enemyPositions: [BASE_POSITIONS.ENEMY.FAR_LEFT, BASE_POSITIONS.ENEMY.LEFT],
+      heroPosition: {x: 60, y: 85},
+      enemyPositions: [{x: 20, y: 70}, {x: 80, y: 50}],
     }
   },
   {
