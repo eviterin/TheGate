@@ -194,6 +194,25 @@ export function useEndTurn() {
     return { endTurn };
 }
 
+// Add helper function to check if game states are different
+function hasGameStateChanged(oldState: any, newState: any): boolean {
+    if (!oldState || !newState) return true;
+    
+    // Compare relevant fields that indicate meaningful changes
+    return oldState.runState !== newState.runState ||
+           oldState.currentFloor !== newState.currentFloor ||
+           oldState.currentHealth !== newState.currentHealth ||
+           oldState.currentMana !== newState.currentMana ||
+           oldState.currentBlock !== newState.currentBlock ||
+           JSON.stringify(oldState.hand) !== JSON.stringify(newState.hand) ||
+           JSON.stringify(oldState.enemyCurrentHealth) !== JSON.stringify(newState.enemyCurrentHealth) ||
+           JSON.stringify(oldState.enemyBlock) !== JSON.stringify(newState.enemyBlock) ||
+           JSON.stringify(oldState.enemyIntents) !== JSON.stringify(newState.enemyIntents);
+}
+
+// Keep track of last game state
+let lastGameState: any = null;
+
 export function useGameState() {
     const contractConfig = useGameContract();
 
@@ -268,7 +287,11 @@ export function useGameState() {
                 availableCardRewards: Array.isArray(availableRewards) ? availableRewards.map(Number) : []
             };
 
-            console.log('Processed game state:', gameState);
+            if (hasGameStateChanged(lastGameState, gameState)) {
+                console.log('Processed game state:', gameState);
+                lastGameState = { ...gameState };
+            }
+
             return gameState;
         } catch (error) {
             console.error('Error getting game state:', error);

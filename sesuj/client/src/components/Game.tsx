@@ -108,6 +108,15 @@ const Game: React.FC = () => {
         setGameState(state);
         setIsLoadingGameState(false);
         
+        // Reset auto end turn flag when:
+        // 1. Game state changes significantly (different floor or run state)
+        // 2. Coming back from menu (state becomes available)
+        if (!gameState || !state || 
+            state.currentFloor !== gameState.currentFloor || 
+            state.runState !== gameState.runState) {
+          setHasAutoEndedTurn(false);
+        }
+        
         // Auto end turn if enabled and either no mana or no playable cards
         const hasPlayableCards = state?.hand?.some(cardId => {
           const card = cardData.find(c => c.numericId === cardId);
