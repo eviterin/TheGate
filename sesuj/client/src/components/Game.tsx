@@ -1025,35 +1025,37 @@ const Game: React.FC = () => {
 
           <div className="bottom-area">
             <div className="bottom-left">
-              {/* Add mana display */}
-              <div className="mana-display">
-                {console.log('Current mana:', optimisticMana, gameState?.currentMana)}
-                {Array.from({length: optimisticMana ?? gameState?.currentMana ?? 0}).map((_, i) => (
-                  <span key={i} className="mana-icon">✨</span>
-                ))}
-              </div>
-
-              {/* Show deck/discard/draw buttons when not in whale room */}
+              {/* Only show mana and pile buttons when not in whale room */}
               {(!gameState || gameState.runState !== 1) && (
-                <div className="pile-buttons" style={{ marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <button 
-                    className="menu-button"
-                    onClick={toggleDeck}
-                  >
-                    {isDeckVisible ? 'Hide Deck' : `View Deck (${deck.length})`}
-                  </button>
-                  <button 
-                    className="menu-button"
-                    onClick={toggleDiscard}
-                  >
-                    {isDiscardVisible ? 'Hide Discard' : `View Discard (${discard.length})`}
-                  </button>
-                  <button 
-                    className="menu-button"
-                    onClick={toggleDraw}
-                  >
-                    {isDrawVisible ? 'Hide Draw' : `View Draw (${draw.length})`}
-                  </button>
+                <div className="pile-and-mana">
+                  <div className="pile-buttons">
+                    <button 
+                      className="menu-button"
+                      onClick={toggleDeck}
+                    >
+                      {isDeckVisible ? 'Hide Deck' : `View Deck (${deck.length})`}
+                    </button>
+                    <button 
+                      className="menu-button"
+                      onClick={toggleDiscard}
+                    >
+                      {isDiscardVisible ? 'Hide Discard' : `View Discard (${discard.length})`}
+                    </button>
+                    <button 
+                      className="menu-button"
+                      onClick={toggleDraw}
+                    >
+                      {isDrawVisible ? 'Hide Draw' : `View Draw (${draw.length})`}
+                    </button>
+                  </div>
+                  
+                  <div className="mana-display">
+                    {[...Array(gameState?.maxMana ?? 0)].map((_, i) => (
+                      <span key={i} className={`mana-icon ${i >= (optimisticMana ?? gameState?.currentMana ?? 0) ? 'depleted' : ''}`}>
+                        ✨
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
               <button 

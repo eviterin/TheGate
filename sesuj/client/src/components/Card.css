@@ -23,19 +23,47 @@
 
 .card-mana-cost {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 3px;
+  z-index: 3;
+}
+
+.mana-orb {
   width: 20px;
   height: 20px;
-  border-radius: 50%;
-  background: #4a90e2;
-  color: white;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 12px;
-  z-index: 2;
+  background: 
+    radial-gradient(circle at 35% 35%, 
+      rgba(255, 255, 255, 0.3) 0%,
+      transparent 40%
+    ),
+    radial-gradient(circle at center,
+      rgba(88, 43, 156, 0.9) 0%,
+      rgba(45, 13, 99, 0.9) 60%,
+      rgba(31, 9, 67, 0.9) 100%
+    );
+  border-radius: 50%;
+  box-shadow: 
+    0 0 8px rgba(255, 215, 0, 0.4),
+    inset 2px 2px 4px rgba(255, 255, 255, 0.3),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(88, 43, 156, 0.8);
+  overflow: hidden;
+}
+
+.mana-orb::after {
+  content: '✨';
+  position: absolute;
+  font-size: 14px;
+  color: #FFD700;
+  filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.6));
+  opacity: 0.9;
 }
 
 .card-image {

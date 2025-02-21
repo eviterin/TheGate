@@ -35,7 +35,11 @@ const Card: React.FC<CardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="card-frame" style={{ backgroundImage: `url(${cardFrame})` }}>
-        <div className="card-mana-cost">{manaCost}</div>
+        <div className="card-mana-cost">
+          {[...Array(manaCost)].map((_, i) => (
+            <div key={i} className="mana-orb" />
+          ))}
+        </div>
         <div className="card-image">
           <img 
             src={imageError ? defaultCardArt : (imageUrl || defaultCardArt)} 
