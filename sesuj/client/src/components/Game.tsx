@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import ResourceBar from './ResourceBar';
 import InfoBar from './InfoBar';
 import Hand from './Hand';
 import Card from './Card';
 import GameEntity from './GameEntity';
 import PendingActions, { PendingAction } from './PendingActions';
 import LoadingOverlay from './LoadingOverlay';
-import { Health } from '../game/resources/Health';
-import { Faith } from '../game/resources/Faith';
 import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, useSkipCardReward, useRetryFromDeath } from '../hooks/GameState';
 import { useCards } from '../hooks/CardsContext';
 import './Game.css';
+
+// Add InfoBar props interface
+interface InfoBarProps {
+  gameState: any;
+}
 
 const TRANSACTION_TIMEOUT = 10000; // 10 seconds timeout for transactions
 
@@ -50,6 +52,7 @@ const Game: React.FC = () => {
   const [gameState, setGameState] = useState<any>(null);
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null);
   const [isHandVisible, setIsHandVisible] = useState(true);
+  const [isGateOpen, setIsGateOpen] = useState(false);
   const { getGameState } = useGameState();
   const { playCard } = usePlayCard();
   const { endTurn: endTurnAction } = useEndTurn();
@@ -118,13 +121,16 @@ const Game: React.FC = () => {
         }
         
         // Auto end turn if enabled and either no mana or no playable cards
-        const hasPlayableCards = state?.hand?.some(cardId => {
+        const hasPlayableCards = cardData.length > 0 && state?.hand?.some(cardId => {
           const card = cardData.find(c => c.numericId === cardId);
           return card && card.manaCost <= (state.currentMana || 0);
         });
 
+        // Only auto end turn if we're in combat (runState === 2) and have card data loaded
+        const isInCombat = state?.runState === 2;
         if (autoEndTurnEnabled && 
-            state?.runState === 2 && 
+            isInCombat && 
+            cardData.length > 0 &&  // Make sure we have card data loaded
             !hasAutoEndedTurn && 
             !hasPendingEndTurn() && 
             (!hasPlayableCards || state?.currentMana === 0 || !state?.hand?.length)) {
@@ -132,8 +138,8 @@ const Game: React.FC = () => {
           handleEndTurn();
         }
 
-        // Reset the flag if we have mana and playable cards again
-        if (state?.currentMana && state.currentMana > 0) {
+        // Reset the flag if we have mana and playable cards again, but only in combat
+        if (isInCombat && state?.currentMana && state.currentMana > 0) {
           const canPlaySomething = state.hand?.some(cardId => {
             const card = cardData.find(c => c.numericId === cardId);
             return card && card.manaCost <= state.currentMana;
@@ -535,6 +541,11 @@ const Game: React.FC = () => {
     }
   };
 
+  // Add handler for gate click
+  const handleGateClick = () => {
+    setIsGateOpen(true);
+  };
+
   return (
     <>
       <style>
@@ -574,12 +585,15 @@ const Game: React.FC = () => {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.85);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 1000;
+          }
+
+          .whale-room-overlay.gate-open {
+            background: rgba(0, 0, 0, 0.85);
           }
 
           .whale-room-content {
@@ -787,6 +801,45 @@ const Game: React.FC = () => {
             cursor: not-allowed;
             opacity: 0.7;
           }
+
+          .whale-room-gate {
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 12px 24px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #ffd700;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+          }
+
+          .whale-room-gate:hover {
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);
+            transform: translateY(-50%) scale(1.02);
+          }
+
+          .whale-room-gate-text {
+            color: #ffd700;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+          }
+
+          .resource-bars {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 180px;
+            z-index: 100;
+          }
         `}
       </style>
       <div className="game-wrapper">
@@ -797,19 +850,9 @@ const Game: React.FC = () => {
               backgroundImage: `url(${getBackgroundImage()})`
             }}
           >
+            {/* Info Bar */}
             <InfoBar />
-            <div className="resource-bars" style={{
-              position: 'absolute',
-              top: '50px',
-              left: '10px',
-              width: '180px',
-            }}>
-              <div style={{ marginBottom: '8px' }}>
-                <ResourceBar resource={new Health(gameState?.currentHealth || 0, gameState?.maxHealth || 0, gameState?.currentBlock || 0)} />
-              </div>
-              <ResourceBar resource={new Faith(gameState?.currentMana || 0, gameState?.maxMana || 0)} />
-            </div>
-            
+
             {/* Game Entities */}
             {gameState && (
               <>
@@ -889,23 +932,31 @@ const Game: React.FC = () => {
 
             {/* Whale Room Overlay */}
             {gameState?.runState === 1 && (
-              <div className="whale-room-overlay">
-                <div className="whale-room-content">
-                  <h2 className="whale-room-title">Choose a Divine Blessing</h2>
-                  <div className="whale-room-options">
-                    {WHALE_ROOM_OPTIONS.map(option => (
-                      <div
-                        key={option.id}
-                        className="whale-room-option"
-                        onClick={() => handleWhaleRoomChoice(option.id)}
-                      >
-                        <h3>{option.title}</h3>
-                        <p className="description">{option.description}</p>
-                        <span className="effect">{option.effect}</span>
-                      </div>
-                    ))}
+              <div className={`whale-room-overlay ${isGateOpen ? 'gate-open' : ''}`}>
+                {!isGateOpen ? (
+                  <div className="whale-room-gate" onClick={handleGateClick}>
+                    <div className="whale-room-gate-text">
+                      Enter The Gate
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="whale-room-content">
+                    <h2 className="whale-room-title">Choose a Divine Blessing</h2>
+                    <div className="whale-room-options">
+                      {WHALE_ROOM_OPTIONS.map(option => (
+                        <div
+                          key={option.id}
+                          className="whale-room-option"
+                          onClick={() => handleWhaleRoomChoice(option.id)}
+                        >
+                          <h3>{option.title}</h3>
+                          <p className="description">{option.description}</p>
+                          <span className="effect">{option.effect}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -938,27 +989,31 @@ const Game: React.FC = () => {
             )}
           </div>
 
-          {/* New bottom area with three columns */}
           <div className="bottom-area">
             <div className="bottom-left">
-              <button 
-                className="menu-button"
-                onClick={toggleDeck}
-              >
-                {isDeckVisible ? 'Hide Deck' : `View Deck (${deck.length})`}
-              </button>
-              <button 
-                className="menu-button"
-                onClick={toggleDiscard}
-              >
-                {isDiscardVisible ? 'Hide Discard' : `View Discard (${discard.length})`}
-              </button>
-              <button 
-                className="menu-button"
-                onClick={toggleDraw}
-              >
-                {isDrawVisible ? 'Hide Draw' : `View Draw (${draw.length})`}
-              </button>
+              {/* Show deck/discard/draw buttons when not in whale room */}
+              {(!gameState || gameState.runState !== 1) && (
+                <div className="pile-buttons" style={{ marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <button 
+                    className="menu-button"
+                    onClick={toggleDeck}
+                  >
+                    {isDeckVisible ? 'Hide Deck' : `View Deck (${deck.length})`}
+                  </button>
+                  <button 
+                    className="menu-button"
+                    onClick={toggleDiscard}
+                  >
+                    {isDiscardVisible ? 'Hide Discard' : `View Discard (${discard.length})`}
+                  </button>
+                  <button 
+                    className="menu-button"
+                    onClick={toggleDraw}
+                  >
+                    {isDrawVisible ? 'Hide Draw' : `View Draw (${draw.length})`}
+                  </button>
+                </div>
+              )}
               <button 
                 className="menu-button"
                 onClick={handleBackToMenu}
@@ -979,14 +1034,17 @@ const Game: React.FC = () => {
             </div>
 
             <div className="bottom-right">
-              <button 
-                className={`menu-button end-turn-button ${hasPendingCardActions() ? 'disabled' : ''}`}
-                onClick={handleEndTurn}
-                disabled={hasPendingCardActions()}
-                title={hasPendingCardActions() ? "Wait for pending card actions to complete" : "End Turn"}
-              >
-                End Turn
-              </button>
+              {/* Only show End Turn button when not in whale room */}
+              {(!gameState || gameState.runState !== 1) && (
+                <button 
+                  className={`menu-button end-turn-button ${hasPendingCardActions() ? 'disabled' : ''}`}
+                  onClick={handleEndTurn}
+                  disabled={hasPendingCardActions()}
+                  title={hasPendingCardActions() ? "Wait for pending card actions to complete" : "End Turn"}
+                >
+                  End Turn
+                </button>
+              )}
               <div className="feature-toggles">
                 <label className="menu-button feature-toggle">
                   <input
@@ -1007,66 +1065,6 @@ const Game: React.FC = () => {
               </div>
             </div>
           </div>
-
-          <button 
-            className="hand-toggle"
-            onClick={() => setIsHandVisible(!isHandVisible)}
-          >
-            {isHandVisible ? 'Hide Hand' : 'Show Hand'}
-          </button>
-
-          {/* Deck/Discard/Draw viewers */}
-          {isDeckVisible && (
-            <div className="deck-viewer">
-              <h3>Your Deck ({deck.length} cards)</h3>
-              <div className="deck-cards">
-                {deck.map((cardId, index) => {
-                  const card = cardData.find(c => c.numericId === cardId);
-                  if (!card) return null;
-                  return (
-                    <Card
-                      key={`deck-${index}`}
-                      {...card}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {isDiscardVisible && (
-            <div className="deck-viewer">
-              <h3>Discard Pile ({discard.length} cards)</h3>
-              <div className="deck-cards">
-                {discard.map((cardId, index) => {
-                  const card = cardData.find(c => c.numericId === cardId);
-                  if (!card) return null;
-                  return (
-                    <Card
-                      key={`discard-${index}`}
-                      {...card}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {isDrawVisible && (
-            <div className="deck-viewer">
-              <h3>Draw Pile ({draw.length} cards)</h3>
-              <div className="deck-cards">
-                {draw.map((cardId, index) => {
-                  const card = cardData.find(c => c.numericId === cardId);
-                  if (!card) return null;
-                  return (
-                    <Card
-                      key={`draw-${index}`}
-                      {...card}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
