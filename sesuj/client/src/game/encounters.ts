@@ -149,8 +149,8 @@ export const encounters: Encounter[] = [
     level: 3,
     name: 'Forsaken Outpost',
     chainData: {
-      enemyTypes: [ENEMY_TYPE.TYPE_A, ENEMY_TYPE.TYPE_B],
-      enemyMaxHealth: [10, 12],
+      enemyTypes: [ENEMY_TYPE.TYPE_A],
+      enemyMaxHealth: [12],
       baseIntents: {
         [ENEMY_TYPE.TYPE_A]: {
           damage: { min: 6, max: 10 },
@@ -163,8 +163,8 @@ export const encounters: Encounter[] = [
       },
     },
     clientData: {
-      heroPosition: BASE_POSITIONS.HERO.CENTER,
-      enemyPositions: [BASE_POSITIONS.ENEMY.LEFT, BASE_POSITIONS.ENEMY.RIGHT],
+      heroPosition: {x: 60, y: 85},
+      enemyPositions: [{x: 22, y: 68}],
     }
   },
   {
@@ -185,8 +185,8 @@ export const encounters: Encounter[] = [
       },
     },
     clientData: {
-      heroPosition: BASE_POSITIONS.HERO.LEFT,
-      enemyPositions: [BASE_POSITIONS.ENEMY.RIGHT, BASE_POSITIONS.ENEMY.FAR_RIGHT],
+      heroPosition: {x: 50, y: 85},
+      enemyPositions: [{x: 80, y: 70}, {x: 80, y: 50}],
     }
   },
   {

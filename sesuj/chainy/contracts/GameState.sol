@@ -243,14 +243,34 @@ contract GameState {
 
     function startEncounter() private {
         GameData storage data = playerData[msg.sender];
-        data.enemyTypes = [ENEMY_TYPE_A, ENEMY_TYPE_B];
-        data.enemyMaxHealth = [10, 12];
-        data.enemyCurrentHealth = [10, 12];
-        data.enemyBlock = new uint16[](2);
-        // Clear enemy block at start of encounter
-        for (uint i = 0; i < data.enemyBlock.length; i++) {
-            data.enemyBlock[i] = 0;
+        
+        // Get encounter data based on floor
+        if (data.currentFloor == 3) {
+            // For level 3, randomly choose between TYPE_A and TYPE_B
+            uint256 seed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
+            uint8 randomType = (seed % 2 == 0) ? ENEMY_TYPE_A : ENEMY_TYPE_B;
+            
+            data.enemyTypes = new uint8[](1);
+            data.enemyMaxHealth = new uint16[](1);
+            data.enemyCurrentHealth = new uint16[](1);
+            data.enemyBlock = new uint16[](1);
+            
+            data.enemyTypes[0] = randomType;
+            data.enemyMaxHealth[0] = 18;  // Much higher health for single enemy
+            data.enemyCurrentHealth[0] = data.enemyMaxHealth[0];
+            data.enemyBlock[0] = 0;
+        } else {
+            // Default behavior for other floors
+            data.enemyTypes = [ENEMY_TYPE_A, ENEMY_TYPE_B];
+            data.enemyMaxHealth = [10, 12];
+            data.enemyCurrentHealth = [10, 12];
+            data.enemyBlock = new uint16[](2);
+            // Clear enemy block
+            for (uint i = 0; i < data.enemyBlock.length; i++) {
+                data.enemyBlock[i] = 0;
+            }
         }
+        
         setNewEnemyIntents();
         delete data.hand;
         delete data.discard;
@@ -269,10 +289,28 @@ contract GameState {
         for (uint i = 0; i < data.enemyTypes.length; i++) {
             if (data.enemyCurrentHealth[i] > 0) {
                 uint8 enemyType = data.enemyTypes[i];
-                if (enemyType == ENEMY_TYPE_A) {
-                    data.enemyIntents[i] = uint16(6 + (seed % 5));
-                } else if (enemyType == ENEMY_TYPE_B) {
-                    data.enemyIntents[i] = (seed % 3 == 0) ? INTENT_BLOCK_5 : uint16(4 + (seed % 5));
+                
+                // Special handling for level 3's single enemy
+                if (data.currentFloor == 3) {
+                    if (enemyType == ENEMY_TYPE_A) {
+                        // Type A does more damage in level 3
+                        data.enemyIntents[i] = uint16(8 + (seed % 5)); // 8-12 damage instead of 6-10
+                    } else if (enemyType == ENEMY_TYPE_B) {
+                        // Type B has higher block and damage in level 3
+                        if (seed % 3 == 0) {
+                            data.enemyIntents[i] = INTENT_BLOCK_5;
+                            data.enemyBlock[i] = 8; // More block (8 instead of 5)
+                        } else {
+                            data.enemyIntents[i] = uint16(6 + (seed % 5)); // 6-10 damage instead of 4-8
+                        }
+                    }
+                } else {
+                    // Normal behavior for other levels
+                    if (enemyType == ENEMY_TYPE_A) {
+                        data.enemyIntents[i] = uint16(6 + (seed % 5));
+                    } else if (enemyType == ENEMY_TYPE_B) {
+                        data.enemyIntents[i] = (seed % 3 == 0) ? INTENT_BLOCK_5 : uint16(4 + (seed % 5));
+                    }
                 }
             }
             seed = uint256(keccak256(abi.encodePacked(seed)));

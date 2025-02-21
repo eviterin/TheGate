@@ -855,6 +855,30 @@ const Game: React.FC = () => {
             width: 180px;
             z-index: 100;
           }
+
+          .mana-display {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(89, 86, 108, 0.15);
+            border: 1px solid rgba(89, 86, 108, 0.3);
+            backdrop-filter: blur(5px);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            min-height: 36px;
+          }
+
+          .mana-icon {
+            font-size: 16px;
+            animation: sparkle 2s infinite;
+            animation-delay: calc(var(--index) * 0.2s);
+          }
+
+          @keyframes sparkle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(0.95); }
+          }
         `}
       </style>
       <div className="game-wrapper">
@@ -1001,6 +1025,14 @@ const Game: React.FC = () => {
 
           <div className="bottom-area">
             <div className="bottom-left">
+              {/* Add mana display */}
+              <div className="mana-display">
+                {console.log('Current mana:', optimisticMana, gameState?.currentMana)}
+                {Array.from({length: optimisticMana ?? gameState?.currentMana ?? 0}).map((_, i) => (
+                  <span key={i} className="mana-icon">✨</span>
+                ))}
+              </div>
+
               {/* Show deck/discard/draw buttons when not in whale room */}
               {(!gameState || gameState.runState !== 1) && (
                 <div className="pile-buttons" style={{ marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>

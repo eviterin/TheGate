@@ -298,4 +298,65 @@
   animation: slideIn 0.3s ease-out;
   font-size: 0.85em;
   word-break: break-word;
+}
+
+.whale-room-overlay {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 0vh; 
+  z-index: 1000;
+}
+
+.whale-room-content {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.whale-room-title {
+  position: relative;
+  z-index: 10;
+  margin-bottom: 2rem;
+  margin-top: -4rem; 
+  color: #fff;
+  font-size: 28px;
+  font-family: 'CardFont', sans-serif;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.whale-room-options {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+  margin-top: 1rem;
+  max-width: 900px;
+}
+
+.whale-room-option {
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9em;
+}
+
+.whale-room-option:hover {
+  transform: translateY(-5px);
+  background: rgba(0, 0, 0, 0.8);
 } 
