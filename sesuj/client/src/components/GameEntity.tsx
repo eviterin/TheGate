@@ -1,4 +1,5 @@
 import React from 'react';
+import { getLevelConfig } from '../game/levelConfigs';
 
 // Import all enemy models
 const enemyModels: { [key: string]: string } = {};
@@ -83,6 +84,15 @@ const GameEntity: React.FC<GameEntityProps> = ({
     return modelUrl;
   };
 
+  // Get position from level config
+  const getEntityPosition = () => {
+    const levelConfig = getLevelConfig(currentFloor);
+    if (isHero) {
+      return levelConfig.heroPosition;
+    }
+    return levelConfig.enemyPositions[position] || { x: 50, y: 50 }; // Fallback to center if position not found
+  };
+
   // Function to render intent information
   const renderIntent = () => {
     if (isHero || !intent) return null;
@@ -113,15 +123,17 @@ const GameEntity: React.FC<GameEntityProps> = ({
       </div>
     );
   };
+
+  const entityPosition = getEntityPosition();
   
   return (
     <div 
       className={`game-entity ${type} ${isValidTarget ? 'valid-target' : ''}`}
       style={{
         position: 'absolute',
-        [isHero ? 'left' : 'right']: isHero ? '20%' : `${20 + (position * 25)}%`,
-        top: '50%',
-        transform: 'translateY(-50%)',
+        left: `${entityPosition.x}%`,
+        top: `${entityPosition.y}%`,
+        transform: 'translate(-50%, -50%)',
         width: '120px',
         height: '180px',
         display: 'flex',
@@ -130,7 +142,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         padding: '10px',
         color: 'white',
         cursor: isValidTarget ? 'pointer' : 'default',
-        transition: 'all 0.2s ease'
+        transition: 'all 0.3s ease-in-out'
       }}
       onClick={() => isValidTarget && onEntityClick?.()}
     >

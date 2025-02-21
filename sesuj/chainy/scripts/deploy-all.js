@@ -1,29 +1,44 @@
 const { execSync } = require('child_process');
 const path = require('path');
 
+async function runStep(name, command) {
+    console.log(`\n📝 ${name}...`);
+    try {
+        execSync(command, { stdio: 'inherit' });
+        console.log(`✅ ${name} completed successfully`);
+        return true;
+    } catch (error) {
+        console.error(`❌ ${name} failed:`, error.message);
+        return false;
+    }
+}
+
 async function main() {
     console.log('🚀 Starting full deployment process...\n');
 
     try {
         // Step 1: Compile contracts
-        console.log('📝 Compiling contracts...');
-        execSync('npx hardhat compile', { stdio: 'inherit' });
-        console.log('✅ Contracts compiled successfully\n');
+        if (!await runStep(
+            'Compiling contracts',
+            'npx hardhat compile'
+        )) throw new Error('Compilation failed');
 
         // Step 2: Deploy main contract
-        console.log('🌐 Deploying GameState contract...');
-        execSync('node scripts/deploy.js', { stdio: 'inherit' });
-        console.log('✅ GameState contract deployed successfully\n');
+        if (!await runStep(
+            'Deploying GameState contract',
+            'node scripts/deploy.js'
+        )) throw new Error('GameState deployment failed');
 
         // Step 3: Deploy cards
-        console.log('🎴 Deploying cards...');
-        execSync('node scripts/deploy-cards.js', { stdio: 'inherit' });
-        console.log('✅ Cards deployed successfully\n');
+        if (!await runStep(
+            'Deploying cards',
+            'node scripts/deploy-cards.js'
+        )) throw new Error('Cards deployment failed');
 
-        console.log('🎉 Full deployment completed successfully!');
+        console.log('\n🎉 Full deployment completed successfully!');
         
     } catch (error) {
-        console.error('❌ Deployment failed:', error.message);
+        console.error('\n❌ Deployment process failed:', error.message);
         process.exit(1);
     }
 }

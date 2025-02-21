@@ -1,17 +1,18 @@
 const ethers = require('ethers');
 const fs = require('fs');
 const path = require('path');
+const { enrichGameState } = require('./enrich-gamestate');
 
 // Read the contract artifacts
 const gameStatePath = path.join(__dirname, '../artifacts/contracts/GameState.sol/GameState.json');
 const gameStateArtifact = JSON.parse(fs.readFileSync(gameStatePath));
 
-async function deployContract(wallet, contractName, artifact) {
-    console.log(`Deploying ${contractName}...`);
+async function deployGameState(wallet) {
+    console.log('Deploying GameState contract...');
     
     const factory = new ethers.ContractFactory(
-        artifact.abi,
-        artifact.bytecode,
+        gameStateArtifact.abi,
+        gameStateArtifact.bytecode,
         wallet
     );
 
@@ -19,29 +20,19 @@ async function deployContract(wallet, contractName, artifact) {
     await contract.waitForDeployment();
 
     const deployedAddress = await contract.getAddress();
-    console.log(`${contractName} deployed to:`, deployedAddress);
+    console.log('GameState contract deployed to:', deployedAddress);
     
+    // Save both the address and ABI
     appendToDeployedContracts({
-        name: `${contractName}.sol`,
+        name: 'GameState.sol',
         address: deployedAddress,
-        abi: artifact.abi
+        abi: gameStateArtifact.abi
     });
 
+    // Enrich the contract with encounter data
+    await enrichGameState(contract, wallet.address);
+
     return deployedAddress;
-}
-
-async function main() {
-    // Connect to HappyChain Sepolia
-    const provider = new ethers.JsonRpcProvider("https://happy-testnet-sepolia.rpc.caldera.xyz/http");
-    
-    // Load your wallet using private key from .env
-    const privateKey = process.env.PRIVATE_KEY;
-    const wallet = new ethers.Wallet(privateKey, provider);
-    
-    console.log("Deploying from address:", wallet.address);
-
-    // Deploy GameState contract
-    await deployContract(wallet, "GameState", gameStateArtifact);
 }
 
 function appendToDeployedContracts(contractInfo) {
@@ -65,6 +56,20 @@ function appendToDeployedContracts(contractInfo) {
     
     fs.writeFileSync(filePath, JSON.stringify(deployedContracts, null, 2));
     console.log("Deployment info saved to:", filePath);
+}
+
+async function main() {
+    // Connect to HappyChain Sepolia
+    const provider = new ethers.JsonRpcProvider("https://happy-testnet-sepolia.rpc.caldera.xyz/http");
+    
+    // Load your wallet using private key from .env
+    const privateKey = process.env.PRIVATE_KEY;
+    const wallet = new ethers.Wallet(privateKey, provider);
+    
+    console.log("Deploying from address:", wallet.address);
+
+    // Deploy GameState contract
+    await deployGameState(wallet);
 }
 
 // Load environment variables and run

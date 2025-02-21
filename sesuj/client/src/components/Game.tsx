@@ -398,7 +398,7 @@ const Game: React.FC = () => {
   };
 
   const handleConfirmReward = async () => {
-    if (!selectedReward) return;
+    if (!selectedReward || isChoosingReward) return;
     
     let actionId: string | undefined;
     const card = cardData.find(c => c.numericId === selectedReward);
@@ -420,6 +420,20 @@ const Game: React.FC = () => {
     try {
       setIsChoosingReward(true);
       await chooseCardReward(selectedReward);
+      
+      // Wait for game state to update
+      const maxAttempts = 10;
+      let attempts = 0;
+      while (attempts < maxAttempts) {
+        const newState = await getGameState();
+        // Check if we're no longer in reward state (runState 3)
+        if (newState?.runState !== 3) {
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between checks
+        attempts++;
+      }
+      
       setSelectedReward(null);
     } catch (error) {
       console.error('Failed to choose reward:', error);

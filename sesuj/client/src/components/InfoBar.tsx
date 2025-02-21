@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useGameState } from '../hooks/GameState';
 import './InfoBar.css';
 
-const FLOOR_NAMES: { [key: number]: string } = {
+export const FLOOR_NAMES: { [key: number]: string } = {
     0: 'The Gate',
     1: 'Cursed Hamlet',
     2: 'Barren Dunes',
