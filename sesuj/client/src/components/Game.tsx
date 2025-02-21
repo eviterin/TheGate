@@ -550,6 +550,72 @@ const Game: React.FC = () => {
     <>
       <style>
         {`
+          .game-wrapper {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: linear-gradient(180deg, #2b2838 0%, #1f1c2c 100%);
+          }
+
+          .game-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+          }
+
+          .game-content {
+            flex: 1;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            height: min(calc(100vh - 250px), calc((100vw / 2)));
+            width: min(100vw, calc((100vh - 250px) * 2));
+            margin: 0 auto;
+            box-shadow: 0 0 30px rgba(89, 86, 108, 0.3);
+            border-radius: 8px;
+          }
+
+          .bottom-area {
+            padding: 20px;
+            background: linear-gradient(0deg, #1f1c2c 0%, #2b2838 100%);
+          }
+
+          .side-decorations {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: max(calc((100vw - min(100vw, calc((100vh - 250px) * 2))) / 2), 20px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+          }
+
+          .side-decorations.left {
+            left: 0;
+            background: linear-gradient(90deg, #1f1c2c 0%, rgba(43, 40, 56, 0.8) 100%);
+          }
+
+          .side-decorations.right {
+            right: 0;
+            background: linear-gradient(90deg, rgba(43, 40, 56, 0.8) 0%, #1f1c2c 100%);
+          }
+
+          .menu-button {
+            background: rgba(89, 86, 108, 0.15);
+            border: 1px solid rgba(89, 86, 108, 0.3);
+            backdrop-filter: blur(5px);
+          }
+
+          .menu-button:hover {
+            background: rgba(89, 86, 108, 0.25);
+            border-color: rgba(89, 86, 108, 0.5);
+          }
+
           .feature-toggles {
             display: flex;
             flex-direction: column;
@@ -844,12 +910,9 @@ const Game: React.FC = () => {
       </style>
       <div className="game-wrapper">
         <div className="game-container">
-          <div 
-            className="game-content"
-            style={{
-              backgroundImage: `url(${getBackgroundImage()})`
-            }}
-          >
+          <div className="side-decorations left"></div>
+          <div className="side-decorations right"></div>
+          <div className="game-content" style={{backgroundImage: `url(${getBackgroundImage()})`}}>
             {/* Info Bar */}
             <InfoBar />
 

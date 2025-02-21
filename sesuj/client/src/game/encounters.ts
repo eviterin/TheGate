@@ -1,5 +1,3 @@
-import { FLOOR_NAMES } from '../components/InfoBar';
-
 export interface Position {
   x: number;
   y: number;
@@ -10,6 +8,7 @@ export interface BasePositions {
     CENTER: Position;
     LEFT: Position;
     RIGHT: Position;
+    BOTTOMCENTER: Position;
   };
   ENEMY: {
     LEFT: Position;
@@ -77,6 +76,7 @@ export const BASE_POSITIONS: BasePositions = {
     CENTER: { x: 50, y: 80 },
     LEFT: { x: 20, y: 80 },
     RIGHT: { x: 80, y: 80 },
+    BOTTOMCENTER: { x: 50, y: 95 },
   },
   ENEMY: {
     LEFT: { x: 30, y: 30 },
@@ -87,49 +87,45 @@ export const BASE_POSITIONS: BasePositions = {
   }
 };
 
-// Encounter configurations combining both chain and client data
 export const encounters: Encounter[] = [
-  // Level 0 - The Gate (Whale Room)
   {
     level: 0,
-    name: FLOOR_NAMES[0],
+    name: 'The Gate',
     chainData: {
       enemyTypes: [],
       enemyMaxHealth: [],
-      baseIntents: [], // No intents needed for whale room
+      baseIntents: [],
     },
     clientData: {
-      heroPosition: BASE_POSITIONS.HERO.CENTER,
+      heroPosition: BASE_POSITIONS.HERO.BOTTOMCENTER,
       enemyPositions: [],
     }
   },
-  // Level 1 - Cursed Hamlet
   {
     level: 1,
-    name: FLOOR_NAMES[1],
+    name: 'Dunes',
     chainData: {
       enemyTypes: [ENEMY_TYPE.TYPE_A, ENEMY_TYPE.TYPE_B],
       enemyMaxHealth: [10, 12],
       baseIntents: {
         [ENEMY_TYPE.TYPE_A]: {
-          damage: { min: 6, max: 10 }, // 6 + (seed % 5)
+          damage: { min: 6, max: 10 },
         },
         [ENEMY_TYPE.TYPE_B]: {
-          damage: { min: 4, max: 8 }, // 4 + (seed % 5)
-          blockChance: 0.33, // seed % 3 == 0
+          damage: { min: 4, max: 8 },
+          blockChance: 0.33,
           blockAmount: 5,
         },
       },
     },
     clientData: {
       heroPosition: BASE_POSITIONS.HERO.LEFT,
-      enemyPositions: [BASE_POSITIONS.ENEMY.RIGHT, BASE_POSITIONS.ENEMY.FAR_RIGHT],
+      enemyPositions: [{x: 90, y: 80}, {x: 80, y: 70}],
     }
   },
-  // Level 2 - Barren Dunes
   {
     level: 2,
-    name: FLOOR_NAMES[2],
+    name: 'Cursed Hamlet',
     chainData: {
       enemyTypes: [ENEMY_TYPE.TYPE_A, ENEMY_TYPE.TYPE_B],
       enemyMaxHealth: [10, 12],
@@ -149,10 +145,9 @@ export const encounters: Encounter[] = [
       enemyPositions: [BASE_POSITIONS.ENEMY.FAR_LEFT, BASE_POSITIONS.ENEMY.LEFT],
     }
   },
-  // Level 3 - Forsaken Outpost
   {
     level: 3,
-    name: FLOOR_NAMES[3],
+    name: 'Forsaken Outpost',
     chainData: {
       enemyTypes: [ENEMY_TYPE.TYPE_A, ENEMY_TYPE.TYPE_B],
       enemyMaxHealth: [10, 12],
@@ -172,10 +167,9 @@ export const encounters: Encounter[] = [
       enemyPositions: [BASE_POSITIONS.ENEMY.LEFT, BASE_POSITIONS.ENEMY.RIGHT],
     }
   },
-  // Level 4 - Black Cathedral
   {
     level: 4,
-    name: FLOOR_NAMES[4],
+    name: 'Black Cathedral',
     chainData: {
       enemyTypes: [ENEMY_TYPE.TYPE_A, ENEMY_TYPE.TYPE_B],
       enemyMaxHealth: [10, 12],
@@ -195,10 +189,9 @@ export const encounters: Encounter[] = [
       enemyPositions: [BASE_POSITIONS.ENEMY.RIGHT, BASE_POSITIONS.ENEMY.FAR_RIGHT],
     }
   },
-  // Level 5 - Weeping Monastery
   {
     level: 5,
-    name: FLOOR_NAMES[5],
+    name: 'Weeping Monastery',
     chainData: {
       enemyTypes: [ENEMY_TYPE.TYPE_A, ENEMY_TYPE.TYPE_B],
       enemyMaxHealth: [10, 12],
@@ -218,10 +211,9 @@ export const encounters: Encounter[] = [
       enemyPositions: [BASE_POSITIONS.ENEMY.FAR_LEFT, BASE_POSITIONS.ENEMY.LEFT],
     }
   },
-  // Level 6 - Ruined Courtyard
   {
     level: 6,
-    name: FLOOR_NAMES[6],
+    name: 'Ruined Courtyard',
     chainData: {
       enemyTypes: [ENEMY_TYPE.TYPE_A, ENEMY_TYPE.TYPE_B],
       enemyMaxHealth: [10, 12],
@@ -241,10 +233,9 @@ export const encounters: Encounter[] = [
       enemyPositions: [BASE_POSITIONS.ENEMY.LEFT, BASE_POSITIONS.ENEMY.RIGHT],
     }
   },
-  // Level 7 - Blighted Tower
   {
     level: 7,
-    name: FLOOR_NAMES[7],
+    name: 'Blighted Tower',
     chainData: {
       enemyTypes: [ENEMY_TYPE.TYPE_A, ENEMY_TYPE.TYPE_B],
       enemyMaxHealth: [10, 12],
@@ -264,10 +255,9 @@ export const encounters: Encounter[] = [
       enemyPositions: [BASE_POSITIONS.ENEMY.CENTER, BASE_POSITIONS.ENEMY.FAR_RIGHT],
     }
   },
-  // Level 8 - Blighted Spire Top
   {
     level: 8,
-    name: FLOOR_NAMES[8],
+    name: 'Blighted Spire Top',
     chainData: {
       enemyTypes: [ENEMY_TYPE.TYPE_A, ENEMY_TYPE.TYPE_B],
       enemyMaxHealth: [10, 12],
@@ -287,10 +277,9 @@ export const encounters: Encounter[] = [
       enemyPositions: [BASE_POSITIONS.ENEMY.FAR_LEFT, BASE_POSITIONS.ENEMY.CENTER],
     }
   },
-  // Level 9 - Abyssal Throne
   {
     level: 9,
-    name: FLOOR_NAMES[9],
+    name: 'Abyssal Throne',
     chainData: {
       enemyTypes: [ENEMY_TYPE.TYPE_A, ENEMY_TYPE.TYPE_B],
       enemyMaxHealth: [10, 12],
@@ -310,10 +299,9 @@ export const encounters: Encounter[] = [
       enemyPositions: [BASE_POSITIONS.ENEMY.LEFT, BASE_POSITIONS.ENEMY.RIGHT],
     }
   },
-  // Level 10 - The End of Days
   {
     level: 10,
-    name: FLOOR_NAMES[10],
+    name: 'The End of Days',
     chainData: {
       enemyTypes: [ENEMY_TYPE.TYPE_A, ENEMY_TYPE.TYPE_B],
       enemyMaxHealth: [10, 12],
@@ -335,19 +323,21 @@ export const encounters: Encounter[] = [
   },
 ];
 
-// Helper function to get encounter data
 export function getEncounter(level: number): Encounter {
   return encounters.find(e => e.level === level) || encounters[0];
 }
 
-// Helper function to get only chain-relevant data for contract initialization
 export function getChainEncounterData(level: number): ChainData {
   const encounter = getEncounter(level);
   return encounter.chainData;
 }
 
-// Helper function to get only client-side data
 export function getClientEncounterData(level: number): ClientData {
   const encounter = getEncounter(level);
   return encounter.clientData;
+}
+
+export function getFloorName(level: number): string {
+  const encounter = getEncounter(level);
+  return encounter.name;
 } 
