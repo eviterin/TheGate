@@ -5,13 +5,14 @@ import Hand from './Hand';
 import Card from './Card';
 import GameEntity from './GameEntity';
 import PendingActions, { PendingAction } from './PendingActions';
+import LoadingOverlay from './LoadingOverlay';
 import { Health } from '../game/resources/Health';
 import { Faith } from '../game/resources/Faith';
 import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, useSkipCardReward, useRetryFromDeath } from '../hooks/GameState';
 import { useCards } from '../hooks/CardsContext';
 import './Game.css';
 
-const TRANSACTION_TIMEOUT = 30000; // 30 seconds timeout for transactions
+const TRANSACTION_TIMEOUT = 10000; // 10 seconds timeout for transactions
 
 // Whale Room options
 const WHALE_ROOM_OPTIONS = [
@@ -64,10 +65,13 @@ const Game: React.FC = () => {
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [optimisticHand, setOptimisticHand] = useState<number[]>([]);
   const [optimisticMana, setOptimisticMana] = useState<number | null>(null);
-  const [optimisticUpdatesEnabled, setOptimisticUpdatesEnabled] = useState(false);
+  const [optimisticUpdatesEnabled, setOptimisticUpdatesEnabled] = useState(true);
   const { retryFromDeath } = useRetryFromDeath();
   const { abandonRun } = useAbandonRun();
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isLoadingGameState, setIsLoadingGameState] = useState(true);
+  const [isChoosingRoom, setIsChoosingRoom] = useState(false);
+  const [isChoosingReward, setIsChoosingReward] = useState(false);
 
   // Fetch card data
   useEffect(() => {
@@ -93,6 +97,17 @@ const Game: React.FC = () => {
         if (!mounted) return;
         
         setGameState(state);
+        setIsLoadingGameState(false);
+        
+        // Update deck, discard, and draw piles
+        setDeck(state?.deck || []);
+        setDiscard(state?.discard || []);
+        setDraw(state?.draw || []);
+        
+        // Clear pending actions when entering reward state (level complete)
+        if (state?.runState === 3) { // RUN_STATE_CARD_REWARD
+          setPendingActions([]);
+        }
         
         // Always sync state if optimistic updates are disabled
         if (!optimisticUpdatesEnabled || pendingActions.length === 0) {
@@ -113,21 +128,20 @@ const Game: React.FC = () => {
               // For play card actions, check if the card is no longer in hand
               if (action.type === 'playCard' && action.cardId) {
                 const cardStillInHand = state.hand.includes(action.cardId);
-                // Also check if the targeted enemy was defeated (health <= 0)
-                const targetDefeated = action.targetIndex !== undefined && 
-                  action.targetIndex > 0 && // Only check for enemy targets (index > 0)
-                  (!state.enemyCurrentHealth[action.targetIndex - 1] || 
-                   state.enemyCurrentHealth[action.targetIndex - 1] <= 0);
-                
-                if (!cardStillInHand || targetDefeated) {
+                if (!cardStillInHand) {
                   return { ...action, status: 'completed' as const };
                 }
               }
-              // For end turn, check if we got new cards or mana was reset
+              // For end turn, check if we got new cards
               else if (action.type === 'endTurn') {
-                if (state.hand.length > 0 || state.currentMana === state.maxMana) {
+                const gotNewCards = state.hand.length > 0;
+                if (gotNewCards) {
                   return { ...action, status: 'completed' as const };
                 }
+              }
+              // For reward actions, check if we're no longer in reward state
+              else if ((action.type === 'chooseReward' || action.type === 'skipReward') && state.runState !== 3) {
+                return { ...action, status: 'completed' as const };
               }
             }
             return action;
@@ -144,21 +158,20 @@ const Game: React.FC = () => {
               setOptimisticMana(state.currentMana);
             }
 
-            // Remove both completed and failed actions after a delay
-            setTimeout(() => {
-              setPendingActions(prev => 
-                prev.filter(a => 
-                  !completedActions.find(ca => ca.id === a.id) && 
-                  !failedActions.find(fa => fa.id === a.id)
-                )
-              );
-            }, 1000);
+            // Remove both completed and failed actions immediately
+            setPendingActions(prev => 
+              prev.filter(a => 
+                !completedActions.find(ca => ca.id === a.id) && 
+                !failedActions.find(fa => fa.id === a.id)
+              )
+            );
+          } else {
+            setPendingActions(updatedActions);
           }
-
-          setPendingActions(updatedActions);
         }
       } catch (error) {
         console.error('Failed to fetch game state:', error);
+        setIsLoadingGameState(false);
         
         // On error, always reset to actual state
         if (gameState) {
@@ -219,7 +232,7 @@ const Game: React.FC = () => {
       const newAction: PendingAction = {
         id: actionId,
         type: 'playCard',
-        description: `Playing ${card.name}${card.targeted ? ` on target ${targetIndex}` : ''}`,
+        description: `Playing ${card.name}`,
         timestamp: Date.now(),
         status: 'pending' as const,
         cardId,
@@ -352,46 +365,67 @@ const Game: React.FC = () => {
   const handleConfirmReward = async () => {
     if (!selectedReward) return;
     
+    let actionId: string | undefined;
+    const card = cardData.find(c => c.numericId === selectedReward);
+    if (!card) return;
+
+    if (optimisticUpdatesEnabled) {
+      actionId = Date.now().toString();
+      const newAction: PendingAction = {
+        id: actionId,
+        type: 'chooseReward',
+        description: `Adding ${card.name} to deck...`,
+        timestamp: Date.now(),
+        status: 'pending' as const,
+        cardId: selectedReward
+      };
+      setPendingActions(prev => [...prev, newAction]);
+    }
+
+    setIsChoosingReward(true);
     try {
-      console.log('Choosing reward card and continuing:', selectedReward);
       await chooseCardReward(selectedReward);
-      
-      // Reset selection
       setSelectedReward(null);
-      
-      // Refresh game state after choosing reward and continuing
-      const newState = await getGameState();
-      if (newState) {
-        setGameState(newState);
-        setHand(newState.hand || []);
-        setDeck(newState.deck || []);
-        setDraw(newState.draw || []);
-        setDiscard(newState.discard || []);
-      }
     } catch (error) {
-      console.error('Failed to choose reward and continue:', error);
+      console.error('Failed to choose reward:', error);
+      if (optimisticUpdatesEnabled && actionId) {
+        setPendingActions(prev => 
+          prev.map(a => a.id === actionId ? { ...a, status: 'failed' as const } : a)
+        );
+      }
+    } finally {
+      setIsChoosingReward(false);
     }
   };
 
   const handleSkipReward = async () => {
+    let actionId: string | undefined;
+    
+    if (optimisticUpdatesEnabled) {
+      actionId = Date.now().toString();
+      const newAction: PendingAction = {
+        id: actionId,
+        type: 'skipReward',
+        description: 'Skipping reward...',
+        timestamp: Date.now(),
+        status: 'pending' as const
+      };
+      setPendingActions(prev => [...prev, newAction]);
+    }
+
+    setIsChoosingReward(true);
     try {
-      console.log('Skipping reward and continuing');
       await skipCardReward();
-      
-      // Reset selection
       setSelectedReward(null);
-      
-      // Refresh game state after skipping and continuing
-      const newState = await getGameState();
-      if (newState) {
-        setGameState(newState);
-        setHand(newState.hand || []);
-        setDeck(newState.deck || []);
-        setDraw(newState.draw || []);
-        setDiscard(newState.discard || []);
-      }
     } catch (error) {
-      console.error('Failed to skip and continue:', error);
+      console.error('Failed to skip reward:', error);
+      if (optimisticUpdatesEnabled && actionId) {
+        setPendingActions(prev => 
+          prev.map(a => a.id === actionId ? { ...a, status: 'failed' as const } : a)
+        );
+      }
+    } finally {
+      setIsChoosingReward(false);
     }
   };
 
@@ -403,10 +437,13 @@ const Game: React.FC = () => {
   };
 
   const handleWhaleRoomChoice = async (optionId: number) => {
+    setIsChoosingRoom(true);
     try {
       await chooseRoom(optionId);
     } catch (error) {
       console.error('Failed to choose whale room option:', error);
+    } finally {
+      setIsChoosingRoom(false);
     }
   };
 
@@ -896,6 +933,24 @@ const Game: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Add loading overlays */}
+      <LoadingOverlay 
+        isVisible={isLoadingGameState} 
+        message="Loading game state..." 
+      />
+      <LoadingOverlay 
+        isVisible={isChoosingRoom} 
+        message="Receiving divine blessing..." 
+      />
+      <LoadingOverlay 
+        isVisible={isChoosingReward} 
+        message="Adding card to your deck..." 
+      />
+      <LoadingOverlay 
+        isVisible={isRetrying} 
+        message="Divine intervention in progress..." 
+      />
     </>
   );
 };

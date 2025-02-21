@@ -273,8 +273,6 @@
   color: white;
   backdrop-filter: blur(4px);
   font-size: 0.9em;
-  min-height: 50px; /* Minimum height to always show something */
-  max-height: min(calc(100vh - 400px), max-content);
   display: flex;
   flex-direction: column;
 }
@@ -290,7 +288,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .action-item {

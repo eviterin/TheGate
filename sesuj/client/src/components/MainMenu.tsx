@@ -8,10 +8,41 @@ const MainMenu: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavigate
   const [isHovered, setIsHovered] = useState<string | null>(null);
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [hasActiveRun, setHasActiveRun] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const { contracts } = useContracts();
   const { getGameState } = useGameState();
   const { abandonRun } = useAbandonRun();
   const { startRun } = useStartRun();
+
+  // Pre-fetch game state
+  const [prefetchInterval, setPrefetchInterval] = useState<NodeJS.Timeout | null>(null);
+  const startPrefetching = () => {
+    // Clear any existing interval
+    if (prefetchInterval) clearInterval(prefetchInterval);
+    
+    // Start aggressive polling (every 200ms)
+    const interval = setInterval(async () => {
+      try {
+        const state = await getGameState();
+        if (state?.runState === 1) { // WHALE_ROOM state
+          // If we're in whale room, we can stop polling
+          if (prefetchInterval) clearInterval(prefetchInterval);
+          setPrefetchInterval(null);
+        }
+      } catch (error) {
+        console.error('Prefetch error:', error);
+      }
+    }, 200);
+    
+    setPrefetchInterval(interval);
+  };
+
+  useEffect(() => {
+    return () => {
+      // Cleanup interval on unmount
+      if (prefetchInterval) clearInterval(prefetchInterval);
+    };
+  }, [prefetchInterval]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -49,19 +80,28 @@ const MainMenu: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavigate
 
   const handleStartNewRun = async () => {
     try {
-      await startRun();
-      console.log('Successfully started new run');
+      setIsStarting(true);
+      
+      // Start prefetching game state
+      startPrefetching();
+      
+      // Navigate immediately with fade animation
       onNavigate('game');
+      
+      // Start the actual transaction
+      await startRun();
     } catch (error) {
       console.error('Failed to start new run:', error);
+      setIsStarting(false);
+      // Could add error handling UI here
     }
   };
 
   const menuItems = [
     { 
-      label: hasActiveRun ? 'Continue Run' : 'Start New Run', 
+      label: hasActiveRun ? 'Continue Run' : (isStarting ? 'Starting...' : 'Start New Run'), 
       action: hasActiveRun ? () => onNavigate('game') : handleStartNewRun,
-      disabled: !contracts.gameState
+      disabled: !contracts.gameState || isStarting
     },
     ...(hasActiveRun ? [{
       label: 'Abandon Run',
@@ -76,7 +116,7 @@ const MainMenu: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavigate
   ];
 
   return (
-    <div className="main-menu">
+    <div className={`main-menu ${isStarting ? 'starting' : ''}`}>
       <h1>Game Title</h1>
       {userAddress && (
         <div className="user-info" style={{ fontSize: '0.8em', marginBottom: '20px', opacity: 0.7 }}>
@@ -90,7 +130,9 @@ const MainMenu: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavigate
             onClick={item.action}
             onMouseEnter={() => setIsHovered(item.label)}
             onMouseLeave={() => setIsHovered(null)}
-            className={`menu-item ${isHovered === item.label ? 'hovered' : ''} ${item.disabled ? 'disabled' : ''}`}
+            className={`menu-item ${isHovered === item.label ? 'hovered' : ''} ${item.disabled ? 'disabled' : ''} ${
+              item.label === 'Starting...' ? 'starting' : ''
+            }`}
             disabled={item.disabled}
           >
             {item.label}

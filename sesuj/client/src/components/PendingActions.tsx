@@ -3,7 +3,7 @@ import './PendingActions.css';
 
 export interface PendingAction {
   id: string;
-  type: 'playCard' | 'endTurn';
+  type: 'playCard' | 'endTurn' | 'chooseReward' | 'skipReward';
   description: string;
   timestamp: number;
   status: 'pending' | 'completed' | 'failed';
@@ -34,7 +34,7 @@ const PendingActions: React.FC<PendingActionsProps> = ({ actions }) => {
               <span className="action-description">{action.description}</span>
               <div className="action-status">
                 {action.status === 'pending' && (
-                  <div className="loading-spinner" />
+                  <div className="pending-action-spinner" />
                 )}
                 {action.status === 'completed' && (
                   <span className="status-icon">✓</span>

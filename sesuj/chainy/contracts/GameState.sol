@@ -24,6 +24,7 @@ contract GameState {
         bool hasEnabledQuickTransactions;
         uint256 quickTransactionsEnabledAt;
         bool extraCardDrawEnabled;  // New field for extra card draw option
+        bool hasProtectionBlessing;  // New field for Divine Protection blessing
     }
     
     mapping(address => GameData) public playerData;
@@ -75,6 +76,7 @@ contract GameState {
         data.maxMana = 3;
         data.currentMana = 0;
         data.extraCardDrawEnabled = false;  // Reset extra card draw blessing
+        data.hasProtectionBlessing = false;  // Reset protection blessing
         delete data.deck;
         data.deck = [CARD_ID_STRIKE, CARD_ID_STRIKE, CARD_ID_STRIKE, CARD_ID_DEFEND, CARD_ID_DEFEND];
     }
@@ -90,6 +92,7 @@ contract GameState {
         data.maxMana = 0;
         data.currentMana = 0;
         data.extraCardDrawEnabled = false;  // Reset extra card draw blessing
+        data.hasProtectionBlessing = false;  // Reset protection blessing
         delete data.enemyTypes;
         delete data.enemyMaxHealth;
         delete data.enemyCurrentHealth;
@@ -117,9 +120,11 @@ contract GameState {
             data.maxMana += 1;
             data.currentMana += 1;
         } else if (option == WHALE_OPTION_PROTECTION) {
-            data.currentBlock = 5;  // Start with 5 block
+            data.hasProtectionBlessing = true;  // Set the blessing flag
+            data.currentBlock = 5;  // Apply initial block
         } else if (option == WHALE_OPTION_UPGRADE) {
             data.maxHealth += 5;
+            data.currentHealth += 5;  // Also increase current health
         }
 
         data.runState = RUN_STATE_ENCOUNTER;
@@ -249,7 +254,7 @@ contract GameState {
         setNewEnemyIntents();
         delete data.hand;
         delete data.discard;
-        data.currentBlock = 0;
+        data.currentBlock = data.hasProtectionBlessing ? 5 : 0;  // Apply protection blessing if active
         copyDeckIntoDrawpile();
         shuffleDrawPile();
         drawNewHand();
@@ -311,14 +316,18 @@ contract GameState {
 
         data.deck.push(cardId);
         delete data.availableCardRewards;
-        data.runState = RUN_STATE_WHALE_ROOM;
+        data.runState = RUN_STATE_ENCOUNTER;
+        data.currentFloor++;
+        startEncounter();
     }
 
     function skipCardReward() public {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_CARD_REWARD, "Not in reward state");
         delete data.availableCardRewards;
-        data.runState = RUN_STATE_WHALE_ROOM;
+        data.runState = RUN_STATE_ENCOUNTER;
+        data.currentFloor++;
+        startEncounter();
     }
 
     // View functions
@@ -420,6 +429,7 @@ contract GameState {
         data.maxMana = 0;
         data.currentMana = 0;
         data.extraCardDrawEnabled = false;
+        data.hasProtectionBlessing = false;  // Reset protection blessing
         delete data.enemyTypes;
         delete data.enemyMaxHealth;
         delete data.enemyCurrentHealth;
