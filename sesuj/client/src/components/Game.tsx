@@ -66,6 +66,8 @@ const Game: React.FC = () => {
   const [optimisticHand, setOptimisticHand] = useState<number[]>([]);
   const [optimisticMana, setOptimisticMana] = useState<number | null>(null);
   const [optimisticUpdatesEnabled, setOptimisticUpdatesEnabled] = useState(true);
+  const [autoEndTurnEnabled, setAutoEndTurnEnabled] = useState(true);
+  const [hasAutoEndedTurn, setHasAutoEndedTurn] = useState(false);
   const { retryFromDeath } = useRetryFromDeath();
   const { abandonRun } = useAbandonRun();
   const [isRetrying, setIsRetrying] = useState(false);
@@ -87,6 +89,13 @@ const Game: React.FC = () => {
     fetchCards();
   }, [getActiveCards]);
 
+  // Add helper function to check for pending end turn
+  const hasPendingEndTurn = () => {
+    return pendingActions.some(action => 
+      action.type === 'endTurn' && action.status === 'pending'
+    );
+  };
+
   // Continuously update game state
   useEffect(() => {
     let mounted = true;
@@ -99,6 +108,32 @@ const Game: React.FC = () => {
         setGameState(state);
         setIsLoadingGameState(false);
         
+        // Auto end turn if enabled and either no mana or no playable cards
+        const hasPlayableCards = state?.hand?.some(cardId => {
+          const card = cardData.find(c => c.numericId === cardId);
+          return card && card.manaCost <= (state.currentMana || 0);
+        });
+
+        if (autoEndTurnEnabled && 
+            state?.runState === 2 && 
+            !hasAutoEndedTurn && 
+            !hasPendingEndTurn() && 
+            (!hasPlayableCards || state?.currentMana === 0 || !state?.hand?.length)) {
+          setHasAutoEndedTurn(true);
+          handleEndTurn();
+        }
+
+        // Reset the flag if we have mana and playable cards again
+        if (state?.currentMana && state.currentMana > 0) {
+          const canPlaySomething = state.hand?.some(cardId => {
+            const card = cardData.find(c => c.numericId === cardId);
+            return card && card.manaCost <= state.currentMana;
+          });
+          if (canPlaySomething) {
+            setHasAutoEndedTurn(false);
+          }
+        }
+
         // Update deck, discard, and draw piles
         setDeck(state?.deck || []);
         setDiscard(state?.discard || []);
@@ -200,10 +235,10 @@ const Game: React.FC = () => {
     };
   }, [getGameState, pendingActions, gameState, optimisticUpdatesEnabled]);
 
-  // Handle card selection
+  // Reset the auto end turn flag when we play a card
   const handleCardSelect = (cardIndex: number) => {
+    setHasAutoEndedTurn(false); // Reset flag when selecting a card
     const cardId = optimisticHand[cardIndex];
-    const card = cardData.find(c => c.numericId === cardId);
     
     if (cardIndex === selectedCardIndex) {
       setSelectedCardIndex(null);
@@ -382,8 +417,8 @@ const Game: React.FC = () => {
       setPendingActions(prev => [...prev, newAction]);
     }
 
-    setIsChoosingReward(true);
     try {
+      setIsChoosingReward(true);
       await chooseCardReward(selectedReward);
       setSelectedReward(null);
     } catch (error) {
@@ -413,8 +448,8 @@ const Game: React.FC = () => {
       setPendingActions(prev => [...prev, newAction]);
     }
 
-    setIsChoosingReward(true);
     try {
+      setIsChoosingReward(true);
       await skipCardReward();
       setSelectedReward(null);
     } catch (error) {
@@ -481,6 +516,13 @@ const Game: React.FC = () => {
     <>
       <style>
         {`
+          .feature-toggles {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+          }
+
           .feature-toggle {
             display: flex;
             align-items: center;
@@ -488,12 +530,19 @@ const Game: React.FC = () => {
             color: white;
             font-size: 14px;
             cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
           }
           
           .feature-toggle input[type="checkbox"] {
             width: 16px;
             height: 16px;
             cursor: pointer;
+          }
+
+          .feature-toggle:hover {
+            background: rgba(255, 255, 255, 0.15);
           }
 
           .whale-room-overlay {
@@ -662,6 +711,59 @@ const Game: React.FC = () => {
             background: #b55;
             transform: translateY(-2px);
           }
+
+          .reward-card-container {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 4px;
+            transform: scale(0.9);
+          }
+
+          .reward-card-container:hover:not(.disabled) {
+            transform: scale(0.95) translateY(-5px);
+          }
+
+          .reward-card-container.selected:not(.disabled) {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+            transform: scale(0.95) translateY(-5px);
+          }
+
+          .reward-card-container.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+          }
+
+          .reward-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+          }
+
+          .skip-reward-button {
+            background: rgba(220, 53, 69, 0.8);
+            border-color: rgba(220, 53, 69, 0.3);
+          }
+
+          .skip-reward-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+
+          .continue-button {
+            background: rgba(40, 167, 69, 0.8);
+            border-color: rgba(40, 167, 69, 0.3);
+          }
+
+          .continue-button.disabled {
+            background: rgba(108, 117, 125, 0.8);
+            border-color: rgba(108, 117, 125, 0.3);
+            cursor: not-allowed;
+            opacity: 0.7;
+          }
         `}
       </style>
       <div className="game-wrapper">
@@ -735,8 +837,8 @@ const Game: React.FC = () => {
                     return (
                       <div 
                         key={`reward-${index}`}
-                        onClick={() => handleSelectReward(cardId)}
-                        className={`reward-card-container ${selectedReward === cardId ? 'selected' : ''}`}
+                        onClick={() => !isChoosingReward && handleSelectReward(cardId)}
+                        className={`reward-card-container ${selectedReward === cardId ? 'selected' : ''} ${isChoosingReward ? 'disabled' : ''}`}
                       >
                         <Card {...card} />
                       </div>
@@ -747,13 +849,14 @@ const Game: React.FC = () => {
                   <button 
                     className="skip-reward-button menu-button"
                     onClick={handleSkipReward}
+                    disabled={isChoosingReward}
                   >
                     Skip
                   </button>
                   <button 
-                    className={`continue-button menu-button ${!selectedReward ? 'disabled' : ''}`}
+                    className={`continue-button menu-button ${!selectedReward || isChoosingReward ? 'disabled' : ''}`}
                     onClick={handleConfirmReward}
-                    disabled={!selectedReward}
+                    disabled={!selectedReward || isChoosingReward}
                   >
                     Continue
                   </button>
@@ -861,14 +964,24 @@ const Game: React.FC = () => {
               >
                 End Turn
               </button>
-              <label className="menu-button feature-toggle">
-                <input
-                  type="checkbox"
-                  checked={optimisticUpdatesEnabled}
-                  onChange={(e) => setOptimisticUpdatesEnabled(e.target.checked)}
-                />
-                Optimistic Updates
-              </label>
+              <div className="feature-toggles">
+                <label className="menu-button feature-toggle">
+                  <input
+                    type="checkbox"
+                    checked={optimisticUpdatesEnabled}
+                    onChange={(e) => setOptimisticUpdatesEnabled(e.target.checked)}
+                  />
+                  Optimistic Updates
+                </label>
+                <label className="menu-button feature-toggle">
+                  <input
+                    type="checkbox"
+                    checked={autoEndTurnEnabled}
+                    onChange={(e) => setAutoEndTurnEnabled(e.target.checked)}
+                  />
+                  Auto End Turn
+                </label>
+              </div>
             </div>
           </div>
 

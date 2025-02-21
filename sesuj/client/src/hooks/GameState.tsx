@@ -207,8 +207,6 @@ export function useGameState() {
                 return null;
             }
 
-            console.log('Reading state for address:', targetAddress);
-            
             // First get the scalar values from playerData
             const state = await readContract(config, {
                 address: contractConfig.address,
