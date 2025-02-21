@@ -945,7 +945,7 @@ const Game: React.FC = () => {
       />
       <LoadingOverlay 
         isVisible={isChoosingReward} 
-        message="Adding card to your deck..." 
+        message={selectedReward ? "Adding card to your deck..." : "Skipping reward..."} 
       />
       <LoadingOverlay 
         isVisible={isRetrying} 
