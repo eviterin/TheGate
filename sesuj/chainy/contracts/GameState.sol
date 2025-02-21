@@ -57,6 +57,7 @@ contract GameState {
     
     function startRun() public {
         GameData storage data = playerData[msg.sender];
+        require(data.runState == RUN_STATE_NONE, "Cannot start new run while one is active");
         data.runState = RUN_STATE_WHALE_ROOM;
         data.currentFloor = 0;
         data.maxHealth = 21;
@@ -102,7 +103,7 @@ contract GameState {
         uint8 playedCardID = data.hand[playedCardIndex];
 
         // Only validate enemy targeting for attack cards
-        if (playedCardID == CARD_ID_STRIKE || playedCardID == CARD_ID_POMMEL_STRIKE) {
+        if (playedCardID == CARD_ID_STRIKE || playedCardID == CARD_ID_POMMEL_STRIKE || playedCardID == CARD_ID_CLEAVE) {
             require(targetIndex < data.enemyTypes.length, "Invalid target");
             require(data.enemyCurrentHealth[targetIndex] > 0, "Cannot target a dead enemy");
         }
@@ -124,6 +125,7 @@ contract GameState {
             discardCard(playedCardIndex);
         } else if (playedCardID == CARD_ID_CLEAVE && data.currentMana >= 2) {
             data.currentMana -= 2;
+            // Target validation already done above
             for (uint i = 0; i < data.enemyTypes.length; i++) {
                 if (data.enemyCurrentHealth[i] > 0) {
                     dealDamageToEnemy(uint8(i), 8);

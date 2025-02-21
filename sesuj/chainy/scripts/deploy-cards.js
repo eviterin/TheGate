@@ -66,9 +66,8 @@ async function initializeCards(contract) {
             name: 'Cleave',
             description: 'Deal 8 damage to ALL enemies.',
             manaCost: 2,
-            targeted: false
+            targeted: true
         },
-        
     ];
 
     for (const card of initialCards) {
