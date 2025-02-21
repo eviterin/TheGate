@@ -101,7 +101,7 @@ export function useAbandonRun() {
 export function useChooseRoom() {
     const contractConfig = useGameContract();
 
-    const chooseRoom = useCallback(async () => {
+    const chooseRoom = useCallback(async (option: number) => {
         const currentUser = getCurrentUser();
         
         if (!currentUser) {
@@ -109,15 +109,15 @@ export function useChooseRoom() {
         }
 
         try {
-            console.log('Choosing room...');
+            console.log('Choosing room with option:', option);
             const hash = await writeContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'chooseRoom',
-                args: [],
+                args: [option],
             })
 
-            console.log('Room chosen:', { hash });
+            console.log('Room chosen:', { hash, option });
             return hash;
         } catch (error) {   
             console.error('Error choosing room:', error);
@@ -722,4 +722,49 @@ export function useSkipCardReward() {
     }, [contractConfig]);
 
     return { skipCardReward };
+}
+
+export function useRetryFromDeath() {
+    const contractConfig = useGameContract();
+
+    const retryFromDeath = useCallback(async () => {
+        const currentUser = getCurrentUser();
+        
+        if (!currentUser) {
+            throw new Error('No user connected');
+        }
+
+        try {
+            console.log('Retrying from death...');
+            
+            // First simulate the transaction to check for potential errors
+            await simulateContract(config, {
+                address: contractConfig.address,
+                abi: contractConfig.abi,
+                functionName: 'retryFromDeath',
+                args: [],
+                account: currentUser.address,
+            });
+
+            // If simulation succeeds, send the actual transaction
+            const hash = await writeContract(config, {
+                address: contractConfig.address,
+                abi: contractConfig.abi,
+                functionName: 'retryFromDeath',
+                args: [],
+            });
+
+            // Wait for transaction to be confirmed
+            console.log('Waiting for retry transaction to be confirmed...');
+            await waitForTransaction(config, { hash });
+
+            console.log('Retry successful:', { hash });
+            return hash;
+        } catch (error) {   
+            console.error('Error retrying from death:', error);
+            throw error;
+        }
+    }, [contractConfig]);
+
+    return { retryFromDeath };
 } 

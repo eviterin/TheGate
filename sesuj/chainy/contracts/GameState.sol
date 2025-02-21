@@ -23,6 +23,7 @@ contract GameState {
         uint8[] availableCardRewards;
         bool hasEnabledQuickTransactions;
         uint256 quickTransactionsEnabledAt;
+        bool extraCardDrawEnabled;  // New field for extra card draw option
     }
     
     mapping(address => GameData) public playerData;
@@ -35,10 +36,17 @@ contract GameState {
     uint8 constant RUN_STATE_WHALE_ROOM = 1;
     uint8 constant RUN_STATE_ENCOUNTER = 2;
     uint8 constant RUN_STATE_CARD_REWARD = 3;
+    uint8 constant RUN_STATE_DEATH = 4;  // New state for when player dies
 
     uint8 constant ENEMY_TYPE_NONE = 0;
     uint8 constant ENEMY_TYPE_A = 1;
     uint8 constant ENEMY_TYPE_B = 2;
+
+    // Whale Room options
+    uint8 constant WHALE_OPTION_EXTRA_CARD = 1;
+    uint8 constant WHALE_OPTION_EXTRA_FAITH = 2;
+    uint8 constant WHALE_OPTION_PROTECTION = 3;  // Changed from HEAL
+    uint8 constant WHALE_OPTION_UPGRADE = 4;
 
     uint8 constant CARD_ID_NONE = 0;
     uint8 constant CARD_ID_STRIKE = 1;
@@ -58,18 +66,22 @@ contract GameState {
     function startRun() public {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_NONE, "Cannot start new run while one is active");
+        
+        // Reset all game state including blessings
         data.runState = RUN_STATE_WHALE_ROOM;
         data.currentFloor = 0;
         data.maxHealth = 21;
         data.currentHealth = 21;
-        data.maxMana = 5;
+        data.maxMana = 3;
         data.currentMana = 0;
+        data.extraCardDrawEnabled = false;  // Reset extra card draw blessing
         delete data.deck;
         data.deck = [CARD_ID_STRIKE, CARD_ID_STRIKE, CARD_ID_STRIKE, CARD_ID_DEFEND, CARD_ID_DEFEND];
     }
     
     function abandonRun() public {
         GameData storage data = playerData[msg.sender];
+        // Reset all state variables including blessings
         data.runState = RUN_STATE_NONE;
         data.currentFloor = 0;
         data.maxHealth = 0;
@@ -77,10 +89,12 @@ contract GameState {
         data.currentBlock = 0;
         data.maxMana = 0;
         data.currentMana = 0;
+        data.extraCardDrawEnabled = false;  // Reset extra card draw blessing
         delete data.enemyTypes;
         delete data.enemyMaxHealth;
         delete data.enemyCurrentHealth;
         delete data.enemyIntents;
+        delete data.enemyBlock;
         delete data.deck;
         delete data.hand;
         delete data.draw;
@@ -88,13 +102,29 @@ contract GameState {
         delete data.availableCardRewards;
     }
     
-    function chooseRoom() public {
+    function chooseRoom(uint8 option) public {
         GameData storage data = playerData[msg.sender];
-        if (data.runState == RUN_STATE_WHALE_ROOM) {
-            data.runState = RUN_STATE_ENCOUNTER;
-            data.currentFloor++;
-            startEncounter();
+        require(data.runState == RUN_STATE_WHALE_ROOM, "Not in whale room");
+        require(option >= 1 && option <= 4, "Invalid whale room option");
+
+        // Store current floor to prevent multiple blessings per floor
+        uint8 currentFloor = data.currentFloor;
+        require(currentFloor == 0 || currentFloor != data.currentFloor, "Already chose blessing for this floor");
+
+        if (option == WHALE_OPTION_EXTRA_CARD) {
+            data.extraCardDrawEnabled = true;
+        } else if (option == WHALE_OPTION_EXTRA_FAITH) {
+            data.maxMana += 1;
+            data.currentMana += 1;
+        } else if (option == WHALE_OPTION_PROTECTION) {
+            data.currentBlock = 5;  // Start with 5 block
+        } else if (option == WHALE_OPTION_UPGRADE) {
+            data.maxHealth += 5;
         }
+
+        data.runState = RUN_STATE_ENCOUNTER;
+        data.currentFloor++;
+        startEncounter();
     }
 
     function playCard(uint8 playedCardIndex, uint8 targetIndex) public {
@@ -155,7 +185,7 @@ contract GameState {
         }
 
         if (data.currentHealth == 0) {
-            abandonRun();
+            data.runState = RUN_STATE_DEATH;
             return;
         }
 
@@ -329,9 +359,12 @@ contract GameState {
     }
 
     function drawNewHand() private {
-        drawCard();
-        drawCard();
-        drawCard();
+        GameData storage data = playerData[msg.sender];
+        uint8 cardsToDraw = data.extraCardDrawEnabled ? 4 : 3;
+        
+        for (uint8 i = 0; i < cardsToDraw; i++) {
+            drawCard();
+        }
     }
 
     function discardCard(uint cardIndex) private {
@@ -371,5 +404,34 @@ contract GameState {
             uint256 j = uint256(keccak256(abi.encodePacked(seed, i))) % (i + 1);
             (data.draw[i], data.draw[j]) = (data.draw[j], data.draw[i]);
         }
+    }
+
+    // Add new function to retry from death
+    function retryFromDeath() public {
+        GameData storage data = playerData[msg.sender];
+        require(data.runState == RUN_STATE_DEATH, "Not in death state");
+        
+        // Clear all state before starting new run
+        data.runState = RUN_STATE_NONE;
+        data.currentFloor = 0;
+        data.maxHealth = 0;
+        data.currentHealth = 0;
+        data.currentBlock = 0;
+        data.maxMana = 0;
+        data.currentMana = 0;
+        data.extraCardDrawEnabled = false;
+        delete data.enemyTypes;
+        delete data.enemyMaxHealth;
+        delete data.enemyCurrentHealth;
+        delete data.enemyIntents;
+        delete data.enemyBlock;
+        delete data.deck;
+        delete data.hand;
+        delete data.draw;
+        delete data.discard;
+        delete data.availableCardRewards;
+        
+        // Start a new run
+        startRun();
     }
 }

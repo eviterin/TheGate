@@ -90,7 +90,8 @@ const Playground: React.FC = () => {
 
     const handleChooseRoom = async () => {
         try {
-            await chooseRoom();
+            // Default to the first whale room option (Extra Card Draw)
+            await chooseRoom(1);
             console.log('Successfully chose room');
             await refreshGameState();
         } catch (error) {

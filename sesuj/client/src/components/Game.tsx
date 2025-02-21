@@ -7,11 +7,39 @@ import GameEntity from './GameEntity';
 import PendingActions, { PendingAction } from './PendingActions';
 import { Health } from '../game/resources/Health';
 import { Faith } from '../game/resources/Faith';
-import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, useSkipCardReward } from '../hooks/GameState';
+import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, useSkipCardReward, useRetryFromDeath } from '../hooks/GameState';
 import { useCards } from '../hooks/CardsContext';
 import './Game.css';
 
 const TRANSACTION_TIMEOUT = 30000; // 30 seconds timeout for transactions
+
+// Whale Room options
+const WHALE_ROOM_OPTIONS = [
+  { 
+    id: 1, 
+    title: '🎴 Card Master', 
+    description: 'Begin each turn with an additional card in your hand.',
+    effect: '3 → 4 cards per turn'
+  },
+  { 
+    id: 2, 
+    title: '✨ Divine Power', 
+    description: 'Channel additional Faith energy into your actions.',
+    effect: '+1 Faith per turn'
+  },
+  { 
+    id: 3, 
+    title: '🛡️ Divine Protection', 
+    description: 'Begin each combat with a protective barrier.',
+    effect: 'Start with 5 Block'
+  },
+  { 
+    id: 4, 
+    title: '💪 Sacred Might', 
+    description: 'Your body is strengthened by divine power.',
+    effect: '+5 Max HP'
+  }
+];
 
 const Game: React.FC = () => {
   const [hand, setHand] = useState<number[]>([]);
@@ -37,6 +65,9 @@ const Game: React.FC = () => {
   const [optimisticHand, setOptimisticHand] = useState<number[]>([]);
   const [optimisticMana, setOptimisticMana] = useState<number | null>(null);
   const [optimisticUpdatesEnabled, setOptimisticUpdatesEnabled] = useState(false);
+  const { retryFromDeath } = useRetryFromDeath();
+  const { abandonRun } = useAbandonRun();
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Fetch card data
   useEffect(() => {
@@ -324,7 +355,6 @@ const Game: React.FC = () => {
     try {
       console.log('Choosing reward card and continuing:', selectedReward);
       await chooseCardReward(selectedReward);
-      await chooseRoom();
       
       // Reset selection
       setSelectedReward(null);
@@ -347,7 +377,6 @@ const Game: React.FC = () => {
     try {
       console.log('Skipping reward and continuing');
       await skipCardReward();
-      await chooseRoom();
       
       // Reset selection
       setSelectedReward(null);
@@ -373,6 +402,44 @@ const Game: React.FC = () => {
     );
   };
 
+  const handleWhaleRoomChoice = async (optionId: number) => {
+    try {
+      await chooseRoom(optionId);
+    } catch (error) {
+      console.error('Failed to choose whale room option:', error);
+    }
+  };
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    try {
+      await retryFromDeath();
+      
+      // Refresh game state after retrying
+      const newState = await getGameState();
+      if (newState) {
+        setGameState(newState);
+        setHand(newState.hand || []);
+        setDeck(newState.deck || []);
+        setDraw(newState.draw || []);
+        setDiscard(newState.discard || []);
+      }
+    } catch (error) {
+      console.error('Failed to retry:', error);
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  const handleAbandonAndExit = async () => {
+    try {
+      await abandonRun();
+      handleBackToMenu();
+    } catch (error) {
+      console.error('Failed to abandon run:', error);
+    }
+  };
+
   return (
     <>
       <style>
@@ -390,6 +457,173 @@ const Game: React.FC = () => {
             width: 16px;
             height: 16px;
             cursor: pointer;
+          }
+
+          .whale-room-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+          }
+
+          .whale-room-content {
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 800px;
+            width: 90%;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+          }
+
+          .whale-room-title {
+            color: #ffd700;
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 28px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+            letter-spacing: 1px;
+          }
+
+          .whale-room-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            max-width: 700px;
+            margin: 0 auto;
+          }
+
+          .whale-room-option {
+            background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+            border: 1px solid #4a4a4a;
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+          }
+
+          .whale-room-option:hover {
+            transform: translateY(-2px);
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+          }
+
+          .whale-room-option:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.2), transparent);
+          }
+
+          .whale-room-option h3 {
+            color: #ffd700;
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .whale-room-option .description {
+            color: #cccccc;
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            line-height: 1.4;
+          }
+
+          .whale-room-option .effect {
+            display: inline-block;
+            background: rgba(255, 215, 0, 0.1);
+            color: #ffd700;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+          }
+
+          .death-screen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+          }
+
+          .death-screen-content {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+          }
+
+          .death-screen-title {
+            color: #ff4444;
+            font-size: 32px;
+            margin-bottom: 16px;
+          }
+
+          .death-screen-message {
+            color: #cccccc;
+            font-size: 18px;
+            margin-bottom: 24px;
+          }
+
+          .death-screen-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+          }
+
+          .retry-button {
+            background: #4a4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+          }
+
+          .retry-button:hover {
+            background: #5b5;
+            transform: translateY(-2px);
+          }
+
+          .abandon-button {
+            background: #a44;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+          }
+
+          .abandon-button:hover {
+            background: #b55;
+            transform: translateY(-2px);
           }
         `}
       </style>
@@ -486,6 +720,56 @@ const Game: React.FC = () => {
                   >
                     Continue
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Whale Room Overlay */}
+            {gameState?.runState === 1 && (
+              <div className="whale-room-overlay">
+                <div className="whale-room-content">
+                  <h2 className="whale-room-title">Choose a Divine Blessing</h2>
+                  <div className="whale-room-options">
+                    {WHALE_ROOM_OPTIONS.map(option => (
+                      <div
+                        key={option.id}
+                        className="whale-room-option"
+                        onClick={() => handleWhaleRoomChoice(option.id)}
+                      >
+                        <h3>{option.title}</h3>
+                        <p className="description">{option.description}</p>
+                        <span className="effect">{option.effect}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Death Screen Overlay */}
+            {gameState?.runState === 4 && (
+              <div className="death-screen-overlay">
+                <div className="death-screen-content">
+                  <h2 className="death-screen-title">You Died</h2>
+                  <p className="death-screen-message">
+                    Your journey has come to an end. Would you like to try again?
+                  </p>
+                  <div className="death-screen-buttons">
+                    <button 
+                      className="retry-button" 
+                      onClick={handleRetry}
+                      disabled={isRetrying}
+                    >
+                      {isRetrying ? 'Retrying...' : 'Try Again'}
+                    </button>
+                    <button 
+                      className="abandon-button" 
+                      onClick={handleAbandonAndExit}
+                      disabled={isRetrying}
+                    >
+                      Back to Menu
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
