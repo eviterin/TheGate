@@ -178,7 +178,10 @@ export function useEndTurn() {
                 abi: contractConfig.abi,
                 functionName: 'endTurn',
                 args: [],
-            })
+            });
+
+            // Wait for transaction to be confirmed
+            await waitForTransaction(config, { hash });
 
             console.log('Turn ended:', { hash });
             return hash;
