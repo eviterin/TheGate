@@ -23,6 +23,7 @@ interface EncountersData {
       BLOCK_AND_ATTACK: number;
       HEAL: number;
       ATTACK_BUFF: number;
+      BLOCK_AND_HEAL: number;
     };
     ANIMATIONS: {
       ATTACK: string;
@@ -41,10 +42,11 @@ const ANIMATIONS = (encountersData as EncountersData).constants.ANIMATIONS;
 
 // Helper to determine intent type
 interface IntentInfo {
-  type: 'attack' | 'block' | 'block_and_attack' | 'heal' | 'attack_buff';
+  type: 'attack' | 'block' | 'block_and_attack' | 'heal' | 'attack_buff' | 'block_and_heal';
   value: number;
   blockValue?: number;
   buffValue?: number;
+  healValue?: number;
   animation: string;
 }
 
@@ -72,6 +74,15 @@ const getIntentInfo = (intent: number): IntentInfo => {
       type: 'attack_buff',
       value: 2,
       animation: ANIMATIONS.BUFF
+    };
+  }
+  if (intent === INTENT_TYPES.BLOCK_AND_HEAL) {
+    return {
+      type: 'block_and_heal',
+      value: 5,
+      blockValue: 5,
+      healValue: 5,
+      animation: ANIMATIONS.BLOCK
     };
   }
   // Any other number is an attack with that damage value
@@ -214,6 +225,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         case 'block_and_attack': return '#ffff70';
         case 'heal': return '#ff70ff';
         case 'attack_buff': return '#ff9070';
+        case 'block_and_heal': return '#70ffff';
         default: return '#ff7070';
       }
     };
@@ -224,6 +236,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         case 'block_and_attack': return '#ffff40';
         case 'heal': return '#ff40ff';
         case 'attack_buff': return '#ff6040';
+        case 'block_and_heal': return '#40ffff';
         default: return '#ff4040';
       }
     };
@@ -231,7 +244,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
     return (
       <div style={{
         position: 'absolute',
-        top: '-90px',
+        bottom: '-25px',
         left: '50%',
         transform: 'translateX(-50%)',
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -242,7 +255,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
         display: 'flex',
         alignItems: 'center',
         gap: '4px',
-        border: `1px solid ${getBorderColor(intentInfo.type)}`
+        border: `1px solid ${getBorderColor(intentInfo.type)}`,
+        zIndex: 3
       }}>
         {intentInfo.type === 'block' ? (
           <>🛡️ Block {intentInfo.value}</>
@@ -252,6 +266,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
           <>💚 Heal {intentInfo.value}</>
         ) : intentInfo.type === 'attack_buff' ? (
           <>💪 Buff +{intentInfo.value} ATK</>
+        ) : intentInfo.type === 'block_and_heal' ? (
+          <>🛡️ Block {intentInfo.blockValue} + 💚 Heal {intentInfo.healValue}</>
         ) : (
           <>⚔️ Attack {intentInfo.value}</>
         )}
@@ -423,7 +439,10 @@ const GameEntity: React.FC<GameEntityProps> = ({
         </div>
         
         <div style={{ 
-          marginTop: '10px', 
+          position: 'absolute',
+          top: '-45px',
+          left: '50%',
+          transform: 'translateX(-50%)',
           textAlign: 'center',
           textShadow: '1px 1px 2px rgba(0, 0, 0, 0.5)',
           backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -431,7 +450,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
           borderRadius: '4px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '4px'
+          gap: '4px',
+          zIndex: 2  // Ensure stats show above background but below intents
         }}>
           <div style={{ 
             display: 'flex', 

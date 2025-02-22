@@ -222,6 +222,9 @@ contract GameState {
                     require(i < buffs.length, "Invalid enemy index for buff");
                     uint8 newBuff = buffs[i] + 2;
                     encounters.setEnemyBuff(msg.sender, uint8(i), newBuff);
+                } else if (intent == 1004) { // INTENT_BLOCK_AND_HEAL
+                    encounters.setEnemyBlock(msg.sender, uint8(i), 5);
+                    encounters.healEnemy(msg.sender, uint8(i), 5);
                 } else {
                     require(i < buffs.length, "Invalid enemy index for buff");
                     uint8 totalDamage = uint8(intent) + buffs[i];

@@ -19,6 +19,7 @@ contract GameEncounters {
     uint16 constant INTENT_BLOCK_AND_ATTACK = 1001;
     uint16 constant INTENT_HEAL = 1002;
     uint16 constant INTENT_ATTACK_BUFF = 1003;
+    uint16 constant INTENT_BLOCK_AND_HEAL = 1004;
 
     address public gameStateContract;
     mapping(address => EnemyData) private enemyData;
@@ -124,8 +125,9 @@ contract GameEncounters {
                     if (data.types[i] == ENEMY_TYPE_A) {
                         data.intents[i] = uint16(6 + (seed % 3));
                     } else if (data.types[i] == ENEMY_TYPE_B) {
-                        if (data.buffs[i] == 0) {
-                            data.intents[i] = INTENT_ATTACK_BUFF;
+                        uint256 action = seed % 10;
+                        if (action < 4) {
+                            data.intents[i] = INTENT_BLOCK_5;
                         } else {
                             data.intents[i] = uint16(8 + (seed % 3));
                         }
@@ -135,20 +137,18 @@ contract GameEncounters {
             }
         }
         else if (floor == 2) {
-            uint256 action = seed % 10;
-            uint16 sharedIntent;
-            
-            if (action < 4) {
-                sharedIntent = INTENT_BLOCK_5;
-            } else if (action < 6) {
-                sharedIntent = INTENT_HEAL;
-            } else {
-                sharedIntent = uint16(5 + (seed % 3));
+            // First enemy is the attacker
+            if (data.currentHealth[0] > 0) {
+                data.intents[0] = uint16(6 + (seed % 3));
             }
             
-            for (uint i = 0; i < data.types.length; i++) {
-                if (data.currentHealth[i] > 0) {
-                    data.intents[i] = sharedIntent;
+            // Second enemy is the healer
+            if (data.currentHealth[1] > 0) {
+                uint256 action = seed % 10;
+                if (action < 6) {
+                    data.intents[1] = INTENT_BLOCK_AND_HEAL;
+                } else {
+                    data.intents[1] = INTENT_HEAL;
                 }
             }
         }
@@ -171,7 +171,7 @@ contract GameEncounters {
                         if (action < 3) {
                             data.intents[i] = INTENT_HEAL;
                         } else if (action < 6) {
-                            data.intents[i] = INTENT_ATTACK_BUFF;
+                            data.intents[i] = INTENT_BLOCK_5;
                         } else {
                             data.intents[i] = uint16(6 + (seed % 5));
                         }
