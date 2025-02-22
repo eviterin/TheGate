@@ -359,12 +359,10 @@ const Game: React.FC = () => {
 
       // Update optimistic state immediately
       const newHand = [...(gameState?.hand || [])];
-      // Remove cards in reverse order to maintain correct indices
-      cardIntents
-        .sort((a, b) => b.cardIndex - a.cardIndex)
-        .forEach(intent => {
-          newHand.splice(intent.cardIndex, 1);
-        });
+      // Remove cards in order they were played
+      cardIntents.forEach(intent => {
+        newHand.splice(intent.cardIndex, 1);
+      });
       setOptimisticHand(newHand);
 
       // Just submit the transaction without waiting for confirmation
@@ -1143,6 +1141,7 @@ const Game: React.FC = () => {
                     animationTarget={currentAnimation?.sourceType === 'enemy' ? currentAnimation.targetPosition : undefined}
                     previousHealth={previousEnemyHealth[index]}
                     previousBlock={previousEnemyBlock[index]}
+                    buff={gameState.enemyBuffs[index]}
                   />
                 ))}
               </>

@@ -132,7 +132,7 @@ const Intent: React.FC<IntentProps> = ({
               <div className="intent-content">
                 <div className="intent-number">{index + 1}</div>
                 <span className="intent-description">
-                  {intent.cardName} → Enemy {intent.targetIndex + 1}
+                  {intent.cardName}{[1, 3, 4].includes(intent.cardId) ? ` → Enemy ${intent.targetIndex + 1}` : ''}
                 </span>
                 <button 
                   className="remove-intent" 

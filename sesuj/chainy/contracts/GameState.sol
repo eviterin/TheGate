@@ -8,7 +8,7 @@ interface IGameEncounters {
         uint16[] currentHealth;
         uint16[] intents;
         uint16[] blockAmount;
-        uint8[] attackBuff;
+        uint8[] buffs;
     }
     
     function startEncounter(address player, uint8 floor) external returns (EnemyData memory);
@@ -16,13 +16,14 @@ interface IGameEncounters {
     function healEnemy(address player, uint8 enemyIndex, uint8 amount) external;
     function setNewEnemyIntents(address player, uint8 floor) external;
     function setEnemyBlock(address player, uint8 enemyIndex, uint16 amount) external;
+    function setEnemyBuff(address player, uint8 enemyIndex, uint8 amount) external;
     function getEnemyData(address player) external view returns (
         uint8[] memory types,
         uint16[] memory maxHealth,
         uint16[] memory currentHealth,
         uint16[] memory intents,
         uint16[] memory blockAmount,
-        uint8[] memory attackBuff
+        uint8[] memory buffs
     );
     function clearEnemyData(address player) external;
 }
@@ -203,7 +204,7 @@ contract GameState {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_ENCOUNTER, "Not in encounter");
         
-        (uint8[] memory types,,uint16[] memory currentHealth,uint16[] memory intents,,uint8[] memory attackBuff) = encounters.getEnemyData(msg.sender);
+        (uint8[] memory types,,uint16[] memory currentHealth,uint16[] memory intents,,uint8[] memory buffs) = encounters.getEnemyData(msg.sender);
 
         bool shouldContinue = true;
 
@@ -218,9 +219,12 @@ contract GameState {
                 } else if (intent == 1002) { // INTENT_HEAL
                     encounters.healEnemy(msg.sender, uint8(i), 5);
                 } else if (intent == 1003) { // INTENT_ATTACK_BUFF
-                    attackBuff[i] += 2;
+                    require(i < buffs.length, "Invalid enemy index for buff");
+                    uint8 newBuff = buffs[i] + 2;
+                    encounters.setEnemyBuff(msg.sender, uint8(i), newBuff);
                 } else {
-                    uint8 totalDamage = uint8(intent) + attackBuff[i];
+                    require(i < buffs.length, "Invalid enemy index for buff");
+                    uint8 totalDamage = uint8(intent) + buffs[i];
                     dealDamageToHero(totalDamage);
                 }
             }
@@ -329,9 +333,11 @@ contract GameState {
         uint8[] memory types,
         uint16[] memory maxHealth,
         uint16[] memory currentHealth,
-        uint16[] memory intents
+        uint16[] memory intents,
+        uint16[] memory blockAmount,
+        uint8[] memory buffs
     ) {
-        (types, maxHealth, currentHealth, intents,,) = encounters.getEnemyData(player);
+        (types, maxHealth, currentHealth, intents, blockAmount, buffs) = encounters.getEnemyData(player);
     }
 
     function getEnemyBlock(address player) public view returns (uint16[] memory) {

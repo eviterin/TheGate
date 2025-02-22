@@ -105,6 +105,7 @@ interface GameEntityProps {
   animationTarget?: Position;
   previousHealth?: number;
   previousBlock?: number;
+  buff?: number;
 }
 
 const GameEntity: React.FC<GameEntityProps> = ({ 
@@ -121,6 +122,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
   animationTarget,
   previousHealth = health,
   previousBlock = block,
+  buff = 0
 }) => {
   const isHero = type === 'hero';
   const [isShaking, setIsShaking] = useState(false);
@@ -318,6 +320,52 @@ const GameEntity: React.FC<GameEntityProps> = ({
           .health-bar.flashing {
             filter: brightness(1.5) saturate(1.5);
           }
+
+          .stat-container {
+            position: relative;
+            cursor: help;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+          }
+
+          .stat-container:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+          }
+
+          .stat-container:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: calc(100% + 5px);
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.4;
+            z-index: 1000;
+            pointer-events: none;
+            width: max-content;
+            max-width: 200px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-shadow: none;
+            white-space: normal;
+          }
+
+          .stat-container:hover::before {
+            display: none;
+          }
+
+          /* Ensure tooltips stay within viewport */
+          @media (max-height: 800px) {
+            .stat-container:hover::after {
+              bottom: auto;
+              top: calc(100% + 5px);
+            }
+          }
         `}
       </style>
       <div 
@@ -392,14 +440,28 @@ const GameEntity: React.FC<GameEntityProps> = ({
             gap: '8px',
             animation: isShaking ? 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both' : undefined
           }}>
-            <span>{health <= 0 ? '💔' : '❤️'} {health}/{maxHealth}</span>
+            <div className="stat-container" title="Health Points">
+              <span>{health <= 0 ? '💔' : '❤️'} {health}/{maxHealth}</span>
+            </div>
             {block > 0 && (
-              <span style={{ 
-                color: '#70ff70',
-                fontWeight: 'bold'
-              }}>
-                🛡️ {block}
-              </span>
+              <div className="stat-container" title="Block">
+                <span style={{ 
+                  color: '#70ff70',
+                  fontWeight: 'bold'
+                }}>
+                  🛡️ {block}
+                </span>
+              </div>
+            )}
+            {buff > 0 && (
+              <div className="stat-container" title="Permanent Attack+">
+                <span style={{ 
+                  color: '#ff9070',
+                  fontWeight: 'bold'
+                }}>
+                  💪 +{buff}
+                </span>
+              </div>
             )}
           </div>
         </div>

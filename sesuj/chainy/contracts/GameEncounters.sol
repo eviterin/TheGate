@@ -8,7 +8,7 @@ contract GameEncounters {
         uint16[] currentHealth;
         uint16[] intents;
         uint16[] blockAmount;
-        uint8[] attackBuff;
+        uint8[] buffs;
     }
 
     uint8 constant ENEMY_TYPE_NONE = 0;
@@ -45,36 +45,36 @@ contract GameEncounters {
             data.maxHealth = [14, 16];
             data.currentHealth = [14, 16];
             data.blockAmount = new uint16[](2);
-            data.attackBuff = new uint8[](2);
+            data.buffs = new uint8[](2);
         } else if (floor == 2) {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_A];
             data.maxHealth = [16, 16];
             data.currentHealth = [16, 16];
             data.blockAmount = new uint16[](2);
-            data.attackBuff = new uint8[](2);
+            data.buffs = new uint8[](2);
         } else if (floor == 3) {
             data.types = [ENEMY_TYPE_B];
             data.maxHealth = [32];
             data.currentHealth = [32];
             data.blockAmount = new uint16[](1);
-            data.attackBuff = new uint8[](1);
+            data.buffs = new uint8[](1);
         } else if (floor == 4) {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
             data.maxHealth = [18, 22];
             data.currentHealth = [18, 22];
             data.blockAmount = new uint16[](2);
-            data.attackBuff = new uint8[](2);
+            data.buffs = new uint8[](2);
         } else {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
             data.maxHealth = [10, 12];
             data.currentHealth = [10, 12];
             data.blockAmount = new uint16[](2);
-            data.attackBuff = new uint8[](2);
+            data.buffs = new uint8[](2);
         }
         
         for (uint i = 0; i < data.blockAmount.length; i++) {
             data.blockAmount[i] = 0;
-            data.attackBuff[i] = 0;
+            data.buffs[i] = 0;
         }
         
         setNewEnemyIntents(player, floor);
@@ -124,13 +124,10 @@ contract GameEncounters {
                     if (data.types[i] == ENEMY_TYPE_A) {
                         data.intents[i] = uint16(6 + (seed % 3));
                     } else if (data.types[i] == ENEMY_TYPE_B) {
-                        uint256 action = seed % 10;
-                        if (action < 4) {
-                            data.intents[i] = INTENT_BLOCK_5;
-                        } else if (action < 7) {
-                            data.intents[i] = INTENT_BLOCK_AND_ATTACK;
+                        if (data.buffs[i] == 0) {
+                            data.intents[i] = INTENT_ATTACK_BUFF;
                         } else {
-                            data.intents[i] = uint16(4 + (seed % 3));
+                            data.intents[i] = uint16(8 + (seed % 3));
                         }
                     }
                 }
@@ -157,18 +154,10 @@ contract GameEncounters {
         }
         else if (floor == 3) {
             if (data.currentHealth[0] > 0) {
-                uint256 action = seed % 10;
-                
-                if (data.attackBuff[0] == 0) {
+                if (data.buffs[0] == 0) {
                     data.intents[0] = INTENT_ATTACK_BUFF;
                 } else {
-                    if (action < 3) {
-                        data.intents[0] = INTENT_BLOCK_5;
-                    } else if (action < 6) {
-                        data.intents[0] = INTENT_BLOCK_AND_ATTACK;
-                    } else {
-                        data.intents[0] = uint16(8 + (seed % 5));
-                    }
+                    data.intents[0] = uint16(8 + (seed % 5) + data.buffs[0]);
                 }
             }
         }
@@ -220,13 +209,19 @@ contract GameEncounters {
         data.blockAmount[enemyIndex] = amount;
     }
 
+    function setEnemyBuff(address player, uint8 enemyIndex, uint8 amount) external onlyGameState {
+        EnemyData storage data = enemyData[player];
+        require(enemyIndex < data.buffs.length, "Invalid enemy index");
+        data.buffs[enemyIndex] = amount;
+    }
+
     function getEnemyData(address player) external view returns (
         uint8[] memory types,
         uint16[] memory maxHealth,
         uint16[] memory currentHealth,
         uint16[] memory intents,
         uint16[] memory blockAmount,
-        uint8[] memory attackBuff
+        uint8[] memory buffs
     ) {
         EnemyData storage data = enemyData[player];
         return (
@@ -235,7 +230,7 @@ contract GameEncounters {
             data.currentHealth,
             data.intents,
             data.blockAmount,
-            data.attackBuff
+            data.buffs
         );
     }
 
