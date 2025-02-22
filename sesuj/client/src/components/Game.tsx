@@ -91,6 +91,7 @@ const Game: React.FC = () => {
   const [draw, setDraw] = useState<number[]>([]);
   const [discard, setDiscard] = useState<number[]>([]);
   const [gameState, setGameState] = useState<any>(null);
+  const [frozenState, setFrozenState] = useState<any>(null);
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null);
   const [isHandVisible, setIsHandVisible] = useState(true);
   const [isGateOpen, setIsGateOpen] = useState(false);
@@ -155,6 +156,9 @@ const Game: React.FC = () => {
     
     const fetchGameState = async () => {
       try {
+        // Don't update state during enemy turn when we have frozen state
+        if (frozenState) return;
+
         const state = await getGameState();
         if (!mounted) return;
         
@@ -450,16 +454,24 @@ const Game: React.FC = () => {
       setOptimisticHand([]);
       setOptimisticMana(0);
       setPendingActions(prev => [...prev, newAction]);
+    }
+
+    try {
+      // Freeze the state BEFORE ending turn
+      const stateBeforeEnemyTurn = await getGameState();
+      if (!stateBeforeEnemyTurn) return;
+      
+      // Freeze the state for the enemy turn
+      setFrozenState(stateBeforeEnemyTurn);
+      setGameState(stateBeforeEnemyTurn);
 
       // Show enemy turn banner with initial delay
       setTurnState('transitioning');
       setTurnBannerMessage("Enemy Turn");
       setTurnBannerType('enemy');
       setShowTurnBanner(true);
-    }
-
-    try {
-      // Call the end turn action first
+      
+      // Now call end turn after freezing state
       await endTurnAction();
       
       // Wait longer for banner animation and transition feel
@@ -469,25 +481,13 @@ const Game: React.FC = () => {
       // Add delay before enemies start acting
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      // Calculate total expected damage from all enemies
-      let expectedHealth = gameState?.currentHealth ?? 0;
-      let currentBlock = gameState?.currentBlock ?? 0;
-
       // Animate enemy actions with delays
-      if (animationsEnabled && gameState) {
-        for (let i = 0; i < gameState.enemyTypes.length; i++) {
-          if (gameState.enemyCurrentHealth[i] > 0) {
-            const intent = gameState.enemyIntents[i];
-            const enemyType = gameState.enemyTypes[i];
-            const levelConfig = getLevelConfig(gameState.currentFloor);
+      if (animationsEnabled && stateBeforeEnemyTurn) {
+        for (let i = 0; i < stateBeforeEnemyTurn.enemyTypes.length; i++) {
+          if (stateBeforeEnemyTurn.enemyCurrentHealth[i] > 0) {
+            const intent = stateBeforeEnemyTurn.enemyIntents[i];
+            const levelConfig = getLevelConfig(stateBeforeEnemyTurn.currentFloor);
             const targetPos = levelConfig.heroPosition;
-
-            // Calculate damage from this enemy's intent
-            if (intent !== INTENT_TYPES.BLOCK_5) { // If not blocking, it's damage
-              const damage = calculateDamageAfterBlock(intent, currentBlock);
-              expectedHealth -= damage;
-              currentBlock = Math.max(0, currentBlock - intent); // Reduce block
-            }
 
             // Create animation state for this enemy
             const animationState: AnimationState = {
@@ -517,10 +517,15 @@ const Game: React.FC = () => {
         // Show player turn banner
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        // Force a game state refresh before showing player turn
+        // Clear frozen state and get fresh state before showing player turn
+        setFrozenState(null);
         const newState = await getGameState();
         if (newState) {
           setGameState(newState);
+          setPreviousHealth(newState.currentHealth);
+          setPreviousBlock(newState.currentBlock);
+          setPreviousEnemyHealth(newState.enemyCurrentHealth);
+          setPreviousEnemyBlock(newState.enemyBlock);
           setOptimisticHand(newState.hand || []);
           setOptimisticMana(newState.currentMana || 0);
         }
@@ -536,6 +541,7 @@ const Game: React.FC = () => {
         }, 2000);
       } else {
         // If animations are disabled, just force a state refresh
+        setFrozenState(null);
         const newState = await getGameState();
         if (newState) {
           setGameState(newState);
@@ -548,9 +554,10 @@ const Game: React.FC = () => {
       console.error('Failed to end turn:', error);
       
       if (optimisticUpdatesEnabled && actionId) {
-        // Revert optimistic updates
-        setOptimisticHand(gameState.hand);
-        setOptimisticMana(gameState.currentMana);
+        // Revert optimistic updates and clear frozen state
+        setFrozenState(null);
+        setOptimisticHand(gameState?.hand || []);
+        setOptimisticMana(gameState?.currentMana || 0);
         setCurrentAnimation(null);
         setShowTurnBanner(false);
         setTurnState('player');
