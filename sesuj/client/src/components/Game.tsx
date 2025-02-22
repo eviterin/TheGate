@@ -340,6 +340,7 @@ const Game: React.FC = () => {
 
     try {
       setIsCommittingIntents(true);
+      setOptimisticUpdatesEnabled(false);  // Disable optimistic updates during commit
 
       // Convert intents to contract format
       const plays = cardIntents.map((intent, index) => {
@@ -357,51 +358,42 @@ const Game: React.FC = () => {
       const stateBeforeAnimations = gameState;
       setFrozenState(stateBeforeAnimations);
 
-      // Update optimistic state immediately
-      const newHand = [...(gameState?.hand || [])];
-      // Remove cards in order they were played
-      cardIntents.forEach(intent => {
-        newHand.splice(intent.cardIndex, 1);
-      });
-      setOptimisticHand(newHand);
+      // Start animations immediately while transaction is processing
+      const animationPromise = (async () => {
+        for (let i = 0; i < cardIntents.length; i++) {
+          const intent = cardIntents[i];
+          const card = cardData.find(c => c.numericId === intent.cardId);
+          if (!card) continue;
 
-      // Just submit the transaction without waiting for confirmation
-      await playCards(plays).catch(error => {
-        console.error('Transaction failed:', error);
-        // On error, restore the original hand
-        if (gameState) {
-          setOptimisticHand(gameState.hand || []);
+          const levelConfig = getLevelConfig(stateBeforeAnimations.currentFloor);
+          const targetPos = levelConfig.enemyPositions[intent.targetIndex];
+
+          const animationState: AnimationState = {
+            sourceType: 'hero',
+            sourceIndex: 0,
+            targetPosition: targetPos,
+            timestamp: Date.now()
+          };
+
+          // If not the first animation, add small delay
+          if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+
+          // Show and wait for this animation
+          setCurrentAnimation(animationState);
+          await new Promise(resolve => setTimeout(resolve, 600));
+          setCurrentAnimation(null);
         }
-      });
+      })();
 
-      // Play all animations immediately
-      for (let i = 0; i < cardIntents.length; i++) {
-        const intent = cardIntents[i];
-        const card = cardData.find(c => c.numericId === intent.cardId);
-        if (!card) continue;
+      // Submit transaction in parallel with animations
+      const transactionPromise = playCards(plays);
 
-        const levelConfig = getLevelConfig(stateBeforeAnimations.currentFloor);
-        const targetPos = levelConfig.enemyPositions[intent.targetIndex];
+      // Wait for both animations and transaction to complete
+      await Promise.all([animationPromise, transactionPromise]);
 
-        const animationState: AnimationState = {
-          sourceType: 'hero',
-          sourceIndex: 0,
-          targetPosition: targetPos,
-          timestamp: Date.now()
-        };
-
-        // If not the first animation, add small delay
-        if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-
-        // Show and wait for this animation
-        setCurrentAnimation(animationState);
-        await new Promise(resolve => setTimeout(resolve, 600));
-        setCurrentAnimation(null);
-      }
-
-      // Add a small delay to ensure animations are complete
+      // Add a small delay to ensure chain state is updated
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Clear frozen state and update with new state
@@ -419,6 +411,9 @@ const Game: React.FC = () => {
       // Set hasAutoEndedTurn to true to prevent double end turn
       setHasAutoEndedTurn(true);
       
+      // Re-enable optimistic updates
+      setOptimisticUpdatesEnabled(true);
+      
       // Automatically end turn after committing cards
       handleEndTurn();
 
@@ -426,6 +421,13 @@ const Game: React.FC = () => {
       console.error('Failed to commit card intents:', error);
       setFrozenState(null);
       setCurrentAnimation(null);
+      
+      // On error, restore the original state
+      if (gameState) {
+        setOptimisticHand(gameState.hand || []);
+        setOptimisticMana(gameState.currentMana || 0);
+      }
+      setOptimisticUpdatesEnabled(true);
     } finally {
       setIsCommittingIntents(false);
     }
