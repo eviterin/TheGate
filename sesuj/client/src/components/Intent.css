@@ -9,6 +9,9 @@
   flex-direction: column;
   gap: 8px;
   user-select: none;
+  position: fixed;
+  right: 320px;
+  bottom: 280px;
 }
 
 .intents-container.dragging {

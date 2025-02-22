@@ -205,6 +205,8 @@ contract GameState {
         
         (uint8[] memory types,,uint16[] memory currentHealth,uint16[] memory intents,,uint8[] memory attackBuff) = encounters.getEnemyData(msg.sender);
 
+        bool shouldContinue = true;
+
         for (uint i = 0; i < types.length; i++) {
             if (currentHealth[i] > 0) {
                 uint16 intent = intents[i];
@@ -226,17 +228,21 @@ contract GameState {
 
         if (data.currentHealth == 0) {
             data.runState = RUN_STATE_DEATH;
-            return;
+            shouldContinue = false;
         }
 
-        if (checkWinCondition()) return;
+        if (shouldContinue && checkWinCondition()) {
+            shouldContinue = false;
+        }
 
-        data.currentBlock = 0;
-        encounters.setNewEnemyIntents(msg.sender, data.currentFloor);
-        data.currentMana = data.maxMana;
-        drawCard();
-        drawCard();
-        drawCard();
+        if (shouldContinue) {
+            data.currentBlock = 0;
+            encounters.setNewEnemyIntents(msg.sender, data.currentFloor);
+            data.currentMana = data.maxMana;
+            drawCard();
+            drawCard();
+            drawCard();
+        }
     }
 
     function dealDamageToHero(uint8 damage) private {

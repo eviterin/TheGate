@@ -357,10 +357,23 @@ const Game: React.FC = () => {
       const stateBeforeAnimations = gameState;
       setFrozenState(stateBeforeAnimations);
 
+      // Update optimistic state immediately
+      const newHand = [...(gameState?.hand || [])];
+      // Remove cards in reverse order to maintain correct indices
+      cardIntents
+        .sort((a, b) => b.cardIndex - a.cardIndex)
+        .forEach(intent => {
+          newHand.splice(intent.cardIndex, 1);
+        });
+      setOptimisticHand(newHand);
+
       // Just submit the transaction without waiting for confirmation
-      playCards(plays).catch(error => {
+      await playCards(plays).catch(error => {
         console.error('Transaction failed:', error);
-        // Handle failure if needed
+        // On error, restore the original hand
+        if (gameState) {
+          setOptimisticHand(gameState.hand || []);
+        }
       });
 
       // Play all animations immediately
@@ -404,6 +417,12 @@ const Game: React.FC = () => {
 
       // Clear intents after everything is done
       setCardIntents([]);
+
+      // Set hasAutoEndedTurn to true to prevent double end turn
+      setHasAutoEndedTurn(true);
+      
+      // Automatically end turn after committing cards
+      handleEndTurn();
 
     } catch (error) {
       console.error('Failed to commit card intents:', error);
@@ -509,9 +528,14 @@ const Game: React.FC = () => {
         // Add shorter delay before player turn
         await new Promise(resolve => setTimeout(resolve, 400));
 
-        // Clear frozen state and get fresh state before showing player turn
+        // Clear frozen state and force multiple state refreshes to ensure we have latest state
         setFrozenState(null);
-        const newState = await getGameState();
+        let newState = await getGameState();
+        
+        // Add a small delay and try to get state again to ensure chain has processed everything
+        await new Promise(resolve => setTimeout(resolve, 200));
+        newState = await getGameState();
+        
         if (newState) {
           setGameState(newState);
           setPreviousHealth(newState.currentHealth);
@@ -534,7 +558,12 @@ const Game: React.FC = () => {
       } else {
         // If animations are disabled, just force a state refresh
         setFrozenState(null);
-        const newState = await getGameState();
+        let newState = await getGameState();
+        
+        // Add a small delay and try to get state again to ensure chain has processed everything
+        await new Promise(resolve => setTimeout(resolve, 200));
+        newState = await getGameState();
+        
         if (newState) {
           setGameState(newState);
           setOptimisticHand(newState.hand || []);
@@ -550,6 +579,14 @@ const Game: React.FC = () => {
       setCurrentAnimation(null);
       setShowTurnBanner(false);
       setTurnState('player');
+      
+      // Try to get fresh state
+      const newState = await getGameState();
+      if (newState) {
+        setGameState(newState);
+        setOptimisticHand(newState.hand || []);
+        setOptimisticMana(newState.currentMana || 0);
+      }
     }
   };
 
