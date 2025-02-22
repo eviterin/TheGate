@@ -129,8 +129,8 @@ contract GameState {
             data.hasProtectionBlessing = true;
             data.currentBlock = 5;
         } else if (option == 4) { // WHALE_OPTION_UPGRADE
-            data.maxHealth += 5;
-            data.currentHealth += 5;
+            data.maxHealth += 15;
+            data.currentHealth += 15;
         }
 
         data.runState = RUN_STATE_ENCOUNTER;

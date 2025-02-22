@@ -57,19 +57,19 @@ const WHALE_ROOM_OPTIONS = [
     id: 2, 
     title: '✨ Divine Power', 
     description: 'Channel additional Faith energy into your actions.',
-    effect: '+1 Faith per turn'
+    effect: '3 → 4 ✨ per turn'
   },
   { 
     id: 3, 
     title: '🛡️ Divine Protection', 
     description: 'Begin each combat with a protective barrier.',
-    effect: 'Start with 5 Block'
+    effect: 'Start each turn with 5 🛡️'
   },
   { 
     id: 4, 
     title: '💪 Sacred Might', 
     description: 'Your body is strengthened by divine power.',
-    effect: '+5 Max HP'
+    effect: '21 → 36 ❤️'
   }
 ];
 
