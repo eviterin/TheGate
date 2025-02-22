@@ -128,7 +128,6 @@ const Game: React.FC = () => {
   const [previousBlock, setPreviousBlock] = useState<number>(0);
   const [previousEnemyHealth, setPreviousEnemyHealth] = useState<number[]>([]);
   const [previousEnemyBlock, setPreviousEnemyBlock] = useState<number[]>([]);
-  const [expectingDeath, setExpectingDeath] = useState(false);
 
   // Fetch card data
   useEffect(() => {
@@ -457,7 +456,12 @@ const Game: React.FC = () => {
       setTurnBannerMessage("Enemy Turn");
       setTurnBannerType('enemy');
       setShowTurnBanner(true);
+    }
 
+    try {
+      // Call the end turn action first
+      await endTurnAction();
+      
       // Wait longer for banner animation and transition feel
       await new Promise(resolve => setTimeout(resolve, 1500));
       setTurnState('enemy');
@@ -483,12 +487,6 @@ const Game: React.FC = () => {
               const damage = calculateDamageAfterBlock(intent, currentBlock);
               expectedHealth -= damage;
               currentBlock = Math.max(0, currentBlock - intent); // Reduce block
-              
-              // Check for expected death
-              if (expectedHealth <= 0) {
-                setExpectingDeath(true);
-                break; // Stop processing more enemies if we expect death
-              }
             }
 
             // Create animation state for this enemy
@@ -516,29 +514,36 @@ const Game: React.FC = () => {
         // Hide enemy turn banner
         setShowTurnBanner(false);
         
-        // Only show player turn banner if we don't expect death
-        if (!expectingDeath) {
-          // Longer delay before showing player turn banner
-          await new Promise(resolve => setTimeout(resolve, 800));
-          setTurnBannerMessage("Your Turn");
-          setTurnBannerType('player');
-          setShowTurnBanner(true);
-          
-          // Keep player turn banner visible longer
-          setTimeout(() => {
-            setShowTurnBanner(false);
-            setTurnState('player');
-          }, 2000);
-        }
-      }
-    }
+        // Show player turn banner
+        await new Promise(resolve => setTimeout(resolve, 800));
 
-    try {
-      await endTurnAction();
-      
-      // Reset optimistic values after chain confirmation
-      setOptimisticHand([]);
-      setOptimisticMana(0);
+        // Force a game state refresh before showing player turn
+        const newState = await getGameState();
+        if (newState) {
+          setGameState(newState);
+          setOptimisticHand(newState.hand || []);
+          setOptimisticMana(newState.currentMana || 0);
+        }
+
+        setTurnBannerMessage("Your Turn");
+        setTurnBannerType('player');
+        setShowTurnBanner(true);
+        
+        // Keep player turn banner visible longer
+        setTimeout(() => {
+          setShowTurnBanner(false);
+          setTurnState('player');
+        }, 2000);
+      } else {
+        // If animations are disabled, just force a state refresh
+        const newState = await getGameState();
+        if (newState) {
+          setGameState(newState);
+          setOptimisticHand(newState.hand || []);
+          setOptimisticMana(newState.currentMana || 0);
+        }
+        setTurnState('player');
+      }
     } catch (error) {
       console.error('Failed to end turn:', error);
       
@@ -692,7 +697,6 @@ const Game: React.FC = () => {
             margin: 0 auto;
             box-shadow: 0 0 30px rgba(89, 86, 108, 0.3);
             border-radius: 8px;
-            ${expectingDeath ? 'filter: brightness(0.7);' : ''}
             transition: filter 0.5s ease-out;
           }
 

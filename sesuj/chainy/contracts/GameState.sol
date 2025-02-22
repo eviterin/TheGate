@@ -56,6 +56,7 @@ contract GameState {
     uint8 constant CARD_ID_CLEAVE = 4;
     
     uint16 constant INTENT_BLOCK_5 = 1000;
+    uint16 constant INTENT_BLOCK_AND_ATTACK = 1001;  // New intent type
 
     function enableQuickTransactions() public {
         require(!playerData[msg.sender].hasEnabledQuickTransactions, "Already enabled");
@@ -183,6 +184,9 @@ contract GameState {
                 uint16 intent = data.enemyIntents[i];
                 if (intent == INTENT_BLOCK_5) {
                     data.enemyBlock[i] = 5;
+                } else if (intent == INTENT_BLOCK_AND_ATTACK) {
+                    data.enemyBlock[i] = 5;  // Apply block first
+                    dealDamageToHero(6);     // Then deal damage
                 } else {
                     dealDamageToHero(uint8(intent));
                 }
@@ -286,34 +290,83 @@ contract GameState {
         uint256 seed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
         data.enemyIntents = new uint16[](data.enemyTypes.length);
         
-        for (uint i = 0; i < data.enemyTypes.length; i++) {
-            if (data.enemyCurrentHealth[i] > 0) {
-                uint8 enemyType = data.enemyTypes[i];
-                
-                // Special handling for level 3's single enemy
-                if (data.currentFloor == 3) {
-                    if (enemyType == ENEMY_TYPE_A) {
-                        // Type A does more damage in level 3
-                        data.enemyIntents[i] = uint16(8 + (seed % 5)); // 8-12 damage instead of 6-10
-                    } else if (enemyType == ENEMY_TYPE_B) {
-                        // Type B has higher block and damage in level 3
-                        if (seed % 3 == 0) {
+        // Handle specific level patterns
+        if (data.currentFloor == 1) {
+            // Level 1: Dunes - Two bandits with different patterns
+            for (uint i = 0; i < data.enemyTypes.length; i++) {
+                if (data.enemyCurrentHealth[i] > 0) {
+                    if (data.enemyTypes[i] == ENEMY_TYPE_A) {
+                        // Aggressive bandit: Always attacks with 6-8 damage
+                        data.enemyIntents[i] = uint16(6 + (seed % 3));  // 6-8 damage
+                    } else if (data.enemyTypes[i] == ENEMY_TYPE_B) {
+                        // Defensive bandit: Mix of block, attack, and combined
+                        uint256 action = seed % 10;  // 0-9 for percentage rolls
+                        if (action < 4) {  // 40% chance to block
                             data.enemyIntents[i] = INTENT_BLOCK_5;
-                            data.enemyBlock[i] = 8; // More block (8 instead of 5)
-                        } else {
-                            data.enemyIntents[i] = uint16(6 + (seed % 5)); // 6-10 damage instead of 4-8
+                        } else if (action < 7) {  // 30% chance for block and attack
+                            data.enemyIntents[i] = INTENT_BLOCK_AND_ATTACK;
+                        } else {  // 30% chance to attack
+                            data.enemyIntents[i] = uint16(4 + (seed % 3));  // 4-6 damage
                         }
                     }
-                } else {
-                    // Normal behavior for other levels
-                    if (enemyType == ENEMY_TYPE_A) {
-                        data.enemyIntents[i] = uint16(6 + (seed % 5));
-                    } else if (enemyType == ENEMY_TYPE_B) {
-                        data.enemyIntents[i] = (seed % 3 == 0) ? INTENT_BLOCK_5 : uint16(4 + (seed % 5));
-                    }
+                }
+                seed = uint256(keccak256(abi.encodePacked(seed)));
+            }
+        }
+        else if (data.currentFloor == 2) {
+            // Level 2: Cursed Hamlet - Synchronized villagers
+            // Both enemies will always do the same action
+            uint256 action = seed % 10;  // 0-9 for percentage rolls
+            uint16 sharedIntent;
+            
+            if (action < 5) {  // 50% chance to block
+                sharedIntent = INTENT_BLOCK_5;
+            } else {  // 50% chance to attack
+                sharedIntent = uint16(5 + (seed % 3));  // 5-7 damage
+            }
+            
+            for (uint i = 0; i < data.enemyTypes.length; i++) {
+                if (data.enemyCurrentHealth[i] > 0) {
+                    data.enemyIntents[i] = sharedIntent;
                 }
             }
-            seed = uint256(keccak256(abi.encodePacked(seed)));
+        }
+        else if (data.currentFloor == 3) {
+            // Level 3: Forsaken Outpost - Single powerful guardian
+            if (data.enemyCurrentHealth[0] > 0) {
+                uint256 action = seed % 10;  // 0-9 for percentage rolls
+                
+                if (action < 3) {  // 30% chance to block
+                    data.enemyIntents[0] = INTENT_BLOCK_5;
+                    data.enemyBlock[0] = 8;  // Higher block amount
+                } else if (action < 7) {  // 40% chance for block and attack
+                    data.enemyIntents[0] = INTENT_BLOCK_AND_ATTACK;
+                } else {  // 30% chance to attack
+                    data.enemyIntents[0] = uint16(8 + (seed % 5));  // 8-12 damage
+                }
+            }
+        }
+        else {
+            // Default behavior for other levels
+            for (uint i = 0; i < data.enemyTypes.length; i++) {
+                if (data.enemyCurrentHealth[i] > 0) {
+                    uint8 enemyType = data.enemyTypes[i];
+                    
+                    if (enemyType == ENEMY_TYPE_A) {
+                        data.enemyIntents[i] = uint16(6 + (seed % 5));  // 6-10 damage
+                    } else if (enemyType == ENEMY_TYPE_B) {
+                        uint256 action = seed % 3;  // Basic 3-way split
+                        if (action == 0) {
+                            data.enemyIntents[i] = INTENT_BLOCK_5;
+                        } else if (action == 1) {
+                            data.enemyIntents[i] = INTENT_BLOCK_AND_ATTACK;
+                        } else {
+                            data.enemyIntents[i] = uint16(4 + (seed % 5));  // 4-8 damage
+                        }
+                    }
+                }
+                seed = uint256(keccak256(abi.encodePacked(seed)));
+            }
         }
     }
 

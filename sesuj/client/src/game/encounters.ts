@@ -10,6 +10,12 @@ interface EncounterJson {
         };
         INTENT_TYPES: {
             BLOCK_5: 1000;
+            BLOCK_AND_ATTACK: number;
+        };
+        ANIMATIONS: {
+            ATTACK: string;
+            BLOCK: string;
+            BLOCK_AND_ATTACK: string;
         };
     };
     encounters: {
@@ -119,10 +125,10 @@ function getClientData(level: number): ClientData {
 }
 
 // Type assertion for imported JSON
-const typedData = encounterData as EncounterJson;
+const typedData = (encounterData as unknown) as EncounterJson;
 
 // Export shared constants
-export const { ENEMY_TYPE, INTENT_TYPES } = typedData.constants;
+export const { ENEMY_TYPE, INTENT_TYPES, ANIMATIONS } = typedData.constants;
 
 // Add client data to encounters
 export const encounters: Encounter[] = typedData.encounters.map((encounter) => ({

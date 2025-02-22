@@ -6,11 +6,13 @@
       "TYPE_B": 2
     },
     "INTENT_TYPES": {
-      "BLOCK_5": 1000
+      "BLOCK_5": 1000,
+      "BLOCK_AND_ATTACK": 1001
     },
     "ANIMATIONS": {
       "ATTACK": "jump",
-      "BLOCK": "flip"
+      "BLOCK": "flip",
+      "BLOCK_AND_ATTACK": "flip-attack"
     }
   },
   "encounters": [
@@ -26,19 +28,23 @@
     {
       "level": 1,
       "name": "Dunes",
+      "description": "Two desert bandits ambush you. One is aggressive, the other more cautious.",
       "chainData": {
         "enemyTypes": [1, 2],
         "enemyMaxHealth": [10, 12],
         "baseIntents": {
           "1": { 
-            "damage": { "min": 6, "max": 10 },
-            "animation": "jump"
+            "damage": { "min": 6, "max": 8 },
+            "animation": "jump",
+            "pattern": "aggressive"
           },
           "2": { 
-            "damage": { "min": 4, "max": 8 },
-            "blockChance": 0.33,
+            "damage": { "min": 4, "max": 6 },
+            "blockChance": 0.4,
             "blockAmount": 5,
-            "animation": "flip"
+            "blockAndAttackChance": 0.3,
+            "animation": "flip",
+            "pattern": "defensive"
           }
         }
       }
@@ -46,17 +52,17 @@
     {
       "level": 2,
       "name": "Cursed Hamlet",
+      "description": "Two possessed villagers. They move in perfect sync.",
       "chainData": {
-        "enemyTypes": [1, 2],
-        "enemyMaxHealth": [12, 14],
+        "enemyTypes": [1, 1],
+        "enemyMaxHealth": [12, 12],
         "baseIntents": {
           "1": { 
-            "damage": { "min": 7, "max": 11 },
-            "animation": "jump"
-          },
-          "2": { 
-            "damage": { "min": 5, "max": 9 },
-            "animation": "jump"
+            "damage": { "min": 5, "max": 7 },
+            "blockChance": 0.5,
+            "blockAmount": 5,
+            "animation": "jump",
+            "pattern": "synchronized"
           }
         }
       }
@@ -64,19 +70,18 @@
     {
       "level": 3,
       "name": "Forsaken Outpost",
+      "description": "A lone corrupted guardian blocks your path.",
       "chainData": {
-        "enemyTypes": [1],
-        "enemyMaxHealth": [18],
+        "enemyTypes": [2],
+        "enemyMaxHealth": [24],
         "baseIntents": {
-          "1": { 
-            "damage": { "min": 8, "max": 12 },
-            "animation": "jump"
-          },
           "2": { 
-            "damage": { "min": 6, "max": 10 },
-            "blockChance": 0.33,
+            "damage": { "min": 8, "max": 12 },
+            "blockChance": 0.3,
             "blockAmount": 8,
-            "animation": "flip"
+            "blockAndAttackChance": 0.4,
+            "animation": "flip",
+            "pattern": "guardian"
           }
         }
       }

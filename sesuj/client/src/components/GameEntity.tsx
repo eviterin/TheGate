@@ -20,10 +20,12 @@ interface EncountersData {
     };
     INTENT_TYPES: {
       BLOCK_5: number;
+      BLOCK_AND_ATTACK: number;
     };
     ANIMATIONS: {
       ATTACK: string;
       BLOCK: string;
+      BLOCK_AND_ATTACK: string;
     };
   };
   encounters: any[]; // We don't need the full encounters type for this usage
@@ -35,14 +37,23 @@ const ANIMATIONS = (encountersData as EncountersData).constants.ANIMATIONS;
 
 // Helper to determine intent type
 interface IntentInfo {
-  type: 'attack' | 'block';
+  type: 'attack' | 'block' | 'block_and_attack';
   value: number;
+  blockValue?: number;
   animation: string;
 }
 
 const getIntentInfo = (intent: number): IntentInfo => {
   if (intent === INTENT_TYPES.BLOCK_5) {
     return { type: 'block', value: 5, animation: ANIMATIONS.BLOCK };
+  }
+  if (intent === INTENT_TYPES.BLOCK_AND_ATTACK) {
+    return { 
+      type: 'block_and_attack', 
+      value: 6,
+      blockValue: 5,
+      animation: ANIMATIONS.BLOCK_AND_ATTACK 
+    };
   }
   // Any other number is an attack with that damage value
   return { type: 'attack', value: intent, animation: ANIMATIONS.ATTACK };
@@ -185,15 +196,21 @@ const GameEntity: React.FC<GameEntityProps> = ({
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         padding: '4px 8px',
         borderRadius: '4px',
-        color: intentInfo.type === 'attack' ? '#ff7070' : '#70ff70',
+        color: intentInfo.type === 'block' ? '#70ff70' : 
+               intentInfo.type === 'block_and_attack' ? '#ffff70' : '#ff7070',
         fontSize: '14px',
         display: 'flex',
         alignItems: 'center',
         gap: '4px',
-        border: `1px solid ${intentInfo.type === 'attack' ? '#ff4040' : '#40ff40'}`
+        border: `1px solid ${
+          intentInfo.type === 'block' ? '#40ff40' : 
+          intentInfo.type === 'block_and_attack' ? '#ffff40' : '#ff4040'
+        }`
       }}>
         {intentInfo.type === 'block' ? (
           <>🛡️ Block {intentInfo.value}</>
+        ) : intentInfo.type === 'block_and_attack' ? (
+          <>🛡️ Block {intentInfo.blockValue} + ⚔️ Attack {intentInfo.value}</>
         ) : (
           <>⚔️ Attack {intentInfo.value}</>
         )}
@@ -215,6 +232,11 @@ const GameEntity: React.FC<GameEntityProps> = ({
           @keyframes flip {
             0%, 100% { transform: translate(-50%, -50%) rotateY(0deg); }
             100% { transform: translate(-50%, -50%) rotateY(360deg); }
+          }
+
+          @keyframes flip-attack {
+            0%, 100% { transform: translate(-50%, -50%) rotateY(0deg); }
+            50% { transform: translate(-50%, -50%) rotateY(360deg) scale(1.2); }
           }
 
           @keyframes shake {
