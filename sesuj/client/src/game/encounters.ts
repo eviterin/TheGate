@@ -148,4 +148,9 @@ export function getClientEncounterData(level: number): ClientData {
 export function getFloorName(level: number): string {
     const encounter = getEncounter(level);
     return encounter.name;
+}
+
+// New helper for backgrounds
+export function getBackgroundImage(level: number): string {
+    return `/src/assets/arenas/room_${level}.png`;
 } 

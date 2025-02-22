@@ -8,6 +8,7 @@ import LoadingOverlay from './LoadingOverlay';
 import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, useSkipCardReward, useRetryFromDeath } from '../hooks/GameState';
 import { useCards } from '../hooks/CardsContext';
 import './Game.css';
+import { getBackgroundImage } from '../game/encounters';
 
 // Add InfoBar props interface
 interface InfoBarProps {
@@ -347,9 +348,9 @@ const Game: React.FC = () => {
     return !card.targeted;
   };
 
-  const getBackgroundImage = () => {
+  const getBackground = () => {
     if (!gameState) return '';
-    return `/src/assets/arenas/room_${gameState.currentFloor}.png`;
+    return getBackgroundImage(gameState.currentFloor);
   };
 
   // Handle end turn with optimistic updates
@@ -885,7 +886,7 @@ const Game: React.FC = () => {
         <div className="game-container">
           <div className="side-decorations left"></div>
           <div className="side-decorations right"></div>
-          <div className="game-content" style={{backgroundImage: `url(${getBackgroundImage()})`}}>
+          <div className="game-content" style={{backgroundImage: `url(${getBackground()})`}}>
             {/* Info Bar */}
             <InfoBar />
 
