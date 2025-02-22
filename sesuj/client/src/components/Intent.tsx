@@ -27,7 +27,7 @@ const Intent: React.FC<IntentProps> = ({
   isCommitting 
 }) => {
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
-  const [position, setPosition] = useState({ x: window.innerWidth - 420, y: window.innerHeight - 250 });
+  const [position, setPosition] = useState({ x: window.innerWidth - 320, y: window.innerHeight - 250 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
