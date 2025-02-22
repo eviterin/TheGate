@@ -23,6 +23,7 @@ interface GameStateData {
     draw: number[];
     discard: number[];
     availableCardRewards: number[];
+    lastChosenCard: number;
 }
 
 export function useGameContract() {
@@ -31,6 +32,14 @@ export function useGameContract() {
         throw new Error('GameState contract not initialized');
     }
     return contracts.gameState;
+}
+
+export function useVictoryTrackerContract() {
+    const { contracts } = useContracts();
+    if (!contracts.victoryTracker) {
+        throw new Error('VictoryTracker contract not initialized');
+    }
+    return contracts.victoryTracker;
 }
 
 export function useStartRun() {
@@ -261,6 +270,7 @@ function hasGameStateChanged(oldState: any, newState: any): boolean {
            oldState.currentHealth !== newState.currentHealth ||
            oldState.currentMana !== newState.currentMana ||
            oldState.currentBlock !== newState.currentBlock ||
+           oldState.lastChosenCard !== newState.lastChosenCard ||
            JSON.stringify(oldState.hand) !== JSON.stringify(newState.hand) ||
            JSON.stringify(oldState.enemyCurrentHealth) !== JSON.stringify(newState.enemyCurrentHealth) ||
            JSON.stringify(oldState.enemyBlock) !== JSON.stringify(newState.enemyBlock) ||
@@ -324,6 +334,7 @@ export function useGameState() {
                 currentBlock: Number(state[4] ?? 0),
                 currentMana: Number(state[5] ?? 0),
                 maxMana: Number(state[6] ?? 0),
+                lastChosenCard: Number(state[16] ?? 0),
                 enemyTypes: Array.isArray(enemyTypes) ? enemyTypes.map(Number) : [],
                 enemyMaxHealth: Array.isArray(enemyMaxHealth) ? enemyMaxHealth.map(Number) : [],
                 enemyCurrentHealth: Array.isArray(enemyCurrentHealth) ? enemyCurrentHealth.map(Number) : [],
@@ -838,4 +849,55 @@ export function useRetryFromDeath() {
     }, [contractConfig]);
 
     return { retryFromDeath };
+}
+
+// VictoryTracker hooks
+export function useHasPlayerWon() {
+    const contractConfig = useVictoryTrackerContract();
+
+    const hasPlayerWon = useCallback(async (address: string): Promise<boolean> => {
+        try {
+            console.log('Checking if player has won:', address);
+            
+            const result = await readContract(config, {
+                address: contractConfig.address,
+                abi: contractConfig.abi,
+                functionName: 'hasPlayerWon',
+                args: [address],
+            }) as boolean;
+
+            console.log('Player victory status:', { address, hasWon: result });
+            return result;
+        } catch (error) {
+            console.error('Error checking player victory:', error);
+            throw error;
+        }
+    }, [contractConfig]);
+
+    return { hasPlayerWon };
+}
+
+export function useGetAllWinners() {
+    const contractConfig = useVictoryTrackerContract();
+
+    const getAllWinners = useCallback(async (): Promise<string[]> => {
+        try {
+            console.log('Getting all winners...');
+            
+            const winners = await readContract(config, {
+                address: contractConfig.address,
+                abi: contractConfig.abi,
+                functionName: 'getAllWinners',
+                args: [],
+            }) as string[];
+
+            console.log('All winners:', winners);
+            return winners;
+        } catch (error) {
+            console.error('Error getting winners:', error);
+            throw error;
+        }
+    }, [contractConfig]);
+
+    return { getAllWinners };
 } 

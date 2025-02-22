@@ -261,7 +261,7 @@
 .skip-reward-button {
   background: rgba(89, 86, 108, 0.15);
   border: 1px solid rgba(89, 86, 108, 0.3);
-  color: #cccccc;
+  color: #ffd700;
   padding: 12px 24px;
   border-radius: 4px;
   cursor: pointer;
@@ -272,8 +272,9 @@
 
 .skip-reward-button:hover:not(:disabled) {
   background: rgba(89, 86, 108, 0.25);
-  border-color: rgba(89, 86, 108, 0.5);
+  border-color: #ffd700;
   transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
 }
 
 .continue-button {
@@ -295,7 +296,8 @@
 }
 
 .continue-button.disabled {
-  background: linear-gradient(135deg, #4a4a4a 0%, #2a2a2a 100%);
+  background: rgba(89, 86, 108, 0.15);
+  border: 1px solid rgba(89, 86, 108, 0.3);
   color: #666;
   cursor: not-allowed;
   text-shadow: none;

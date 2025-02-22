@@ -28,6 +28,12 @@ interface IGameEncounters {
     function clearEnemyData(address player) external;
 }
 
+interface IVictoryTracker {
+    function recordVictory(address player) external;
+    function hasPlayerWon(address player) external view returns (bool);
+    function getAllWinners() external view returns (address[] memory);
+}
+
 contract GameState {
     struct GameData {
         uint8 runState;
@@ -46,16 +52,15 @@ contract GameState {
         uint256 quickTransactionsEnabledAt;
         bool extraCardDrawEnabled;
         bool hasProtectionBlessing;
-    }
+        uint8 lastChosenCard;
+    } 
     
     mapping(address => GameData) public playerData;
-    mapping(address => bool) public victoriousPlayers;
-    address[] public winners;
     IGameEncounters public encounters;
+    IVictoryTracker public victoryTracker;
 
     event QuickTransactionsEnabled(address indexed user, uint256 timestamp);
     event RewardsGenerated(address indexed user, uint8 floor, uint8[] rewards);
-    event GameCompleted(address indexed player);
 
     uint8 constant RUN_STATE_NONE = 0;
     uint8 constant RUN_STATE_WHALE_ROOM = 1;
@@ -68,7 +73,7 @@ contract GameState {
     uint8 constant CARD_ID_PRAY = 2;
     uint8 constant CARD_ID_UNFOLD_TRUTH = 3;
     uint8 constant CARD_ID_PREACH = 4;
-    uint8 constant CARD_ID_BALANCE = 5;
+    uint8 constant CARD_ID_BALANCE = 5; 
     uint8 constant CARD_ID_UNVEIL = 6;
     uint8 constant CARD_ID_READ_SCRIPTURE = 7;
     uint8 constant CARD_ID_SEEK_GUIDANCE = 8;
@@ -76,8 +81,9 @@ contract GameState {
     uint8 constant CARD_ID_DIVINE_WRATH = 10;
     uint8 constant CARD_ID_EXPLODICATE = 11;
 
-    constructor(address _encountersContract) {
+    constructor(address _encountersContract, address _victoryTracker) {
         encounters = IGameEncounters(_encountersContract);
+        victoryTracker = IVictoryTracker(_victoryTracker);
     }
 
     function enableQuickTransactions() public {
@@ -99,27 +105,21 @@ contract GameState {
         data.currentMana = 0;
         data.extraCardDrawEnabled = false;
         data.hasProtectionBlessing = false;
+        data.lastChosenCard = 0;  // Reset last chosen card
         delete data.deck;
         data.deck = [CARD_ID_SMITE, CARD_ID_SMITE, CARD_ID_SMITE, CARD_ID_PRAY, CARD_ID_PRAY];
     }
     
     function abandonRun() public {
         GameData storage data = playerData[msg.sender];
+        encounters.clearEnemyData(msg.sender);
+        startRun();
         data.runState = RUN_STATE_NONE;
-        data.currentFloor = 0;
         data.maxHealth = 0;
         data.currentHealth = 0;
-        data.currentBlock = 0;
         data.maxMana = 0;
         data.currentMana = 0;
-        data.extraCardDrawEnabled = false;
-        data.hasProtectionBlessing = false;
         delete data.deck;
-        delete data.hand;
-        delete data.draw;
-        delete data.discard;
-        delete data.availableCardRewards;
-        encounters.clearEnemyData(msg.sender);
     }
     
     function chooseRoom(uint8 option) public {
@@ -127,15 +127,15 @@ contract GameState {
         require(data.runState == RUN_STATE_WHALE_ROOM, "Not in whale room");
         require(option >= 1 && option <= 4, "Invalid whale room option");
 
-        if (option == 1) { // WHALE_OPTION_EXTRA_CARD
+        if (option == 1) {
             data.extraCardDrawEnabled = true;
-        } else if (option == 2) { // WHALE_OPTION_EXTRA_FAITH
+        } else if (option == 2) {
             data.maxMana += 1;
             data.currentMana += 1;
-        } else if (option == 3) { // WHALE_OPTION_PROTECTION
+        } else if (option == 3) { 
             data.hasProtectionBlessing = true;
             data.currentBlock = 5;
-        } else if (option == 4) { // WHALE_OPTION_UPGRADE
+        } else if (option == 4) {
             data.maxHealth += 15;
             data.currentHealth += 15;
         }
@@ -143,6 +143,22 @@ contract GameState {
         data.runState = RUN_STATE_ENCOUNTER;
         data.currentFloor++;
         startEncounter();
+    }
+
+    function requiresTarget(uint8 cardId) private pure returns (bool) {
+        return cardId != CARD_ID_PRAY && 
+               cardId != CARD_ID_SACRED_RITUAL && 
+               cardId != CARD_ID_READ_SCRIPTURE && 
+               cardId != CARD_ID_SEEK_GUIDANCE;
+    }
+
+    function isUnimplementedCard(uint8 cardId) private pure returns (bool) {
+        return cardId == CARD_ID_PREACH ||
+               cardId == CARD_ID_BALANCE ||
+               cardId == CARD_ID_UNVEIL ||
+               cardId == CARD_ID_READ_SCRIPTURE ||
+               cardId == CARD_ID_SEEK_GUIDANCE ||
+               cardId == CARD_ID_DIVINE_WRATH;
     }
 
     function playCard(uint8 playedCardIndex, uint8 targetIndex) public {
@@ -153,14 +169,17 @@ contract GameState {
         (uint8[] memory types,,uint16[] memory currentHealth,,,) = encounters.getEnemyData(msg.sender);
 
         // Check targeting requirements
-        if (playedCardID == CARD_ID_SMITE || 
-            playedCardID == CARD_ID_UNFOLD_TRUTH || 
-            playedCardID == CARD_ID_PREACH ||
-            playedCardID == CARD_ID_BALANCE || 
-            playedCardID == CARD_ID_UNVEIL || 
-            playedCardID == CARD_ID_EXPLODICATE) {
+        if (requiresTarget(playedCardID)) {
             require(targetIndex < types.length, "Invalid target");
             require(currentHealth[targetIndex] > 0, "Cannot target a dead enemy");
+        }
+
+        // Default implementation for unimplemented cards (6 block)
+        if (data.currentMana >= 1 && isUnimplementedCard(playedCardID)) {
+            data.currentMana--;
+            data.currentBlock += 6;
+            discardCard(playedCardIndex);
+            return;
         }
 
         // Implemented cards
@@ -192,19 +211,6 @@ contract GameState {
                 }
             }
             if (anyKilled && checkWinCondition()) return;
-            discardCard(playedCardIndex);
-        }
-        // Default implementation for unimplemented cards (6 block)
-        else if (data.currentMana >= 1 && (
-            playedCardID == CARD_ID_PREACH ||
-            playedCardID == CARD_ID_BALANCE ||
-            playedCardID == CARD_ID_UNVEIL ||
-            playedCardID == CARD_ID_READ_SCRIPTURE ||
-            playedCardID == CARD_ID_SEEK_GUIDANCE ||
-            playedCardID == CARD_ID_DIVINE_WRATH
-        )) {
-            data.currentMana--;
-            data.currentBlock += 6;
             discardCard(playedCardIndex);
         }
     }
@@ -326,10 +332,35 @@ contract GameState {
         generateRewards();
     }
 
+    function getRewardPair(uint8 lastChosen) private pure returns (uint8, uint8) {
+        if (lastChosen == 0) { // First floor
+            return (CARD_ID_UNFOLD_TRUTH, CARD_ID_PREACH);
+        } else if (lastChosen == CARD_ID_UNFOLD_TRUTH) {
+            return (CARD_ID_PREACH, CARD_ID_BALANCE);
+        } else if (lastChosen == CARD_ID_PREACH) {
+            return (CARD_ID_UNFOLD_TRUTH, CARD_ID_BALANCE);
+        } else if (lastChosen == CARD_ID_BALANCE) {
+            return (CARD_ID_UNVEIL, CARD_ID_READ_SCRIPTURE);
+        } else if (lastChosen == CARD_ID_UNVEIL) {
+            return (CARD_ID_READ_SCRIPTURE, CARD_ID_SEEK_GUIDANCE);
+        } else if (lastChosen == CARD_ID_READ_SCRIPTURE) {
+            return (CARD_ID_UNVEIL, CARD_ID_SEEK_GUIDANCE);
+        } else if (lastChosen == CARD_ID_SEEK_GUIDANCE) {
+            return (CARD_ID_SACRED_RITUAL, CARD_ID_DIVINE_WRATH);
+        } else if (lastChosen == CARD_ID_SACRED_RITUAL) {
+            return (CARD_ID_DIVINE_WRATH, CARD_ID_EXPLODICATE);
+        } else if (lastChosen == CARD_ID_DIVINE_WRATH) {
+            return (CARD_ID_SACRED_RITUAL, CARD_ID_EXPLODICATE);
+        }
+        return (0, 0); // Should never happen
+    }
+
     function generateRewards() private {
         GameData storage data = playerData[msg.sender];
         delete data.availableCardRewards;
-        data.availableCardRewards = [CARD_ID_UNFOLD_TRUTH, CARD_ID_SACRED_RITUAL];
+
+        (uint8 reward1, uint8 reward2) = getRewardPair(data.currentFloor == 1 ? 0 : data.lastChosenCard);
+        data.availableCardRewards = [reward1, reward2];
         emit RewardsGenerated(msg.sender, data.currentFloor, data.availableCardRewards);
     }
 
@@ -347,14 +378,13 @@ contract GameState {
         require(isValidChoice, "Invalid card choice");
 
         data.deck.push(cardId);
+        data.lastChosenCard = cardId;
         delete data.availableCardRewards;
         data.runState = RUN_STATE_ENCOUNTER;
         data.currentFloor++;
 
         if (data.currentFloor == 11) {
-            victoriousPlayers[msg.sender] = true;
-            winners.push(msg.sender);
-            emit GameCompleted(msg.sender);
+            victoryTracker.recordVictory(msg.sender);
             data.runState = RUN_STATE_NONE;
         } else {
             startEncounter();
@@ -364,22 +394,7 @@ contract GameState {
     function skipCardReward() public {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_CARD_REWARD, "Not in reward state");
-        delete data.availableCardRewards;
-        data.runState = RUN_STATE_ENCOUNTER;
-        data.currentFloor++;
-
-        if (data.currentFloor == 11) {
-            victoriousPlayers[msg.sender] = true;
-            winners.push(msg.sender);
-            emit GameCompleted(msg.sender);
-            data.runState = RUN_STATE_NONE;
-        } else {
-            startEncounter();
-        }
-    }
-
-    function hasPlayerWon(address player) public view returns (bool) {
-        return victoriousPlayers[player];
+        chooseCardReward(data.lastChosenCard);
     }
 
     function getEnemyData(address player) public view returns (
@@ -474,28 +489,6 @@ contract GameState {
     function retryFromDeath() public {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_DEATH, "Not in death state");
-        
-        data.runState = RUN_STATE_NONE;
-        data.currentFloor = 0;
-        data.maxHealth = 0;
-        data.currentHealth = 0;
-        data.currentBlock = 0;
-        data.maxMana = 0;
-        data.currentMana = 0;
-        data.extraCardDrawEnabled = false;
-        data.hasProtectionBlessing = false;
-        delete data.deck;
-        delete data.hand;
-        delete data.draw;
-        delete data.discard;
-        delete data.availableCardRewards;
-        encounters.clearEnemyData(msg.sender);
-        
-        startRun();
-    }
-
-    // Function to get all winners
-    function getAllWinners() public view returns (address[] memory) {
-        return winners;
+        abandonRun();
     }
 }

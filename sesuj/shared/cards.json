@@ -29,7 +29,7 @@
         },
         {
             "numericId": 4,
-            "id": "explodicate",
+            "id": "explodicate2",
             "name": "Preach",
             "description": "Deal 8 damage to ALL enemies.",
             "manaCost": 2,
@@ -74,7 +74,7 @@
         },
         {
             "numericId": 9,
-            "id": "explodicate",
+            "id": "explodicate3",
             "name": "Sacred Ritual",
             "description": "Gain 10 block. Heal 3 HP.",
             "manaCost": 2,
@@ -83,7 +83,7 @@
         },
         {
             "numericId": 10,
-            "id": "explodicate",
+            "id": "explodicate4",
             "name": "Divine Wrath",
             "description": "Deal 8 damage. If enemy is at full HP, deal double.",
             "manaCost": 1,
@@ -92,7 +92,7 @@
         },
         {
             "numericId": 11,
-            "id": "explodicate",
+            "id": "explodicate5",
             "name": "Explodicate",
             "description": "Deal 15 damage to ALL.",
             "manaCost": 1,

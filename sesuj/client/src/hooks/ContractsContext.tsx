@@ -11,6 +11,7 @@ interface ContractConfig {
 interface ContractsState {
     gameState?: ContractConfig;
     cards?: ContractConfig;
+    victoryTracker?: ContractConfig;
 }
 
 interface ContractsContextType {
@@ -43,6 +44,7 @@ export function ContractsProvider({ children, onInitialized }: ContractsProvider
                 const contractsToLoad = [
                     { name: 'GameState.sol', key: 'gameState' },
                     { name: 'Cards.sol', key: 'cards' },
+                    { name: 'VictoryTracker.sol', key: 'victoryTracker' },
                 ];
 
                 const loadedContracts: ContractsState = {};

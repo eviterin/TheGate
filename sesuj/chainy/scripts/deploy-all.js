@@ -6,8 +6,10 @@ const { execSync } = require('child_process');
 // Read the contract artifacts
 const encountersPath = path.join(__dirname, '../artifacts/contracts/GameEncounters.sol/GameEncounters.json');
 const gameStatePath = path.join(__dirname, '../artifacts/contracts/GameState.sol/GameState.json');
+const victoryTrackerPath = path.join(__dirname, '../artifacts/contracts/VictoryTracker.sol/VictoryTracker.json');
 const encountersArtifact = JSON.parse(fs.readFileSync(encountersPath));
 const gameStateArtifact = JSON.parse(fs.readFileSync(gameStatePath));
+const victoryTrackerArtifact = JSON.parse(fs.readFileSync(victoryTrackerPath));
 
 async function runStep(name, command) {
     console.log(`\n📝 ${name}...`);
@@ -19,6 +21,30 @@ async function runStep(name, command) {
         console.error(`❌ ${name} failed:`, error.message);
         return false;
     }
+}
+
+async function deployVictoryTracker(wallet) {
+    console.log('\n📝 Deploying VictoryTracker contract...');
+    
+    const factory = new ethers.ContractFactory(
+        victoryTrackerArtifact.abi,
+        victoryTrackerArtifact.bytecode,
+        wallet
+    );
+
+    const contract = await factory.deploy();
+    await contract.waitForDeployment();
+
+    const deployedAddress = await contract.getAddress();
+    console.log('✅ VictoryTracker deployed to:', deployedAddress);
+    
+    appendToDeployedContracts({
+        name: 'VictoryTracker.sol',
+        address: deployedAddress,
+        abi: victoryTrackerArtifact.abi
+    });
+
+    return contract;
 }
 
 async function deployEncounters(wallet) {
@@ -45,7 +71,7 @@ async function deployEncounters(wallet) {
     return contract;
 }
 
-async function deployGameState(wallet, encountersAddress) {
+async function deployGameState(wallet, encountersAddress, victoryTrackerAddress) {
     console.log('\n📝 Deploying GameState contract...');
     
     const factory = new ethers.ContractFactory(
@@ -54,7 +80,7 @@ async function deployGameState(wallet, encountersAddress) {
         wallet
     );
 
-    const contract = await factory.deploy(encountersAddress);
+    const contract = await factory.deploy(encountersAddress, victoryTrackerAddress);
     await contract.waitForDeployment();
 
     const deployedAddress = await contract.getAddress();
@@ -111,21 +137,25 @@ async function main() {
         
         console.log("Deploying from address:", wallet.address);
 
-        // Step 2: Deploy GameEncounters contract
+        // Step 2: Deploy VictoryTracker contract
+        const victoryTracker = await deployVictoryTracker(wallet);
+        const victoryTrackerAddress = await victoryTracker.getAddress();
+
+        // Step 3: Deploy GameEncounters contract
         const encounters = await deployEncounters(wallet);
         const encountersAddress = await encounters.getAddress();
 
-        // Step 3: Deploy GameState contract with GameEncounters address
-        const gameState = await deployGameState(wallet, encountersAddress);
+        // Step 4: Deploy GameState contract with GameEncounters and VictoryTracker addresses
+        const gameState = await deployGameState(wallet, encountersAddress, victoryTrackerAddress);
         const gameStateAddress = await gameState.getAddress();
 
-        // Step 4: Update GameEncounters with GameState address
+        // Step 5: Update GameEncounters with GameState address
         console.log('\n📝 Updating GameEncounters with GameState address...');
         const tx = await encounters.setGameStateContract(gameStateAddress);
         await tx.wait();
         console.log('✅ GameEncounters updated with GameState address');
 
-        // Step 5: Deploy cards
+        // Step 6: Deploy cards
         if (!await runStep(
             'Deploying cards',
             'node scripts/deploy-cards.js'

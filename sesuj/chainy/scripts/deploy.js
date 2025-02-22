@@ -5,9 +5,35 @@ const { enrichGameState } = require('./enrich-gamestate');
 
 // Read the contract artifacts
 const gameStatePath = path.join(__dirname, '../artifacts/contracts/GameState.sol/GameState.json');
+const victoryTrackerPath = path.join(__dirname, '../artifacts/contracts/VictoryTracker.sol/VictoryTracker.json');
 const gameStateArtifact = JSON.parse(fs.readFileSync(gameStatePath));
+const victoryTrackerArtifact = JSON.parse(fs.readFileSync(victoryTrackerPath));
 
-async function deployGameState(wallet) {
+async function deployVictoryTracker(wallet) {
+    console.log('Deploying VictoryTracker contract...');
+    
+    const factory = new ethers.ContractFactory(
+        victoryTrackerArtifact.abi,
+        victoryTrackerArtifact.bytecode,
+        wallet
+    );
+
+    const contract = await factory.deploy();
+    await contract.waitForDeployment();
+
+    const deployedAddress = await contract.getAddress();
+    console.log('VictoryTracker contract deployed to:', deployedAddress);
+    
+    appendToDeployedContracts({
+        name: 'VictoryTracker.sol',
+        address: deployedAddress,
+        abi: victoryTrackerArtifact.abi
+    });
+
+    return deployedAddress;
+}
+
+async function deployGameState(wallet, victoryTrackerAddress) {
     console.log('Deploying GameState contract...');
     
     const factory = new ethers.ContractFactory(
@@ -16,7 +42,7 @@ async function deployGameState(wallet) {
         wallet
     );
 
-    const contract = await factory.deploy();
+    const contract = await factory.deploy('0x0000000000000000000000000000000000000000', victoryTrackerAddress);
     await contract.waitForDeployment();
 
     const deployedAddress = await contract.getAddress();
@@ -68,8 +94,11 @@ async function main() {
     
     console.log("Deploying from address:", wallet.address);
 
-    // Deploy GameState contract
-    await deployGameState(wallet);
+    // Deploy VictoryTracker contract first
+    const victoryTrackerAddress = await deployVictoryTracker(wallet);
+
+    // Deploy GameState contract with VictoryTracker address
+    await deployGameState(wallet, victoryTrackerAddress);
 }
 
 // Load environment variables and run
