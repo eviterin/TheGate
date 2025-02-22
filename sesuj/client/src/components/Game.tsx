@@ -1152,35 +1152,37 @@ const Game: React.FC = () => {
             {/* Show reward selection UI when in reward state */}
             {gameState?.runState === 3 && (
               <div className="reward-overlay">
-                <h2>Choose a Card</h2>
-                <div className="reward-cards">
-                  {cardData
-                    .filter(card => gameState.availableCardRewards.includes(card.numericId))
-                    .map(card => (
-                      <div
-                        key={card.numericId}
-                        className={`reward-card-container ${selectedReward === card.numericId ? 'selected' : ''}`}
-                        onClick={() => handleSelectReward(card.numericId)}
-                      >
-                        <Card {...card} />
-                      </div>
-                    ))}
-                </div>
-                <div className="reward-buttons">
-                  <button 
-                    className="menu-button skip-reward-button"
-                    onClick={handleSkipReward}
-                    disabled={isChoosingReward}
-                  >
-                    Skip
-                  </button>
-                  <button
-                    className={`menu-button continue-button ${!selectedReward || isChoosingReward ? 'disabled' : ''}`}
-                    onClick={handleConfirmReward}
-                    disabled={!selectedReward || isChoosingReward}
-                  >
-                    {isChoosingReward ? 'Adding to deck...' : 'Continue'}
-                  </button>
+                <div className="reward-content">
+                  <h2>Choose Your Reward</h2>
+                  <div className="reward-cards">
+                    {cardData
+                      .filter(card => gameState.availableCardRewards.includes(card.numericId))
+                      .map(card => (
+                        <div
+                          key={card.numericId}
+                          className={`reward-card-container ${selectedReward === card.numericId ? 'selected' : ''} ${isChoosingReward ? 'disabled' : ''}`}
+                          onClick={() => !isChoosingReward && handleSelectReward(card.numericId)}
+                        >
+                          <Card {...card} />
+                        </div>
+                      ))}
+                  </div>
+                  <div className="reward-buttons">
+                    <button 
+                      className="skip-reward-button"
+                      onClick={handleSkipReward}
+                      disabled={isChoosingReward}
+                    >
+                      {isChoosingReward ? 'Skipping...' : 'Skip'}
+                    </button>
+                    <button
+                      className={`continue-button ${!selectedReward || isChoosingReward ? 'disabled' : ''}`}
+                      onClick={handleConfirmReward}
+                      disabled={!selectedReward || isChoosingReward}
+                    >
+                      {isChoosingReward ? 'Adding...' : 'Add to Deck'}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1349,7 +1351,7 @@ const Game: React.FC = () => {
       />
       <LoadingOverlay 
         isVisible={isChoosingReward} 
-        message={selectedReward ? "Adding card to your deck..." : "Skipping reward..."} 
+        message={selectedReward ? "Receiving divine blessing..." : "Faith guides you onward..."} 
       />
       <LoadingOverlay 
         isVisible={isRetrying} 

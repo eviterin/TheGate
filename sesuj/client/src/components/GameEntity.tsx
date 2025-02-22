@@ -244,32 +244,46 @@ const GameEntity: React.FC<GameEntityProps> = ({
     return (
       <div style={{
         position: 'absolute',
-        bottom: '-25px',
+        top: '-105px',
         left: '50%',
         transform: 'translateX(-50%)',
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         padding: '4px 8px',
         borderRadius: '4px',
         color: getIntentColor(intentInfo.type),
-        fontSize: '14px',
+        fontSize: '16px',
         display: 'flex',
         alignItems: 'center',
         gap: '4px',
         border: `1px solid ${getBorderColor(intentInfo.type)}`,
-        zIndex: 3
-      }}>
+        zIndex: 3,
+        whiteSpace: 'nowrap',
+        cursor: 'help'
+      }} className="stat-container" title={
+        intentInfo.type === 'block' ? 
+          `Intends to: Block ${intentInfo.value} damage` :
+        intentInfo.type === 'block_and_attack' ? 
+          `Intends to: Block ${intentInfo.blockValue} damage and deal ${intentInfo.value} damage` :
+        intentInfo.type === 'heal' ? 
+          `Intends to: Heal ${intentInfo.value} HP` :
+        intentInfo.type === 'attack_buff' ? 
+          `Intends to: Increase attack damage by ${intentInfo.value}` :
+        intentInfo.type === 'block_and_heal' ? 
+          `Intends to: Block ${intentInfo.blockValue} damage and heal ${intentInfo.healValue} HP` :
+          `Intends to: Deal ${intentInfo.value} damage`
+      }>
         {intentInfo.type === 'block' ? (
-          <>🛡️ Block {intentInfo.value}</>
+          <>🛡️{intentInfo.value}</>
         ) : intentInfo.type === 'block_and_attack' ? (
-          <>🛡️ Block {intentInfo.blockValue} + ⚔️ Attack {intentInfo.value}</>
+          <>🛡️{intentInfo.blockValue}+⚔️{intentInfo.value}</>
         ) : intentInfo.type === 'heal' ? (
-          <>💚 Heal {intentInfo.value}</>
+          <>💚{intentInfo.value}</>
         ) : intentInfo.type === 'attack_buff' ? (
-          <>💪 Buff +{intentInfo.value} ATK</>
+          <>💪+{intentInfo.value}</>
         ) : intentInfo.type === 'block_and_heal' ? (
-          <>🛡️ Block {intentInfo.blockValue} + 💚 Heal {intentInfo.healValue}</>
+          <>🛡️{intentInfo.blockValue}+💚{intentInfo.healValue}</>
         ) : (
-          <>⚔️ Attack {intentInfo.value}</>
+          <>⚔️{intentInfo.value}</>
         )}
       </div>
     );

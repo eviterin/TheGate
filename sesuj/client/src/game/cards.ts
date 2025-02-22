@@ -1,6 +1,5 @@
 import cardData from '../../../shared/cards.json';
 
-// Type for the JSON data structure
 interface CardDataJson {
     cards: {
         numericId: number;
@@ -13,7 +12,6 @@ interface CardDataJson {
     }[];
 }
 
-// Define animation types
 export type CardAnimationType = 'jump' | 'flip' | 'none';
 
 export interface CardData {
@@ -23,11 +21,10 @@ export interface CardData {
     description: string;
     manaCost: number;
     targeted: boolean;
-    imagePath?: string;  // Client-only field
+    imagePath?: string; 
     animationType: CardAnimationType;
 }
 
-// Assert the type of imported JSON
 const typedCardData = cardData as CardDataJson;
 
 export const cards: CardData[] = typedCardData.cards.map((card) => ({
@@ -35,7 +32,6 @@ export const cards: CardData[] = typedCardData.cards.map((card) => ({
     imagePath: `assets/cardart/${card.id}.png`
 }));
 
-// Helper functions
 export function getCardById(id: string): CardData | undefined {
     return cards.find(card => card.id === id);
 }

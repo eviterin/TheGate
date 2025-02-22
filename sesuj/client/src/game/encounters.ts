@@ -107,16 +107,16 @@ const positions: Record<number, ClientData> = {
         enemyPositions: [BASE_POSITIONS.ENEMY.CENTER, BASE_POSITIONS.ENEMY.FAR_RIGHT]
     },
     8: {
-        heroPosition: BASE_POSITIONS.HERO.RIGHT,
-        enemyPositions: [BASE_POSITIONS.ENEMY.FAR_LEFT, BASE_POSITIONS.ENEMY.CENTER]
+        heroPosition: {x: 80, y: 92},
+        enemyPositions: [{x: 50, y: 79}, {x: 20, y: 90}]
     },
     9: {
-        heroPosition: BASE_POSITIONS.HERO.CENTER,
-        enemyPositions: [BASE_POSITIONS.ENEMY.LEFT, BASE_POSITIONS.ENEMY.RIGHT]
+        heroPosition: {x: 50, y: 92},
+        enemyPositions: [{x: 33, y: 85}, {x: 67, y: 85}]
     },
     10: {
-        heroPosition: BASE_POSITIONS.HERO.CENTER,
-        enemyPositions: [BASE_POSITIONS.ENEMY.LEFT, BASE_POSITIONS.ENEMY.RIGHT]
+        heroPosition: {x: 30, y: 80},
+        enemyPositions: [{x: 70, y: 82}, {x: 75, y: 82}]
     }
 } as const;
 
