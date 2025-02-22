@@ -1,8 +1,33 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+interface IGameEncounters {
+    struct EnemyData {
+        uint8[] types;
+        uint16[] maxHealth;
+        uint16[] currentHealth;
+        uint16[] intents;
+        uint16[] blockAmount;
+        uint8[] attackBuff;
+    }
+    
+    function startEncounter(address player, uint8 floor) external returns (EnemyData memory);
+    function dealDamageToEnemy(address player, uint8 enemyIndex, uint8 damage) external returns (bool);
+    function healEnemy(address player, uint8 enemyIndex, uint8 amount) external;
+    function setNewEnemyIntents(address player, uint8 floor) external;
+    function setEnemyBlock(address player, uint8 enemyIndex, uint16 amount) external;
+    function getEnemyData(address player) external view returns (
+        uint8[] memory types,
+        uint16[] memory maxHealth,
+        uint16[] memory currentHealth,
+        uint16[] memory intents,
+        uint16[] memory blockAmount,
+        uint8[] memory attackBuff
+    );
+    function clearEnemyData(address player) external;
+}
+
 contract GameState {
-    // Game state variables
     struct GameData {
         uint8 runState;
         uint8 currentFloor;
@@ -11,11 +36,6 @@ contract GameState {
         uint8 currentBlock;
         uint8 currentMana;
         uint8 maxMana;
-        uint8[] enemyTypes;
-        uint16[] enemyMaxHealth;
-        uint16[] enemyCurrentHealth;
-        uint16[] enemyIntents;
-        uint16[] enemyBlock;
         uint8[] deck;
         uint8[] hand;
         uint8[] draw;
@@ -23,40 +43,31 @@ contract GameState {
         uint8[] availableCardRewards;
         bool hasEnabledQuickTransactions;
         uint256 quickTransactionsEnabledAt;
-        bool extraCardDrawEnabled;  // New field for extra card draw option
-        bool hasProtectionBlessing;  // New field for Divine Protection blessing
+        bool extraCardDrawEnabled;
+        bool hasProtectionBlessing;
     }
     
     mapping(address => GameData) public playerData;
+    IGameEncounters public encounters;
 
     event QuickTransactionsEnabled(address indexed user, uint256 timestamp);
     event RewardsGenerated(address indexed user, uint8 floor, uint8[] rewards);
 
-    // Constants
     uint8 constant RUN_STATE_NONE = 0;
     uint8 constant RUN_STATE_WHALE_ROOM = 1;
     uint8 constant RUN_STATE_ENCOUNTER = 2;
     uint8 constant RUN_STATE_CARD_REWARD = 3;
-    uint8 constant RUN_STATE_DEATH = 4;  // New state for when player dies
-
-    uint8 constant ENEMY_TYPE_NONE = 0;
-    uint8 constant ENEMY_TYPE_A = 1;
-    uint8 constant ENEMY_TYPE_B = 2;
-
-    // Whale Room options
-    uint8 constant WHALE_OPTION_EXTRA_CARD = 1;
-    uint8 constant WHALE_OPTION_EXTRA_FAITH = 2;
-    uint8 constant WHALE_OPTION_PROTECTION = 3;  // Changed from HEAL
-    uint8 constant WHALE_OPTION_UPGRADE = 4;
+    uint8 constant RUN_STATE_DEATH = 4;
 
     uint8 constant CARD_ID_NONE = 0;
     uint8 constant CARD_ID_STRIKE = 1;
     uint8 constant CARD_ID_DEFEND = 2;
     uint8 constant CARD_ID_POMMEL_STRIKE = 3;
     uint8 constant CARD_ID_CLEAVE = 4;
-    
-    uint16 constant INTENT_BLOCK_5 = 1000;
-    uint16 constant INTENT_BLOCK_AND_ATTACK = 1001;  // New intent type
+
+    constructor(address _encountersContract) {
+        encounters = IGameEncounters(_encountersContract);
+    }
 
     function enableQuickTransactions() public {
         require(!playerData[msg.sender].hasEnabledQuickTransactions, "Already enabled");
@@ -69,22 +80,20 @@ contract GameState {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_NONE, "Cannot start new run while one is active");
         
-        // Reset all game state including blessings
         data.runState = RUN_STATE_WHALE_ROOM;
         data.currentFloor = 0;
         data.maxHealth = 21;
         data.currentHealth = 21;
         data.maxMana = 3;
         data.currentMana = 0;
-        data.extraCardDrawEnabled = false;  // Reset extra card draw blessing
-        data.hasProtectionBlessing = false;  // Reset protection blessing
+        data.extraCardDrawEnabled = false;
+        data.hasProtectionBlessing = false;
         delete data.deck;
         data.deck = [CARD_ID_STRIKE, CARD_ID_STRIKE, CARD_ID_STRIKE, CARD_ID_DEFEND, CARD_ID_DEFEND];
     }
     
     function abandonRun() public {
         GameData storage data = playerData[msg.sender];
-        // Reset all state variables including blessings
         data.runState = RUN_STATE_NONE;
         data.currentFloor = 0;
         data.maxHealth = 0;
@@ -92,18 +101,14 @@ contract GameState {
         data.currentBlock = 0;
         data.maxMana = 0;
         data.currentMana = 0;
-        data.extraCardDrawEnabled = false;  // Reset extra card draw blessing
-        data.hasProtectionBlessing = false;  // Reset protection blessing
-        delete data.enemyTypes;
-        delete data.enemyMaxHealth;
-        delete data.enemyCurrentHealth;
-        delete data.enemyIntents;
-        delete data.enemyBlock;
+        data.extraCardDrawEnabled = false;
+        data.hasProtectionBlessing = false;
         delete data.deck;
         delete data.hand;
         delete data.draw;
         delete data.discard;
         delete data.availableCardRewards;
+        encounters.clearEnemyData(msg.sender);
     }
     
     function chooseRoom(uint8 option) public {
@@ -111,21 +116,17 @@ contract GameState {
         require(data.runState == RUN_STATE_WHALE_ROOM, "Not in whale room");
         require(option >= 1 && option <= 4, "Invalid whale room option");
 
-        // Store current floor to prevent multiple blessings per floor
-        uint8 currentFloor = data.currentFloor;
-        require(currentFloor == 0 || currentFloor != data.currentFloor, "Already chose blessing for this floor");
-
-        if (option == WHALE_OPTION_EXTRA_CARD) {
+        if (option == 1) { // WHALE_OPTION_EXTRA_CARD
             data.extraCardDrawEnabled = true;
-        } else if (option == WHALE_OPTION_EXTRA_FAITH) {
+        } else if (option == 2) { // WHALE_OPTION_EXTRA_FAITH
             data.maxMana += 1;
             data.currentMana += 1;
-        } else if (option == WHALE_OPTION_PROTECTION) {
-            data.hasProtectionBlessing = true;  // Set the blessing flag
-            data.currentBlock = 5;  // Apply initial block
-        } else if (option == WHALE_OPTION_UPGRADE) {
+        } else if (option == 3) { // WHALE_OPTION_PROTECTION
+            data.hasProtectionBlessing = true;
+            data.currentBlock = 5;
+        } else if (option == 4) { // WHALE_OPTION_UPGRADE
             data.maxHealth += 5;
-            data.currentHealth += 5;  // Also increase current health
+            data.currentHealth += 5;
         }
 
         data.runState = RUN_STATE_ENCOUNTER;
@@ -138,16 +139,18 @@ contract GameState {
         require(playedCardIndex < data.hand.length, "Invalid card index");
         uint8 playedCardID = data.hand[playedCardIndex];
 
-        // Only validate enemy targeting for attack cards
+        (uint8[] memory types,,uint16[] memory currentHealth,,,) = encounters.getEnemyData(msg.sender);
+
         if (playedCardID == CARD_ID_STRIKE || playedCardID == CARD_ID_POMMEL_STRIKE || playedCardID == CARD_ID_CLEAVE) {
-            require(targetIndex < data.enemyTypes.length, "Invalid target");
-            require(data.enemyCurrentHealth[targetIndex] > 0, "Cannot target a dead enemy");
+            require(targetIndex < types.length, "Invalid target");
+            require(currentHealth[targetIndex] > 0, "Cannot target a dead enemy");
         }
 
         if (playedCardID == CARD_ID_STRIKE && data.currentMana >= 1) {
             data.currentMana--;
-            dealDamageToEnemy(targetIndex, 6);
-            if (checkWinCondition()) return;
+            if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 6)) {
+                if (checkWinCondition()) return;
+            }
             discardCard(playedCardIndex);
         } else if (playedCardID == CARD_ID_DEFEND && data.currentMana >= 1) {
             data.currentMana--;
@@ -155,19 +158,22 @@ contract GameState {
             discardCard(playedCardIndex);
         } else if (playedCardID == CARD_ID_POMMEL_STRIKE && data.currentMana >= 1) {
             data.currentMana--;
-            dealDamageToEnemy(targetIndex, 7);
-            if (checkWinCondition()) return;
+            if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 7)) {
+                if (checkWinCondition()) return;
+            }
             drawCard();
             discardCard(playedCardIndex);
         } else if (playedCardID == CARD_ID_CLEAVE && data.currentMana >= 2) {
             data.currentMana -= 2;
-            // Target validation already done above
-            for (uint i = 0; i < data.enemyTypes.length; i++) {
-                if (data.enemyCurrentHealth[i] > 0) {
-                    dealDamageToEnemy(uint8(i), 8);
+            bool anyKilled = false;
+            for (uint i = 0; i < types.length; i++) {
+                if (currentHealth[i] > 0) {
+                    if (encounters.dealDamageToEnemy(msg.sender, uint8(i), 8)) {
+                        anyKilled = true;
+                    }
                 }
             }
-            if (checkWinCondition()) return;
+            if (anyKilled && checkWinCondition()) return;
             discardCard(playedCardIndex);
         }
     }
@@ -176,19 +182,23 @@ contract GameState {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_ENCOUNTER, "Not in encounter");
         
-        uint enemyCount = data.enemyTypes.length;
+        (uint8[] memory types,,uint16[] memory currentHealth,uint16[] memory intents,,uint8[] memory attackBuff) = encounters.getEnemyData(msg.sender);
 
-        // Process enemy intents first
-        for (uint i = 0; i < enemyCount; i++) {
-            if (data.enemyCurrentHealth[i] > 0) {
-                uint16 intent = data.enemyIntents[i];
-                if (intent == INTENT_BLOCK_5) {
-                    data.enemyBlock[i] = 5;
-                } else if (intent == INTENT_BLOCK_AND_ATTACK) {
-                    data.enemyBlock[i] = 5;  // Apply block first
-                    dealDamageToHero(6);     // Then deal damage
+        for (uint i = 0; i < types.length; i++) {
+            if (currentHealth[i] > 0) {
+                uint16 intent = intents[i];
+                if (intent == 1000) { // INTENT_BLOCK_5
+                    encounters.setEnemyBlock(msg.sender, uint8(i), 5);
+                } else if (intent == 1001) { // INTENT_BLOCK_AND_ATTACK
+                    encounters.setEnemyBlock(msg.sender, uint8(i), 5);
+                    dealDamageToHero(6);
+                } else if (intent == 1002) { // INTENT_HEAL
+                    encounters.healEnemy(msg.sender, uint8(i), 5);
+                } else if (intent == 1003) { // INTENT_ATTACK_BUFF
+                    attackBuff[i] += 2;
                 } else {
-                    dealDamageToHero(uint8(intent));
+                    uint8 totalDamage = uint8(intent) + attackBuff[i];
+                    dealDamageToHero(totalDamage);
                 }
             }
         }
@@ -200,34 +210,12 @@ contract GameState {
 
         if (checkWinCondition()) return;
 
-        // Only clear player block at end of turn
         data.currentBlock = 0;
-
-        setNewEnemyIntents();
+        encounters.setNewEnemyIntents(msg.sender, data.currentFloor);
         data.currentMana = data.maxMana;
         drawCard();
         drawCard();
         drawCard();
-    }
-
-    function dealDamageToEnemy(uint8 enemyIndex, uint8 damage) private {
-        GameData storage data = playerData[msg.sender];
-        uint16 remainingDamage = damage;
-        
-        if (data.enemyBlock[enemyIndex] > 0) {
-            if (data.enemyBlock[enemyIndex] >= remainingDamage) {
-                data.enemyBlock[enemyIndex] -= remainingDamage;
-                return;
-            }
-            remainingDamage -= data.enemyBlock[enemyIndex];
-            data.enemyBlock[enemyIndex] = 0;
-        }
-        
-        if (data.enemyCurrentHealth[enemyIndex] < remainingDamage) {
-            data.enemyCurrentHealth[enemyIndex] = 0;
-        } else {
-            data.enemyCurrentHealth[enemyIndex] -= remainingDamage;
-        }
     }
 
     function dealDamageToHero(uint8 damage) private {
@@ -247,134 +235,23 @@ contract GameState {
 
     function startEncounter() private {
         GameData storage data = playerData[msg.sender];
-        
-        // Get encounter data based on floor
-        if (data.currentFloor == 3) {
-            // For level 3, randomly choose between TYPE_A and TYPE_B
-            uint256 seed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
-            uint8 randomType = (seed % 2 == 0) ? ENEMY_TYPE_A : ENEMY_TYPE_B;
-            
-            data.enemyTypes = new uint8[](1);
-            data.enemyMaxHealth = new uint16[](1);
-            data.enemyCurrentHealth = new uint16[](1);
-            data.enemyBlock = new uint16[](1);
-            
-            data.enemyTypes[0] = randomType;
-            data.enemyMaxHealth[0] = 18;  // Much higher health for single enemy
-            data.enemyCurrentHealth[0] = data.enemyMaxHealth[0];
-            data.enemyBlock[0] = 0;
-        } else {
-            // Default behavior for other floors
-            data.enemyTypes = [ENEMY_TYPE_A, ENEMY_TYPE_B];
-            data.enemyMaxHealth = [10, 12];
-            data.enemyCurrentHealth = [10, 12];
-            data.enemyBlock = new uint16[](2);
-            // Clear enemy block
-            for (uint i = 0; i < data.enemyBlock.length; i++) {
-                data.enemyBlock[i] = 0;
-            }
-        }
-        
-        setNewEnemyIntents();
+        encounters.startEncounter(msg.sender, data.currentFloor);
         delete data.hand;
         delete data.discard;
-        data.currentBlock = data.hasProtectionBlessing ? 5 : 0;  // Apply protection blessing if active
+        data.currentBlock = data.hasProtectionBlessing ? 5 : 0;
         copyDeckIntoDrawpile();
         shuffleDrawPile();
         drawNewHand();
         data.currentMana = data.maxMana;
     }
 
-    function setNewEnemyIntents() private {
-        GameData storage data = playerData[msg.sender];
-        uint256 seed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
-        data.enemyIntents = new uint16[](data.enemyTypes.length);
-        
-        // Handle specific level patterns
-        if (data.currentFloor == 1) {
-            // Level 1: Dunes - Two bandits with different patterns
-            for (uint i = 0; i < data.enemyTypes.length; i++) {
-                if (data.enemyCurrentHealth[i] > 0) {
-                    if (data.enemyTypes[i] == ENEMY_TYPE_A) {
-                        // Aggressive bandit: Always attacks with 6-8 damage
-                        data.enemyIntents[i] = uint16(6 + (seed % 3));  // 6-8 damage
-                    } else if (data.enemyTypes[i] == ENEMY_TYPE_B) {
-                        // Defensive bandit: Mix of block, attack, and combined
-                        uint256 action = seed % 10;  // 0-9 for percentage rolls
-                        if (action < 4) {  // 40% chance to block
-                            data.enemyIntents[i] = INTENT_BLOCK_5;
-                        } else if (action < 7) {  // 30% chance for block and attack
-                            data.enemyIntents[i] = INTENT_BLOCK_AND_ATTACK;
-                        } else {  // 30% chance to attack
-                            data.enemyIntents[i] = uint16(4 + (seed % 3));  // 4-6 damage
-                        }
-                    }
-                }
-                seed = uint256(keccak256(abi.encodePacked(seed)));
-            }
-        }
-        else if (data.currentFloor == 2) {
-            // Level 2: Cursed Hamlet - Synchronized villagers
-            // Both enemies will always do the same action
-            uint256 action = seed % 10;  // 0-9 for percentage rolls
-            uint16 sharedIntent;
-            
-            if (action < 5) {  // 50% chance to block
-                sharedIntent = INTENT_BLOCK_5;
-            } else {  // 50% chance to attack
-                sharedIntent = uint16(5 + (seed % 3));  // 5-7 damage
-            }
-            
-            for (uint i = 0; i < data.enemyTypes.length; i++) {
-                if (data.enemyCurrentHealth[i] > 0) {
-                    data.enemyIntents[i] = sharedIntent;
-                }
-            }
-        }
-        else if (data.currentFloor == 3) {
-            // Level 3: Forsaken Outpost - Single powerful guardian
-            if (data.enemyCurrentHealth[0] > 0) {
-                uint256 action = seed % 10;  // 0-9 for percentage rolls
-                
-                if (action < 3) {  // 30% chance to block
-                    data.enemyIntents[0] = INTENT_BLOCK_5;
-                    data.enemyBlock[0] = 8;  // Higher block amount
-                } else if (action < 7) {  // 40% chance for block and attack
-                    data.enemyIntents[0] = INTENT_BLOCK_AND_ATTACK;
-                } else {  // 30% chance to attack
-                    data.enemyIntents[0] = uint16(8 + (seed % 5));  // 8-12 damage
-                }
-            }
-        }
-        else {
-            // Default behavior for other levels
-            for (uint i = 0; i < data.enemyTypes.length; i++) {
-                if (data.enemyCurrentHealth[i] > 0) {
-                    uint8 enemyType = data.enemyTypes[i];
-                    
-                    if (enemyType == ENEMY_TYPE_A) {
-                        data.enemyIntents[i] = uint16(6 + (seed % 5));  // 6-10 damage
-                    } else if (enemyType == ENEMY_TYPE_B) {
-                        uint256 action = seed % 3;  // Basic 3-way split
-                        if (action == 0) {
-                            data.enemyIntents[i] = INTENT_BLOCK_5;
-                        } else if (action == 1) {
-                            data.enemyIntents[i] = INTENT_BLOCK_AND_ATTACK;
-                        } else {
-                            data.enemyIntents[i] = uint16(4 + (seed % 5));  // 4-8 damage
-                        }
-                    }
-                }
-                seed = uint256(keccak256(abi.encodePacked(seed)));
-            }
-        }
-    }
-
     function checkWinCondition() private returns (bool) {
-        GameData storage data = playerData[msg.sender];
-        for (uint i = 0; i < data.enemyCurrentHealth.length; i++) {
-            if (data.enemyCurrentHealth[i] > 0) return false;
+        (,, uint16[] memory currentHealth,,,) = encounters.getEnemyData(msg.sender);
+        
+        for (uint i = 0; i < currentHealth.length; i++) {
+            if (currentHealth[i] > 0) return false;
         }
+        
         completeEncounter();
         return true;
     }
@@ -421,15 +298,18 @@ contract GameState {
         startEncounter();
     }
 
-    // View functions
     function getEnemyData(address player) public view returns (
-        uint8[] memory, uint16[] memory, uint16[] memory, uint16[] memory) {
-        GameData storage data = playerData[player];
-        return (data.enemyTypes, data.enemyMaxHealth, data.enemyCurrentHealth, data.enemyIntents);
+        uint8[] memory types,
+        uint16[] memory maxHealth,
+        uint16[] memory currentHealth,
+        uint16[] memory intents
+    ) {
+        (types, maxHealth, currentHealth, intents,,) = encounters.getEnemyData(player);
     }
 
     function getEnemyBlock(address player) public view returns (uint16[] memory) {
-        return playerData[player].enemyBlock;
+        (,,,,uint16[] memory blockAmount,) = encounters.getEnemyData(player);
+        return blockAmount;
     }
 
     function getPlayerData(address player) public view returns (
@@ -446,7 +326,6 @@ contract GameState {
         return playerData[player].hasEnabledQuickTransactions;
     }
 
-    // Helper functions
     function drawCard() private {
         GameData storage data = playerData[msg.sender];
         if (data.draw.length == 0) {
@@ -506,12 +385,10 @@ contract GameState {
         }
     }
 
-    // Add new function to retry from death
     function retryFromDeath() public {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_DEATH, "Not in death state");
         
-        // Clear all state before starting new run
         data.runState = RUN_STATE_NONE;
         data.currentFloor = 0;
         data.maxHealth = 0;
@@ -520,19 +397,14 @@ contract GameState {
         data.maxMana = 0;
         data.currentMana = 0;
         data.extraCardDrawEnabled = false;
-        data.hasProtectionBlessing = false;  // Reset protection blessing
-        delete data.enemyTypes;
-        delete data.enemyMaxHealth;
-        delete data.enemyCurrentHealth;
-        delete data.enemyIntents;
-        delete data.enemyBlock;
+        data.hasProtectionBlessing = false;
         delete data.deck;
         delete data.hand;
         delete data.draw;
         delete data.discard;
         delete data.availableCardRewards;
+        encounters.clearEnemyData(msg.sender);
         
-        // Start a new run
         startRun();
     }
 }

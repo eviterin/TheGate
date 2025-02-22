@@ -21,11 +21,15 @@ interface EncountersData {
     INTENT_TYPES: {
       BLOCK_5: number;
       BLOCK_AND_ATTACK: number;
+      HEAL: number;
+      ATTACK_BUFF: number;
     };
     ANIMATIONS: {
       ATTACK: string;
       BLOCK: string;
       BLOCK_AND_ATTACK: string;
+      HEAL: string;
+      BUFF: string;
     };
   };
   encounters: any[]; // We don't need the full encounters type for this usage
@@ -37,9 +41,10 @@ const ANIMATIONS = (encountersData as EncountersData).constants.ANIMATIONS;
 
 // Helper to determine intent type
 interface IntentInfo {
-  type: 'attack' | 'block' | 'block_and_attack';
+  type: 'attack' | 'block' | 'block_and_attack' | 'heal' | 'attack_buff';
   value: number;
   blockValue?: number;
+  buffValue?: number;
   animation: string;
 }
 
@@ -53,6 +58,20 @@ const getIntentInfo = (intent: number): IntentInfo => {
       value: 6,
       blockValue: 5,
       animation: ANIMATIONS.BLOCK_AND_ATTACK 
+    };
+  }
+  if (intent === INTENT_TYPES.HEAL) {
+    return {
+      type: 'heal',
+      value: 5,
+      animation: ANIMATIONS.HEAL
+    };
+  }
+  if (intent === INTENT_TYPES.ATTACK_BUFF) {
+    return {
+      type: 'attack_buff',
+      value: 2,
+      animation: ANIMATIONS.BUFF
     };
   }
   // Any other number is an attack with that damage value
@@ -187,6 +206,26 @@ const GameEntity: React.FC<GameEntityProps> = ({
 
     const intentInfo = getIntentInfo(intent);
     
+    const getIntentColor = (type: string) => {
+      switch (type) {
+        case 'block': return '#70ff70';
+        case 'block_and_attack': return '#ffff70';
+        case 'heal': return '#ff70ff';
+        case 'attack_buff': return '#ff9070';
+        default: return '#ff7070';
+      }
+    };
+
+    const getBorderColor = (type: string) => {
+      switch (type) {
+        case 'block': return '#40ff40';
+        case 'block_and_attack': return '#ffff40';
+        case 'heal': return '#ff40ff';
+        case 'attack_buff': return '#ff6040';
+        default: return '#ff4040';
+      }
+    };
+
     return (
       <div style={{
         position: 'absolute',
@@ -196,21 +235,21 @@ const GameEntity: React.FC<GameEntityProps> = ({
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         padding: '4px 8px',
         borderRadius: '4px',
-        color: intentInfo.type === 'block' ? '#70ff70' : 
-               intentInfo.type === 'block_and_attack' ? '#ffff70' : '#ff7070',
+        color: getIntentColor(intentInfo.type),
         fontSize: '14px',
         display: 'flex',
         alignItems: 'center',
         gap: '4px',
-        border: `1px solid ${
-          intentInfo.type === 'block' ? '#40ff40' : 
-          intentInfo.type === 'block_and_attack' ? '#ffff40' : '#ff4040'
-        }`
+        border: `1px solid ${getBorderColor(intentInfo.type)}`
       }}>
         {intentInfo.type === 'block' ? (
           <>🛡️ Block {intentInfo.value}</>
         ) : intentInfo.type === 'block_and_attack' ? (
           <>🛡️ Block {intentInfo.blockValue} + ⚔️ Attack {intentInfo.value}</>
+        ) : intentInfo.type === 'heal' ? (
+          <>💚 Heal {intentInfo.value}</>
+        ) : intentInfo.type === 'attack_buff' ? (
+          <>💪 Buff +{intentInfo.value} ATK</>
         ) : (
           <>⚔️ Attack {intentInfo.value}</>
         )}
@@ -237,6 +276,19 @@ const GameEntity: React.FC<GameEntityProps> = ({
           @keyframes flip-attack {
             0%, 100% { transform: translate(-50%, -50%) rotateY(0deg); }
             50% { transform: translate(-50%, -50%) rotateY(360deg) scale(1.2); }
+          }
+
+          @keyframes heal-pulse {
+            0% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); filter: brightness(1.5) hue-rotate(90deg); }
+            100% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
+          }
+
+          @keyframes power-up {
+            0% { transform: translate(-50%, -50%); filter: brightness(1); }
+            50% { transform: translate(-50%, -50%) scale(1.15); filter: brightness(1.5) saturate(1.5); }
+            75% { transform: translate(-50%, -50%) scale(1.1) rotate(5deg); }
+            100% { transform: translate(-50%, -50%); filter: brightness(1); }
           }
 
           @keyframes shake {

@@ -622,14 +622,14 @@ const Game: React.FC = () => {
   };
 
   const handleWhaleRoomChoice = async (optionId: number) => {
+    if (isChoosingRoom) return; // Prevent multiple submissions
     setIsChoosingRoom(true);
     try {
       await chooseRoom(optionId);
     } catch (error) {
       console.error('Failed to choose whale room option:', error);
-    } finally {
-      setIsChoosingRoom(false);
     }
+    // Don't set isChoosingRoom to false here - let the game state update handle that
   };
 
   const handleRetry = async () => {
@@ -666,6 +666,15 @@ const Game: React.FC = () => {
   const handleGateClick = () => {
     setIsGateOpen(true);
   };
+
+  // Add this effect near the other useEffect hooks
+  useEffect(() => {
+    // When game state changes from whale room (1) to combat (2), reset the whale room state
+    if (gameState?.runState === 2) {
+      setIsChoosingRoom(false);
+      setIsGateOpen(false);
+    }
+  }, [gameState?.runState]);
 
   return (
     <>
@@ -1170,12 +1179,33 @@ const Game: React.FC = () => {
                       {WHALE_ROOM_OPTIONS.map(option => (
                         <div
                           key={option.id}
-                          className="whale-room-option"
-                          onClick={() => handleWhaleRoomChoice(option.id)}
+                          className={`whale-room-option ${isChoosingRoom ? 'disabled' : ''}`}
+                          onClick={() => !isChoosingRoom && handleWhaleRoomChoice(option.id)}
+                          style={{ 
+                            cursor: isChoosingRoom ? 'not-allowed' : 'pointer',
+                            opacity: isChoosingRoom ? 0.7 : 1,
+                            position: 'relative'
+                          }}
                         >
                           <h3>{option.title}</h3>
                           <p className="description">{option.description}</p>
                           <span className="effect">{option.effect}</span>
+                          {isChoosingRoom && (
+                            <div style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              borderRadius: '12px'
+                            }}>
+                              <span style={{ color: '#ffd700' }}>Receiving blessing...</span>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1327,6 +1357,50 @@ const Game: React.FC = () => {
         isVisible={isRetrying} 
         message="Divine intervention in progress..." 
       />
+
+      {/* Add deck viewer overlays */}
+      {isDeckVisible && (
+        <div className="deck-viewer">
+          <h3>Deck ({deck.length} cards)</h3>
+          <div className="deck-cards">
+            {deck.map((cardId, index) => {
+              const card = cardData.find(c => c.numericId === cardId);
+              return card ? (
+                <Card key={`deck-${cardId}-${index}`} {...card} />
+              ) : null;
+            })}
+          </div>
+        </div>
+      )}
+
+      {isDiscardVisible && (
+        <div className="deck-viewer">
+          <h3>Discard Pile ({discard.length} cards)</h3>
+          <div className="deck-cards">
+            {discard.map((cardId, index) => {
+              const card = cardData.find(c => c.numericId === cardId);
+              return card ? (
+                <Card key={`discard-${cardId}-${index}`} {...card} />
+              ) : null;
+            })}
+          </div>
+        </div>
+      )}
+
+      {isDrawVisible && (
+        <div className="deck-viewer">
+          <h3>Draw Pile ({draw.length} cards)</h3>
+          <p style={{ color: '#999', fontSize: '14px', marginBottom: '12px', textAlign: 'center' }}>Note: Cards shown here may not be in their actual draw order</p>
+          <div className="deck-cards">
+            {draw.map((cardId, index) => {
+              const card = cardData.find(c => c.numericId === cardId);
+              return card ? (
+                <Card key={`draw-${cardId}-${index}`} {...card} />
+              ) : null;
+            })}
+          </div>
+        </div>
+      )}
     </>
   );
 };
