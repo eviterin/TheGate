@@ -5,6 +5,7 @@
   position: relative;
   transition: transform 0.3s ease;
   overflow: visible;
+  z-index: 200;
 }
 
 .hand {
@@ -110,4 +111,35 @@
   0% { transform: scale(1); }
   50% { transform: scale(1.1); }
   100% { transform: scale(1); }
+}
+
+.hand-card.used-in-intent {
+  opacity: 0.7;
+  filter: grayscale(0.5);
+  cursor: not-allowed;
+}
+
+.hand-card.used-in-intent:hover .card {
+  transform: none;
+  filter: grayscale(0.5);
+}
+
+.hand-card .intent-number {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #ffd700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 14px;
+  z-index: 10;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 } 

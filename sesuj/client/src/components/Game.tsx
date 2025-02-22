@@ -3,9 +3,8 @@ import InfoBar from './InfoBar';
 import Hand from './Hand';
 import Card from './Card';
 import GameEntity from './GameEntity';
-import PendingActions, { PendingAction } from './PendingActions';
 import LoadingOverlay from './LoadingOverlay';
-import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, useSkipCardReward, useRetryFromDeath } from '../hooks/GameState';
+import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, useSkipCardReward, useRetryFromDeath, usePlayCards } from '../hooks/GameState';
 import { useCards } from '../hooks/CardsContext';
 import './Game.css';
 import { getBackgroundImage } from '../game/encounters';
@@ -14,6 +13,8 @@ import { Position } from '../game/encounters';
 import { CardAnimationType } from '../game/cards';
 import encountersData from '../../../shared/encounters.json';
 import TurnBanner from './TurnBanner';
+import Intent, { CardIntent } from './Intent';
+import './Intent.css';
 
 // Add InfoBar props interface
 interface InfoBarProps {
@@ -85,6 +86,14 @@ const calculateDamageAfterBlock = (damage: number, block: number): number => {
   return remainingDamage;
 };
 
+// Add this helper function near the top with other helpers
+const calculateTotalManaCost = (intents: CardIntent[], cardData: Array<{ numericId: number; manaCost: number }>): number => {
+  return intents.reduce((total, intent) => {
+    const card = cardData.find(c => c.numericId === intent.cardId);
+    return total + (card?.manaCost || 0);
+  }, 0);
+};
+
 const Game: React.FC = () => {
   const [hand, setHand] = useState<number[]>([]);
   const [deck, setDeck] = useState<number[]>([]);
@@ -107,7 +116,6 @@ const Game: React.FC = () => {
   const { skipCardReward } = useSkipCardReward();
   const { chooseRoom } = useChooseRoom();
   const [selectedReward, setSelectedReward] = useState<number | null>(null);
-  const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [optimisticHand, setOptimisticHand] = useState<number[]>([]);
   const [optimisticMana, setOptimisticMana] = useState<number | null>(null);
   const [optimisticUpdatesEnabled, setOptimisticUpdatesEnabled] = useState(true);
@@ -129,6 +137,9 @@ const Game: React.FC = () => {
   const [previousBlock, setPreviousBlock] = useState<number>(0);
   const [previousEnemyHealth, setPreviousEnemyHealth] = useState<number[]>([]);
   const [previousEnemyBlock, setPreviousEnemyBlock] = useState<number[]>([]);
+  const [cardIntents, setCardIntents] = useState<CardIntent[]>([]);
+  const [isCommittingIntents, setIsCommittingIntents] = useState(false);
+  const { playCards } = usePlayCards();
 
   // Fetch card data
   useEffect(() => {
@@ -143,11 +154,9 @@ const Game: React.FC = () => {
     fetchCards();
   }, [getActiveCards]);
 
-  // Add helper function to check for pending end turn
-  const hasPendingEndTurn = () => {
-    return pendingActions.some(action => 
-      action.type === 'endTurn' && action.status === 'pending'
-    );
+  // Add helper to check if we can end turn
+  const canEndTurn = () => {
+    return !isCommittingIntents;
   };
 
   // Continuously update game state
@@ -156,13 +165,11 @@ const Game: React.FC = () => {
     
     const fetchGameState = async () => {
       try {
-        // Don't update state during enemy turn when we have frozen state
         if (frozenState) return;
 
         const state = await getGameState();
         if (!mounted) return;
         
-        // Store previous values before updating state
         if (gameState) {
           setPreviousHealth(gameState.currentHealth);
           setPreviousBlock(gameState.currentBlock);
@@ -173,34 +180,28 @@ const Game: React.FC = () => {
         setGameState(state);
         setIsLoadingGameState(false);
         
-        // Reset auto end turn flag when:
-        // 1. Game state changes significantly (different floor or run state)
-        // 2. Coming back from menu (state becomes available)
         if (!gameState || !state || 
             state.currentFloor !== gameState.currentFloor || 
             state.runState !== gameState.runState) {
           setHasAutoEndedTurn(false);
         }
         
-        // Auto end turn if enabled and either no mana or no playable cards
         const hasPlayableCards = cardData.length > 0 && state?.hand?.some(cardId => {
           const card = cardData.find(c => c.numericId === cardId);
           return card && card.manaCost <= (state.currentMana || 0);
         });
 
-        // Only auto end turn if we're in combat (runState === 2) and have card data loaded
         const isInCombat = state?.runState === 2;
         if (autoEndTurnEnabled && 
             isInCombat && 
-            cardData.length > 0 &&  // Make sure we have card data loaded
+            cardData.length > 0 && 
             !hasAutoEndedTurn && 
-            !hasPendingEndTurn() && 
+            canEndTurn() && 
             (!hasPlayableCards || state?.currentMana === 0 || !state?.hand?.length)) {
           setHasAutoEndedTurn(true);
           handleEndTurn();
         }
 
-        // Reset the flag if we have mana and playable cards again, but only in combat
         if (isInCombat && state?.currentMana && state.currentMana > 0) {
           const canPlaySomething = state.hand?.some(cardId => {
             const card = cardData.find(c => c.numericId === cardId);
@@ -211,75 +212,17 @@ const Game: React.FC = () => {
           }
         }
 
-        // Update deck, discard, and draw piles
         setDeck(state?.deck || []);
         setDiscard(state?.discard || []);
         setDraw(state?.draw || []);
         
-        // Clear pending actions when entering reward state (level complete)
-        if (state?.runState === 3) { // RUN_STATE_CARD_REWARD
-          setPendingActions([]);
+        if (state?.runState === 3) {
+          setCardIntents([]);
         }
         
-        // Always sync state if optimistic updates are disabled
-        if (!optimisticUpdatesEnabled || pendingActions.length === 0) {
+        if (!optimisticUpdatesEnabled) {
           setOptimisticHand(state?.hand || []);
           setOptimisticMana(state?.currentMana || 0);
-        }
-        
-        // Only process pending actions if optimistic updates are enabled
-        if (optimisticUpdatesEnabled && state && pendingActions.length > 0) {
-          const currentTime = Date.now();
-          const updatedActions = pendingActions.map(action => {
-            if (action.status === 'pending') {
-              // Check for timeout
-              if (currentTime - action.timestamp > TRANSACTION_TIMEOUT) {
-                return { ...action, status: 'failed' as const };
-              }
-
-              // For play card actions, check if the card is no longer in hand
-              if (action.type === 'playCard' && action.cardId) {
-                const cardStillInHand = state.hand.includes(action.cardId);
-                if (!cardStillInHand) {
-                  return { ...action, status: 'completed' as const };
-                }
-              }
-              // For end turn, check if we got new cards
-              else if (action.type === 'endTurn') {
-                const gotNewCards = state.hand.length > 0;
-                if (gotNewCards) {
-                  return { ...action, status: 'completed' as const };
-                }
-              }
-              // For reward actions, check if we're no longer in reward state
-              else if ((action.type === 'chooseReward' || action.type === 'skipReward') && state.runState !== 3) {
-                return { ...action, status: 'completed' as const };
-              }
-            }
-            return action;
-          });
-
-          // Handle completed and failed actions
-          const completedActions = updatedActions.filter(a => a.status === 'completed');
-          const failedActions = updatedActions.filter(a => a.status === 'failed');
-
-          if (completedActions.length > 0 || failedActions.length > 0) {
-            // Sync state immediately for failed actions
-            if (failedActions.length > 0) {
-              setOptimisticHand(state.hand || []);
-              setOptimisticMana(state.currentMana);
-            }
-
-            // Remove both completed and failed actions immediately
-            setPendingActions(prev => 
-              prev.filter(a => 
-                !completedActions.find(ca => ca.id === a.id) && 
-                !failedActions.find(fa => fa.id === a.id)
-              )
-            );
-          } else {
-            setPendingActions(updatedActions);
-          }
         }
       } catch (error) {
         console.error('Failed to fetch game state:', error);
@@ -289,14 +232,6 @@ const Game: React.FC = () => {
         if (gameState) {
           setOptimisticHand(gameState.hand || []);
           setOptimisticMana(gameState.currentMana);
-        }
-        
-        // Only process pending actions if optimistic updates are enabled
-        if (optimisticUpdatesEnabled && pendingActions.some(a => a.status === 'pending')) {
-          setPendingActions(prev => 
-            prev.map(a => 
-              a.status === 'pending' ? { ...a, status: 'failed' as const } : a
-          ));
         }
       }
     };
@@ -309,11 +244,11 @@ const Game: React.FC = () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, [getGameState, pendingActions, gameState, optimisticUpdatesEnabled]);
+  }, [getGameState, gameState, optimisticUpdatesEnabled, frozenState, cardData.length, autoEndTurnEnabled, hasAutoEndedTurn]);
 
-  // Reset the auto end turn flag when we play a card
+  // Update handleCardSelect to queue the card instead of playing it immediately
   const handleCardSelect = (cardIndex: number) => {
-    setHasAutoEndedTurn(false); // Reset flag when selecting a card
+    setHasAutoEndedTurn(false);
     const cardId = optimisticHand[cardIndex];
     
     if (cardIndex === selectedCardIndex) {
@@ -323,7 +258,7 @@ const Game: React.FC = () => {
     }
   };
 
-  // Handle entity click (for targeting) with optimistic updates
+  // Update handleEntityClick to use cardData parameter
   const handleEntityClick = async (targetIndex: number) => {
     if (selectedCardIndex === null) return;
     
@@ -332,77 +267,151 @@ const Game: React.FC = () => {
     
     if (!card || !gameState) return;
 
-    // Check if we have enough mana
-    const currentMana = optimisticMana ?? gameState.currentMana;
-    if (currentMana < card.manaCost) return;
+    // Check if this card is already used in an intent
+    const isCardUsed = cardIntents.some(intent => intent.cardIndex === selectedCardIndex);
+    if (isCardUsed) return;
 
-    let actionId: string | undefined;
-    // Create pending action if optimistic updates are enabled
-    if (optimisticUpdatesEnabled) {
-      actionId = Date.now().toString();
-      const newAction: PendingAction = {
-        id: actionId,
-        type: 'playCard',
-        description: `Playing ${card.name}`,
-        timestamp: Date.now(),
-        status: 'pending' as const,
-        cardId,
-        cardName: card.name,
-        targetIndex
-      };
+    // Calculate total mana needed including the new card
+    const totalManaNeeded = calculateTotalManaCost([...cardIntents, {
+      id: Date.now().toString(),
+      cardIndex: selectedCardIndex,
+      targetIndex,
+      cardId,
+      cardName: card.name
+    }], cardData);
 
-      // Get target position for animation
-      const targetEntity = gameState.enemyTypes[targetIndex] ? 'enemy' : 'hero';
-      const levelConfig = getLevelConfig(gameState.currentFloor);
-      const targetPos = targetEntity === 'enemy' 
-        ? (levelConfig.enemyPositions[targetIndex] || { x: 50, y: 50 })
-        : levelConfig.heroPosition;
+    const currentMana = gameState.currentMana;
+    if (totalManaNeeded > currentMana) {
+      // Maybe show a warning to the user
+      return;
+    }
 
-      // Only animate if animations are enabled
-      if (animationsEnabled) {
+    // Add to intents and update optimistic mana
+    const newIntent: CardIntent = {
+      id: Date.now().toString(),
+      cardIndex: selectedCardIndex,
+      targetIndex,
+      cardId,
+      cardName: card.name
+    };
+
+    setCardIntents(prev => [...prev, newIntent]);
+    setOptimisticMana(currentMana - totalManaNeeded);
+    setSelectedCardIndex(null);
+  };
+
+  // Add handlers for intent management
+  const handleReorderIntents = (fromIndex: number, toIndex: number) => {
+    setCardIntents(prev => {
+      const newIntents = [...prev];
+      const [movedIntent] = newIntents.splice(fromIndex, 1);
+      newIntents.splice(toIndex, 0, movedIntent);
+      return newIntents;
+    });
+  };
+
+  // Update handleRemoveIntent to use cardData parameter
+  // Update handleRemoveIntent to restore mana
+  const handleRemoveIntent = (intentId: string) => {
+    const removedIntent = cardIntents.find(intent => intent.id === intentId);
+    if (!removedIntent) return;
+
+    const removedCard = cardData.find(c => c.numericId === removedIntent.cardId);
+    if (!removedCard) return;
+
+    setCardIntents(prev => {
+      const newIntents = prev.filter(intent => intent.id !== intentId);
+      // Recalculate mana after removing the intent
+      const totalManaCost = calculateTotalManaCost(newIntents, cardData);
+      setOptimisticMana(gameState?.currentMana - totalManaCost);
+      return newIntents;
+    });
+  };
+
+  // Update handleClearIntents to restore all mana
+  const handleClearIntents = () => {
+    setCardIntents([]);
+    setSelectedCardIndex(null);
+    setOptimisticMana(gameState?.currentMana || 0);
+  };
+
+  const handleCommitIntents = async () => {
+    if (cardIntents.length === 0 || isCommittingIntents) return;
+
+    try {
+      setIsCommittingIntents(true);
+
+      // Convert intents to contract format
+      const plays = cardIntents.map((intent, index) => {
+        // Each played card shifts the indices of remaining cards down by 1
+        // So we need to adjust the indices of later cards
+        const adjustedIndex = intent.cardIndex - cardIntents.slice(0, index).filter(
+          prevIntent => prevIntent.cardIndex < intent.cardIndex
+        ).length;
+        
+        return {
+          cardIndex: adjustedIndex,
+          targetIndex: intent.targetIndex
+        };
+      });
+
+      // First send the transaction
+      const txPromise = playCards(plays);
+
+      // Freeze the current state for animations
+      const stateBeforeAnimations = gameState;
+      setFrozenState(stateBeforeAnimations);
+
+      // Play animations for each card sequentially while transaction processes
+      for (const intent of cardIntents) {
+        const card = cardData.find(c => c.numericId === intent.cardId);
+        if (!card) continue;
+
+        // Create animation state for this card
+        const levelConfig = getLevelConfig(stateBeforeAnimations.currentFloor);
+        const targetPos = levelConfig.enemyPositions[intent.targetIndex];
+
         const animationState: AnimationState = {
           sourceType: 'hero',
           sourceIndex: 0,
           targetPosition: targetPos,
           timestamp: Date.now()
         };
-        
+
+        // Show the animation
         setCurrentAnimation(animationState);
-
-        // Clear animation after a delay
-        setTimeout(() => {
-          setCurrentAnimation(null);
-        }, 600);
-      }
-
-      // Apply optimistic updates
-      const newHand = [...optimisticHand];
-      newHand.splice(selectedCardIndex, 1);
-      setOptimisticHand(newHand);
-      setOptimisticMana(currentMana - card.manaCost);
-      setPendingActions(prev => [...prev, newAction]);
-    }
-    
-    setSelectedCardIndex(null);
-
-    try {
-      // For non-targeted cards, always use target index 0
-      const effectiveTargetIndex = card.targeted ? targetIndex : 0;
-      await playCard(selectedCardIndex, effectiveTargetIndex);
-    } catch (error) {
-      console.error('Failed to play card:', error);
-      
-      if (optimisticUpdatesEnabled && actionId) {
-        // Revert optimistic updates
-        setOptimisticHand(gameState.hand);
-        setOptimisticMana(gameState.currentMana);
-        setCurrentAnimation(null);
         
-        // Update the action status
-        setPendingActions(prev => 
-          prev.map(a => a.id === actionId ? { ...a, status: 'failed' as const } : a)
-        );
+        // Wait for animation to complete
+        await new Promise(resolve => setTimeout(resolve, 600));
+        setCurrentAnimation(null);
+
+        // Add small delay between cards
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
+
+      // Wait for transaction to complete
+      await txPromise;
+
+      // Clear frozen state to show new state
+      setFrozenState(null);
+      
+      // Clear intents after successful commit
+      setCardIntents([]);
+
+      // Get fresh state
+      const newState = await getGameState();
+      if (newState) {
+        setGameState(newState);
+        setOptimisticHand(newState.hand || []);
+        setOptimisticMana(newState.currentMana || 0);
+      }
+    } catch (error) {
+      console.error('Failed to commit card intents:', error);
+      // On error, clear frozen state and animations
+      setFrozenState(null);
+      setCurrentAnimation(null);
+    } finally {
+      setIsCommittingIntents(false);
     }
   };
 
@@ -436,25 +445,9 @@ const Game: React.FC = () => {
     return getBackgroundImage(gameState.currentFloor);
   };
 
-  // Handle end turn with optimistic updates
+  // Update handleEndTurn to check for intents
   const handleEndTurn = async () => {
-    let actionId: string | undefined;
-    
-    if (optimisticUpdatesEnabled) {
-      actionId = Date.now().toString();
-      const newAction: PendingAction = {
-        id: actionId,
-        type: 'endTurn',
-        description: 'Ending turn...',
-        timestamp: Date.now(),
-        status: 'pending' as const
-      };
-
-      // Clear hand immediately for better feedback
-      setOptimisticHand([]);
-      setOptimisticMana(0);
-      setPendingActions(prev => [...prev, newAction]);
-    }
+    if (!canEndTurn()) return;
 
     try {
       // Freeze the state BEFORE ending turn
@@ -553,19 +546,11 @@ const Game: React.FC = () => {
     } catch (error) {
       console.error('Failed to end turn:', error);
       
-      if (optimisticUpdatesEnabled && actionId) {
-        // Revert optimistic updates and clear frozen state
-        setFrozenState(null);
-        setOptimisticHand(gameState?.hand || []);
-        setOptimisticMana(gameState?.currentMana || 0);
-        setCurrentAnimation(null);
-        setShowTurnBanner(false);
-        setTurnState('player');
-        
-        setPendingActions(prev => 
-          prev.map(a => a.id === actionId ? { ...a, status: 'failed' as const } : a)
-        );
-      }
+      // On error, clear frozen state and animations
+      setFrozenState(null);
+      setCurrentAnimation(null);
+      setShowTurnBanner(false);
+      setTurnState('player');
     }
   };
 
@@ -621,13 +606,6 @@ const Game: React.FC = () => {
     }
   };
 
-  // Add a helper function to check if there are pending card actions
-  const hasPendingCardActions = () => {
-    return pendingActions.some(action => 
-      action.type === 'playCard' && action.status === 'pending'
-    );
-  };
-
   const handleWhaleRoomChoice = async (optionId: number) => {
     if (isChoosingRoom) return; // Prevent multiple submissions
     setIsChoosingRoom(true);
@@ -680,6 +658,15 @@ const Game: React.FC = () => {
     if (gameState?.runState === 2) {
       setIsChoosingRoom(false);
       setIsGateOpen(false);
+    }
+  }, [gameState?.runState]);
+
+  // Add effect to handle initial combat setup
+  useEffect(() => {
+    if (gameState?.runState === 2) { // Combat state
+      setOptimisticHand(gameState.hand || []);
+      setOptimisticMana(gameState.currentMana || 0);
+      setIsHandVisible(true);
     }
   }, [gameState?.runState]);
 
@@ -1122,15 +1109,6 @@ const Game: React.FC = () => {
                     previousBlock={previousEnemyBlock[index]}
                   />
                 ))}
-
-                {optimisticUpdatesEnabled && (
-                  <PendingActions 
-                    actions={pendingActions}
-                    onActionComplete={(actionId) => {
-                      setPendingActions(prev => prev.filter(a => a.id !== actionId));
-                    }}
-                  />
-                )}
               </>
             )}
             
@@ -1301,50 +1279,26 @@ const Game: React.FC = () => {
                 cardData={cardData}
                 currentMana={optimisticMana ?? (gameState?.currentMana || 0)}
                 isVisible={isHandVisible}
+                cardIntents={cardIntents}
               />
             </div>
 
             <div className="bottom-right">
-              {/* Only show End Turn button when not in whale room */}
-              {(!gameState || gameState.runState !== 1) && (
-                <button 
-                  className={`menu-button end-turn-button ${hasPendingCardActions() ? 'disabled' : ''}`}
-                  onClick={handleEndTurn}
-                  disabled={hasPendingCardActions()}
-                  title={hasPendingCardActions() ? "Wait for pending card actions to complete" : "End Turn"}
-                >
-                  End Turn
-                </button>
-              )}
-              <div className="feature-toggles">
-                <label className="menu-button feature-toggle">
-                  <input
-                    type="checkbox"
-                    checked={optimisticUpdatesEnabled}
-                    onChange={(e) => setOptimisticUpdatesEnabled(e.target.checked)}
-                  />
-                  Optimistic Updates
-                </label>
-                <label className="menu-button feature-toggle">
-                  <input
-                    type="checkbox"
-                    checked={autoEndTurnEnabled}
-                    onChange={(e) => setAutoEndTurnEnabled(e.target.checked)}
-                  />
-                  Auto End Turn
-                </label>
-                <label className="menu-button feature-toggle">
-                  <input
-                    type="checkbox"
-                    checked={animationsEnabled}
-                    onChange={(e) => setAnimationsEnabled(e.target.checked)}
-                  />
-                  Combat Animations
-                </label>
-              </div>
             </div>
           </div>
         </div>
+
+        {/* Move Intent component here, outside the game content */}
+        {gameState && gameState.runState === 2 && (
+          <Intent
+            intents={cardIntents}
+            onReorder={handleReorderIntents}
+            onRemove={handleRemoveIntent}
+            onClear={handleClearIntents}
+            onCommit={handleCommitIntents}
+            isCommitting={isCommittingIntents}
+          />
+        )}
       </div>
 
       {/* Add loading overlays */}

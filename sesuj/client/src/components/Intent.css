@@ -1,0 +1,161 @@
+.intents-container {
+  min-width: 250px;
+  max-width: 300px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  user-select: none;
+}
+
+.intents-container.dragging {
+  opacity: 0.9;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.intents-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.intents-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+}
+
+.intent-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.intent-actions button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.intent-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.clear-button {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+.clear-button:hover:not(:disabled) {
+  background: rgba(220, 53, 69, 0.3);
+}
+
+.commit-button {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+}
+
+.commit-button:hover:not(:disabled) {
+  background: rgba(40, 167, 69, 0.3);
+}
+
+.intents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.intent-item {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 8px 12px;
+  cursor: grab;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.intent-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.intent-item.dragging {
+  opacity: 0.5;
+}
+
+.intent-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  position: relative;
+}
+
+.intent-number {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #ffd700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 14px;
+  z-index: 10;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.intent-description {
+  color: #fff;
+  font-size: 14px;
+  margin-left: 32px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.remove-intent {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+.remove-intent:hover:not(:disabled) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.remove-intent:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+.empty-intents {
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 16px;
+  font-style: italic;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+} 

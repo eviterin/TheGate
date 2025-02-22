@@ -178,6 +178,27 @@ contract GameState {
         }
     }
 
+    struct CardPlay {
+        uint8 cardIndex;
+        uint8 targetIndex;
+    }
+
+    function playCards(CardPlay[] calldata plays) public {
+        GameData storage data = playerData[msg.sender];
+        require(data.runState == RUN_STATE_ENCOUNTER, "Not in encounter");
+        require(plays.length > 0, "No cards to play");
+
+        // Play each card in sequence
+        // If any card fails (reverts), the entire transaction will revert automatically
+        for (uint i = 0; i < plays.length; i++) {
+            // Stop if we're no longer in combat (e.g., all enemies died)
+            if (data.runState != RUN_STATE_ENCOUNTER) break;
+            
+            // Play the card - any failure here will revert the whole transaction
+            playCard(plays[i].cardIndex, plays[i].targetIndex);
+        }
+    }
+
     function endTurn() public {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_ENCOUNTER, "Not in encounter");

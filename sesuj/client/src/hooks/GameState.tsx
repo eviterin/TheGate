@@ -161,6 +161,62 @@ export function usePlayCard() {
     return { playCard };
 }
 
+// Add new hook for playing multiple cards
+export interface CardPlay {
+    cardIndex: number;
+    targetIndex: number;
+}
+
+export function usePlayCards() {
+    const contractConfig = useGameContract();
+
+    const playCards = useCallback(async (plays: CardPlay[]) => {
+        const currentUser = getCurrentUser();
+        
+        if (!currentUser) {
+            throw new Error('No user connected');
+        }
+
+        try {
+            console.log('Playing multiple cards...', { plays });
+            
+            // Convert plays to contract format (uint8 arrays)
+            const contractPlays = plays.map(play => ({
+                cardIndex: play.cardIndex as number,
+                targetIndex: play.targetIndex as number
+            }));
+            
+            // First simulate the transaction to check for potential errors
+            await simulateContract(config, {
+                address: contractConfig.address,
+                abi: contractConfig.abi,
+                functionName: 'playCards',
+                args: [contractPlays],
+                account: currentUser.address,
+            });
+
+            // If simulation succeeds, send the actual transaction
+            const hash = await writeContract(config, {
+                address: contractConfig.address,
+                abi: contractConfig.abi,
+                functionName: 'playCards',
+                args: [contractPlays],
+            });
+
+            // Wait for transaction to be confirmed
+            await waitForTransaction(config, { hash });
+
+            console.log('Multiple cards played:', { hash });
+            return hash;
+        } catch (error) {   
+            console.error('Error playing multiple cards:', error);
+            throw error;
+        }
+    }, [contractConfig]);
+
+    return { playCards };
+}
+
 export function useEndTurn() {
     const contractConfig = useGameContract();
 
