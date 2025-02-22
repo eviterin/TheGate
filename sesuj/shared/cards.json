@@ -2,7 +2,7 @@
     "cards": [
         {
             "numericId": 1,
-            "id": "explodicate",
+            "id": "holy_fire",
             "name": "Strike",
             "description": "Deal 6 damage.",
             "manaCost": 1,
@@ -12,7 +12,7 @@
         {
             "numericId": 2,
             "id": "preach",
-            "name": "Defend",
+            "name": "Pray",
             "description": "Gain 6 block.",
             "manaCost": 1,
             "targeted": false,
@@ -20,7 +20,7 @@
         },
         {
             "numericId": 3,
-            "id": "fortify_faith",
+            "id": "explodicate",
             "name": "Pommel Strike",
             "description": "Deal 7 damage. Draw a card.",
             "manaCost": 1,
@@ -29,10 +29,73 @@
         },
         {
             "numericId": 4,
-            "id": "fasting",
-            "name": "Cleave",
+            "id": "explodicate",
+            "name": "Pontificate Truth",
             "description": "Deal 8 damage to ALL enemies.",
             "manaCost": 2,
+            "targeted": true,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 5,
+            "id": "judgement",
+            "name": "Balance the Scales",
+            "description": "Deal 3 damage to self. Deal 13 damage.",
+            "manaCost": 1,
+            "targeted": true,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 6,
+            "id": "divine_revelation",
+            "name": "Unveil",
+            "description": "Gain 100 block. Draw 3 cards.",
+            "manaCost": 3,
+            "targeted": false,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 7,
+            "id": "read_scripture",
+            "name": "Read Scripture",
+            "description": "Gain 2 strength for the rest of combat.",
+            "manaCost": 2,
+            "targeted": true,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 8,
+            "id": "pray",
+            "name": "Seek Guidance",
+            "description": "Gain 3 cards.",
+            "manaCost": 1,
+            "targeted": false,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 9,
+            "id": "explodicate",
+            "name": "Sacred Ritual",
+            "description": "Gain 10 block. Heal 3 HP.",
+            "manaCost": 2,
+            "targeted": false,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 10,
+            "id": "explodicate",
+            "name": "Divine Wrath",
+            "description": "Deal 8 damage. If enemy is at full HP, deal double.",
+            "manaCost": 1,
+            "targeted": true,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 11,
+            "id": "explodicate",
+            "name": "Explodicate",
+            "description": "Deal 15 damage to ALL.",
+            "manaCost": 1,
             "targeted": true,
             "animationType": "flip"
         }

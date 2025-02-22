@@ -31,8 +31,6 @@ export function useCards() {
 
   const getActiveCards = useCallback(async (): Promise<CardData[]> => {
     try {
-      console.log('🔍 Fetching active cards from chain...');
-      
       const cards = await readContract(config, {
         address: contractConfig.address,
         abi: contractConfig.abi,
@@ -48,11 +46,10 @@ export function useCards() {
           ...card,
           numericId,
           animationType: cardDefinition?.animationType || 'none',
-          imageUrl: new URL(`../assets/cardart/${card.id}.png`, import.meta.url).href
+          imageUrl: cardDefinition ? new URL(`../assets/cardart/${cardDefinition.id}.png`, import.meta.url).href : undefined
         };
       });
 
-      console.log('📦 Fetched and mapped cards:', mappedCards);
       return mappedCards;
     } catch (error) {
       console.error('❌ Error fetching cards:', error);
