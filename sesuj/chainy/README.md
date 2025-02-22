@@ -20,6 +20,8 @@ Card data lives in `/shared/cards.json` and is used by:
 
 ## Development
 
+todo: the .env file!!
+
 ### Install dependencies
 ```bash
 npm install

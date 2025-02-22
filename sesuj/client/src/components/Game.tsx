@@ -13,6 +13,7 @@ import { getLevelConfig } from '../game/levelConfigs';
 import { Position } from '../game/encounters';
 import { CardAnimationType } from '../game/cards';
 import encountersData from '../../../shared/encounters.json';
+import TurnBanner from './TurnBanner';
 
 // Add InfoBar props interface
 interface InfoBarProps {
@@ -78,6 +79,12 @@ interface AnimationState {
   timestamp: number;
 }
 
+// Add helper to calculate damage after block
+const calculateDamageAfterBlock = (damage: number, block: number): number => {
+  const remainingDamage = Math.max(0, damage - block);
+  return remainingDamage;
+};
+
 const Game: React.FC = () => {
   const [hand, setHand] = useState<number[]>([]);
   const [deck, setDeck] = useState<number[]>([]);
@@ -113,6 +120,15 @@ const Game: React.FC = () => {
   const [isChoosingReward, setIsChoosingReward] = useState(false);
   const [currentAnimation, setCurrentAnimation] = useState<AnimationState | null>(null);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
+  const [turnState, setTurnState] = useState<'player' | 'enemy' | 'transitioning'>('player');
+  const [showTurnBanner, setShowTurnBanner] = useState(false);
+  const [turnBannerMessage, setTurnBannerMessage] = useState('');
+  const [turnBannerType, setTurnBannerType] = useState<'enemy' | 'player'>('player');
+  const [previousHealth, setPreviousHealth] = useState<number>(0);
+  const [previousBlock, setPreviousBlock] = useState<number>(0);
+  const [previousEnemyHealth, setPreviousEnemyHealth] = useState<number[]>([]);
+  const [previousEnemyBlock, setPreviousEnemyBlock] = useState<number[]>([]);
+  const [expectingDeath, setExpectingDeath] = useState(false);
 
   // Fetch card data
   useEffect(() => {
@@ -142,6 +158,14 @@ const Game: React.FC = () => {
       try {
         const state = await getGameState();
         if (!mounted) return;
+        
+        // Store previous values before updating state
+        if (gameState) {
+          setPreviousHealth(gameState.currentHealth);
+          setPreviousBlock(gameState.currentBlock);
+          setPreviousEnemyHealth(gameState.enemyCurrentHealth);
+          setPreviousEnemyBlock(gameState.enemyBlock);
+        }
         
         setGameState(state);
         setIsLoadingGameState(false);
@@ -269,8 +293,7 @@ const Game: React.FC = () => {
           setPendingActions(prev => 
             prev.map(a => 
               a.status === 'pending' ? { ...a, status: 'failed' as const } : a
-            )
-          );
+          ));
         }
       }
     };
@@ -429,7 +452,24 @@ const Game: React.FC = () => {
       setOptimisticMana(0);
       setPendingActions(prev => [...prev, newAction]);
 
-      // Animate enemy actions
+      // Show enemy turn banner with initial delay
+      setTurnState('transitioning');
+      setTurnBannerMessage("Enemy Turn");
+      setTurnBannerType('enemy');
+      setShowTurnBanner(true);
+
+      // Wait longer for banner animation and transition feel
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setTurnState('enemy');
+
+      // Add delay before enemies start acting
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Calculate total expected damage from all enemies
+      let expectedHealth = gameState?.currentHealth ?? 0;
+      let currentBlock = gameState?.currentBlock ?? 0;
+
+      // Animate enemy actions with delays
       if (animationsEnabled && gameState) {
         for (let i = 0; i < gameState.enemyTypes.length; i++) {
           if (gameState.enemyCurrentHealth[i] > 0) {
@@ -437,6 +477,19 @@ const Game: React.FC = () => {
             const enemyType = gameState.enemyTypes[i];
             const levelConfig = getLevelConfig(gameState.currentFloor);
             const targetPos = levelConfig.heroPosition;
+
+            // Calculate damage from this enemy's intent
+            if (intent !== INTENT_TYPES.BLOCK_5) { // If not blocking, it's damage
+              const damage = calculateDamageAfterBlock(intent, currentBlock);
+              expectedHealth -= damage;
+              currentBlock = Math.max(0, currentBlock - intent); // Reduce block
+              
+              // Check for expected death
+              if (expectedHealth <= 0) {
+                setExpectingDeath(true);
+                break; // Stop processing more enemies if we expect death
+              }
+            }
 
             // Create animation state for this enemy
             const animationState: AnimationState = {
@@ -446,22 +499,46 @@ const Game: React.FC = () => {
               timestamp: Date.now()
             };
 
-            // Set the animation with a delay based on enemy index
-            setTimeout(() => {
-              setCurrentAnimation(animationState);
-              // Clear the animation after it completes
-              setTimeout(() => {
-                setCurrentAnimation(null);
-              }, 600);
-            }, i * 800); // Stagger enemy animations
+            // Add longer delay before each enemy acts
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            setCurrentAnimation(animationState);
+            
+            // Keep animation duration the same
+            await new Promise(resolve => setTimeout(resolve, 600));
+            setCurrentAnimation(null);
           }
+        }
+
+        // Add delay after enemies finish
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Hide enemy turn banner
+        setShowTurnBanner(false);
+        
+        // Only show player turn banner if we don't expect death
+        if (!expectingDeath) {
+          // Longer delay before showing player turn banner
+          await new Promise(resolve => setTimeout(resolve, 800));
+          setTurnBannerMessage("Your Turn");
+          setTurnBannerType('player');
+          setShowTurnBanner(true);
+          
+          // Keep player turn banner visible longer
+          setTimeout(() => {
+            setShowTurnBanner(false);
+            setTurnState('player');
+          }, 2000);
         }
       }
     }
 
     try {
       await endTurnAction();
-      // If optimistic updates are disabled, wait for next state update
+      
+      // Reset optimistic values after chain confirmation
+      setOptimisticHand([]);
+      setOptimisticMana(0);
     } catch (error) {
       console.error('Failed to end turn:', error);
       
@@ -470,6 +547,8 @@ const Game: React.FC = () => {
         setOptimisticHand(gameState.hand);
         setOptimisticMana(gameState.currentMana);
         setCurrentAnimation(null);
+        setShowTurnBanner(false);
+        setTurnState('player');
         
         setPendingActions(prev => 
           prev.map(a => a.id === actionId ? { ...a, status: 'failed' as const } : a)
@@ -613,6 +692,8 @@ const Game: React.FC = () => {
             margin: 0 auto;
             box-shadow: 0 0 30px rgba(89, 86, 108, 0.3);
             border-radius: 8px;
+            ${expectingDeath ? 'filter: brightness(0.7);' : ''}
+            transition: filter 0.5s ease-out;
           }
 
           .bottom-area {
@@ -978,6 +1059,11 @@ const Game: React.FC = () => {
           <div className="side-decorations left"></div>
           <div className="side-decorations right"></div>
           <div className="game-content" style={{backgroundImage: `url(${getBackground()})`}}>
+            <TurnBanner 
+              message={turnBannerMessage}
+              isVisible={showTurnBanner}
+              type={turnBannerType}
+            />
             {/* Info Bar */}
             <InfoBar />
 
@@ -995,6 +1081,8 @@ const Game: React.FC = () => {
                   currentFloor={gameState.currentFloor}
                   isAnimating={currentAnimation?.sourceType === 'hero' && currentAnimation.sourceIndex === 0}
                   animationTarget={currentAnimation?.sourceType === 'hero' ? currentAnimation.targetPosition : undefined}
+                  previousHealth={previousHealth}
+                  previousBlock={previousBlock}
                 />
                 {gameState.enemyTypes.map((type: number, index: number) => (
                   <GameEntity
@@ -1010,6 +1098,8 @@ const Game: React.FC = () => {
                     intent={gameState.enemyCurrentHealth[index] > 0 ? gameState.enemyIntents[index] : undefined}
                     isAnimating={currentAnimation?.sourceType === 'enemy' && currentAnimation.sourceIndex === index}
                     animationTarget={currentAnimation?.sourceType === 'enemy' ? currentAnimation.targetPosition : undefined}
+                    previousHealth={previousEnemyHealth[index]}
+                    previousBlock={previousEnemyBlock[index]}
                   />
                 ))}
 

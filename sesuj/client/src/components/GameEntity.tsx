@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { getLevelConfig } from '../game/levelConfigs';
 import { Position } from '../game/encounters';
 import { CardAnimationType } from '../game/cards';
@@ -73,6 +73,8 @@ interface GameEntityProps {
   isAnimating?: boolean;
   animationType?: CardAnimationType;
   animationTarget?: Position;
+  previousHealth?: number;
+  previousBlock?: number;
 }
 
 const GameEntity: React.FC<GameEntityProps> = ({ 
@@ -86,10 +88,22 @@ const GameEntity: React.FC<GameEntityProps> = ({
   currentFloor = 0,
   intent = 0,
   isAnimating = false,
-  animationTarget
+  animationTarget,
+  previousHealth = health,
+  previousBlock = block,
 }) => {
   const isHero = type === 'hero';
-  
+  const [isShaking, setIsShaking] = useState(false);
+  const entityRef = useRef<HTMLDivElement>(null);
+
+  // Track health changes
+  useEffect(() => {
+    if (health < previousHealth) {
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 500);
+    }
+  }, [health, previousHealth]);
+
   // Get animation styles based on type and intent
   const getAnimationStyles = () => {
     const styles: React.CSSProperties = {
@@ -199,8 +213,20 @@ const GameEntity: React.FC<GameEntityProps> = ({
           }
 
           @keyframes flip {
-            0% { transform: translate(-50%, -50%) rotateY(0deg); }
+            0%, 100% { transform: translate(-50%, -50%) rotateY(0deg); }
             100% { transform: translate(-50%, -50%) rotateY(360deg); }
+          }
+
+          @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+          }
+
+          @keyframes flash {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(2) saturate(2); }
           }
 
           .game-entity {
@@ -210,9 +236,18 @@ const GameEntity: React.FC<GameEntityProps> = ({
           .game-entity.animating {
             transition: none;
           }
+
+          .health-bar {
+            transition: all 0.2s ease-out;
+          }
+
+          .health-bar.flashing {
+            filter: brightness(1.5) saturate(1.5);
+          }
         `}
       </style>
       <div 
+        ref={entityRef}
         className={`game-entity ${type} ${isValidTarget ? 'valid-target' : ''} ${isAnimating ? 'animating' : ''}`}
         style={getAnimationStyles()}
         onClick={() => isValidTarget && onEntityClick?.()}
@@ -276,8 +311,14 @@ const GameEntity: React.FC<GameEntityProps> = ({
           flexDirection: 'column',
           gap: '4px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <span>❤️ {health}/{maxHealth}</span>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '8px',
+            animation: isShaking ? 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both' : undefined
+          }}>
+            <span>{health <= 0 ? '💔' : '❤️'} {health}/{maxHealth}</span>
             {block > 0 && (
               <span style={{ 
                 color: '#70ff70',
