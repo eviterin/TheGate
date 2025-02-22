@@ -467,12 +467,12 @@ const Game: React.FC = () => {
       // Now call end turn after freezing state
       await endTurnAction();
       
-      // Wait longer for banner animation and transition feel
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait shorter for banner animation and transition feel
+      await new Promise(resolve => setTimeout(resolve, 800));
       setTurnState('enemy');
 
-      // Add delay before enemies start acting
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Add shorter delay before enemies start acting
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       // Animate enemy actions with delays
       if (animationsEnabled && stateBeforeEnemyTurn) {
@@ -490,8 +490,8 @@ const Game: React.FC = () => {
               timestamp: Date.now()
             };
 
-            // Add longer delay before each enemy acts
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Add shorter delay before each enemy acts
+            await new Promise(resolve => setTimeout(resolve, 400));
             
             setCurrentAnimation(animationState);
             
@@ -501,14 +501,14 @@ const Game: React.FC = () => {
           }
         }
 
-        // Add delay after enemies finish
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Add shorter delay after enemies finish
+        await new Promise(resolve => setTimeout(resolve, 400));
         
         // Hide enemy turn banner
         setShowTurnBanner(false);
         
-        // Show player turn banner
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Add shorter delay before player turn
+        await new Promise(resolve => setTimeout(resolve, 400));
 
         // Clear frozen state and get fresh state before showing player turn
         setFrozenState(null);
@@ -527,11 +527,11 @@ const Game: React.FC = () => {
         setTurnBannerType('player');
         setShowTurnBanner(true);
         
-        // Keep player turn banner visible longer
+        // Keep player turn banner visible shorter
         setTimeout(() => {
           setShowTurnBanner(false);
           setTurnState('player');
-        }, 2000);
+        }, 1000);
       } else {
         // If animations are disabled, just force a state refresh
         setFrozenState(null);
