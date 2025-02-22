@@ -343,8 +343,6 @@ const Game: React.FC = () => {
 
       // Convert intents to contract format
       const plays = cardIntents.map((intent, index) => {
-        // Each played card shifts the indices of remaining cards down by 1
-        // So we need to adjust the indices of later cards
         const adjustedIndex = intent.cardIndex - cardIntents.slice(0, index).filter(
           prevIntent => prevIntent.cardIndex < intent.cardIndex
         ).length;
@@ -355,19 +353,22 @@ const Game: React.FC = () => {
         };
       });
 
-      // First send the transaction
-      const txPromise = playCards(plays);
-
       // Freeze the current state for animations
       const stateBeforeAnimations = gameState;
       setFrozenState(stateBeforeAnimations);
 
-      // Play animations for each card sequentially while transaction processes
-      for (const intent of cardIntents) {
+      // Just submit the transaction without waiting for confirmation
+      playCards(plays).catch(error => {
+        console.error('Transaction failed:', error);
+        // Handle failure if needed
+      });
+
+      // Play all animations immediately
+      for (let i = 0; i < cardIntents.length; i++) {
+        const intent = cardIntents[i];
         const card = cardData.find(c => c.numericId === intent.cardId);
         if (!card) continue;
 
-        // Create animation state for this card
         const levelConfig = getLevelConfig(stateBeforeAnimations.currentFloor);
         const targetPos = levelConfig.enemyPositions[intent.targetIndex];
 
@@ -378,36 +379,34 @@ const Game: React.FC = () => {
           timestamp: Date.now()
         };
 
-        // Show the animation
+        // If not the first animation, add small delay
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
+        // Show and wait for this animation
         setCurrentAnimation(animationState);
-        
-        // Wait for animation to complete
         await new Promise(resolve => setTimeout(resolve, 600));
         setCurrentAnimation(null);
-
-        // Add small delay between cards
-        await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      // Wait for transaction to complete
-      await txPromise;
+      // Add a small delay to ensure animations are complete
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Clear frozen state to show new state
+      // Clear frozen state and update with new state
       setFrozenState(null);
-      
-      // Clear intents after successful commit
-      setCardIntents([]);
-
-      // Get fresh state
       const newState = await getGameState();
       if (newState) {
         setGameState(newState);
         setOptimisticHand(newState.hand || []);
         setOptimisticMana(newState.currentMana || 0);
       }
+
+      // Clear intents after everything is done
+      setCardIntents([]);
+
     } catch (error) {
       console.error('Failed to commit card intents:', error);
-      // On error, clear frozen state and animations
       setFrozenState(null);
       setCurrentAnimation(null);
     } finally {
