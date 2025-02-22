@@ -15,6 +15,7 @@ export interface CardData {
   targeted: boolean;
   numericId?: number;
   animationType?: 'jump' | 'flip' | 'none';
+  imageUrl?: string;
 }
 
 export function useCardsContract() {
@@ -46,7 +47,8 @@ export function useCards() {
         return {
           ...card,
           numericId,
-          animationType: cardDefinition?.animationType || 'none'
+          animationType: cardDefinition?.animationType || 'none',
+          imageUrl: new URL(`../assets/cardart/${card.id}.png`, import.meta.url).href
         };
       });
 

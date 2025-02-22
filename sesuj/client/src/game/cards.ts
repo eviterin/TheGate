@@ -21,15 +21,16 @@ export interface CardData {
     description: string;
     manaCost: number;
     targeted: boolean;
-    imagePath?: string; 
+    imageUrl: string;
     animationType: CardAnimationType;
 }
 
 const typedCardData = cardData as CardDataJson;
 
-export const cards: CardData[] = typedCardData.cards.map((card) => ({
+// Map the cards and add image URLs
+export const cards: CardData[] = typedCardData.cards.map(card => ({
     ...card,
-    imagePath: `assets/cardart/${card.id}.png`
+    imageUrl: new URL(`../assets/cardart/${card.id}.png`, import.meta.url).href
 }));
 
 export function getCardById(id: string): CardData | undefined {
