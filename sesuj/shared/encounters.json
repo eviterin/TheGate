@@ -194,13 +194,13 @@
       "level": 9,
       "name": "Abyssal Throne",
       "chainData": {
-        "enemyTypes": [2, 2],
-        "enemyMaxHealth": [19, 19],
+        "enemyTypes": [2],
+        "enemyMaxHealth": [38],
         "baseIntents": {
           "2": {
-            "damage": { "min": 9, "max": 13 },
+            "damage": { "min": 12, "max": 16 },
             "blockChance": 0.45,
-            "blockAmount": 8,
+            "blockAmount": 10,
             "animation": "flip"
           }
         }
@@ -210,13 +210,13 @@
       "level": 10,
       "name": "The End of Days",
       "chainData": {
-        "enemyTypes": [2, 2],
-        "enemyMaxHealth": [20, 20],
+        "enemyTypes": [2],
+        "enemyMaxHealth": [40],
         "baseIntents": {
           "2": {
-            "damage": { "min": 10, "max": 15 },
+            "damage": { "min": 14, "max": 18 },
             "blockChance": 0.5,
-            "blockAmount": 8,
+            "blockAmount": 12,
             "animation": "flip"
           }
         }

@@ -34,6 +34,7 @@ export interface Position {
 export interface ClientData {
     heroPosition: Position;
     enemyPositions: Position[];
+    enemyScales?: number[];
 }
 
 export interface ChainData {
@@ -76,47 +77,58 @@ export const BASE_POSITIONS = {
 const positions: Record<number, ClientData> = {
     0: {
         heroPosition: BASE_POSITIONS.HERO.BOTTOMCENTER,
-        enemyPositions: []
+        enemyPositions: [],
+        enemyScales: []
     },
     1: {
         heroPosition: BASE_POSITIONS.HERO.LEFT,
-        enemyPositions: [{x: 90, y: 80}, {x: 80, y: 70}]
+        enemyPositions: [{x: 90, y: 80}, {x: 80, y: 70}],
+        enemyScales: [1, 1]
     },
     2: {
         heroPosition: {x: 60, y: 85},
-        enemyPositions: [{x: 20, y: 70}, {x: 80, y: 50}]
+        enemyPositions: [{x: 20, y: 70}, {x: 80, y: 50}],
+        enemyScales: [1, 1]
     },
     3: {
         heroPosition: {x: 60, y: 85},
-        enemyPositions: [{x: 22, y: 68}]
+        enemyPositions: [{x: 22, y: 68}],
+        enemyScales: [1.2]
     },
     4: {
         heroPosition: {x: 40, y: 95},
-        enemyPositions: [{x: 82, y: 70}, {x: 10, y: 35}]
+        enemyPositions: [{x: 82, y: 70}, {x: 10, y: 35}],
+        enemyScales: [1, 1]
     },
     5: {
         heroPosition: BASE_POSITIONS.HERO.RIGHT,
-        enemyPositions: [BASE_POSITIONS.ENEMY.FAR_LEFT, BASE_POSITIONS.ENEMY.LEFT]
+        enemyPositions: [BASE_POSITIONS.ENEMY.FAR_LEFT, BASE_POSITIONS.ENEMY.LEFT],
+        enemyScales: [1, 1]
     },
     6: {
         heroPosition: BASE_POSITIONS.HERO.CENTER,
-        enemyPositions: [BASE_POSITIONS.ENEMY.LEFT, BASE_POSITIONS.ENEMY.RIGHT]
+        enemyPositions: [BASE_POSITIONS.ENEMY.LEFT, BASE_POSITIONS.ENEMY.RIGHT],
+        enemyScales: [1, 1]
     },
     7: {
         heroPosition: BASE_POSITIONS.HERO.LEFT,
-        enemyPositions: [BASE_POSITIONS.ENEMY.CENTER, BASE_POSITIONS.ENEMY.FAR_RIGHT]
+        enemyPositions: [BASE_POSITIONS.ENEMY.CENTER, BASE_POSITIONS.ENEMY.FAR_RIGHT],
+        enemyScales: [1, 1]
     },
     8: {
         heroPosition: {x: 80, y: 92},
-        enemyPositions: [{x: 50, y: 79}, {x: 20, y: 90}]
+        enemyPositions: [{x: 50, y: 79}, {x: 20, y: 90}],
+        enemyScales: [1, 1]
     },
     9: {
         heroPosition: {x: 50, y: 92},
-        enemyPositions: [{x: 33, y: 85}, {x: 67, y: 85}]
+        enemyPositions: [{x: 50, y: 75}],
+        enemyScales: [1.3]
     },
     10: {
         heroPosition: {x: 30, y: 80},
-        enemyPositions: [{x: 70, y: 82}, {x: 75, y: 82}]
+        enemyPositions: [{x: 70, y: 75}],
+        enemyScales: [2.0]
     }
 } as const;
 

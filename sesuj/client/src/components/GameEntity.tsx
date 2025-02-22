@@ -117,6 +117,7 @@ interface GameEntityProps {
   previousHealth?: number;
   previousBlock?: number;
   buff?: number;
+  scale?: number;
 }
 
 const GameEntity: React.FC<GameEntityProps> = ({ 
@@ -133,7 +134,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
   animationTarget,
   previousHealth = health,
   previousBlock = block,
-  buff = 0
+  buff = 0,
+  scale
 }) => {
   const isHero = type === 'hero';
   const [isShaking, setIsShaking] = useState(false);
@@ -163,6 +165,11 @@ const GameEntity: React.FC<GameEntityProps> = ({
       color: 'white',
       cursor: isValidTarget ? 'pointer' : 'default',
     };
+
+    // Apply scale if provided
+    if (scale) {
+      styles.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
 
     if (!isAnimating) return styles;
 

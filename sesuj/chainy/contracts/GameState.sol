@@ -49,10 +49,13 @@ contract GameState {
     }
     
     mapping(address => GameData) public playerData;
+    mapping(address => bool) public victoriousPlayers;
+    address[] public winners;
     IGameEncounters public encounters;
 
     event QuickTransactionsEnabled(address indexed user, uint256 timestamp);
     event RewardsGenerated(address indexed user, uint8 floor, uint8[] rewards);
+    event GameCompleted(address indexed player);
 
     uint8 constant RUN_STATE_NONE = 0;
     uint8 constant RUN_STATE_WHALE_ROOM = 1;
@@ -320,7 +323,15 @@ contract GameState {
         delete data.availableCardRewards;
         data.runState = RUN_STATE_ENCOUNTER;
         data.currentFloor++;
-        startEncounter();
+
+        if (data.currentFloor == 11) {
+            victoriousPlayers[msg.sender] = true;
+            winners.push(msg.sender);
+            emit GameCompleted(msg.sender);
+            data.runState = RUN_STATE_NONE;
+        } else {
+            startEncounter();
+        }
     }
 
     function skipCardReward() public {
@@ -329,7 +340,19 @@ contract GameState {
         delete data.availableCardRewards;
         data.runState = RUN_STATE_ENCOUNTER;
         data.currentFloor++;
-        startEncounter();
+
+        if (data.currentFloor == 11) {
+            victoriousPlayers[msg.sender] = true;
+            winners.push(msg.sender);
+            emit GameCompleted(msg.sender);
+            data.runState = RUN_STATE_NONE;
+        } else {
+            startEncounter();
+        }
+    }
+
+    function hasPlayerWon(address player) public view returns (bool) {
+        return victoriousPlayers[player];
     }
 
     function getEnemyData(address player) public view returns (
@@ -442,5 +465,10 @@ contract GameState {
         encounters.clearEnemyData(msg.sender);
         
         startRun();
+    }
+
+    // Function to get all winners
+    function getAllWinners() public view returns (address[] memory) {
+        return winners;
     }
 }

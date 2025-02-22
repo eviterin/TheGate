@@ -362,7 +362,7 @@
   align-items: center;
   width: 100%;
   max-width: 1200px;
-  margin: 0 auto -90px auto; /* Half as much offset as before */
+  margin: 0 auto 180px auto; /* Changed from -180px to 180px to move upward */
   padding: 2rem;
 }
 
@@ -502,7 +502,7 @@
   position: absolute;
   right: 40px;
   top: 50%;
-  transform: translateY(calc(-50% - 90px)); /* Half as much offset as before */
+  transform: translateY(calc(-50% + 180px)); /* Changed from -180px to +180px to move upward */
   padding: 12px 24px;
   background: rgba(0, 0, 0, 0.6);
   border: 2px solid #ffd700;
@@ -516,5 +516,5 @@
 .whale-room-gate:hover {
   background: rgba(0, 0, 0, 0.8);
   box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);
-  transform: translateY(calc(-50% - 90px)) scale(1.02); /* Keep the offset in hover */
+  transform: translateY(calc(-50% + 180px)) scale(1.02); /* Changed from -180px to +180px to move upward */
 } 

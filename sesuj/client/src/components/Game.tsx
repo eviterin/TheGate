@@ -1144,6 +1144,7 @@ const Game: React.FC = () => {
                     previousHealth={previousEnemyHealth[index]}
                     previousBlock={previousEnemyBlock[index]}
                     buff={gameState.enemyBuffs[index]}
+                    scale={getLevelConfig(gameState.currentFloor).enemyScales?.[index]}
                   />
                 ))}
               </>
@@ -1265,6 +1266,30 @@ const Game: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Victory Screen Overlay */}
+            {gameState?.runState === 0 && gameState?.currentFloor === 11 && (
+              <div className="death-screen-overlay victory">
+                <div className="death-screen-content">
+                  <h2 className="death-screen-title" style={{ color: '#ffd700' }}>Victory</h2>
+                  <p className="death-screen-message" style={{ fontSize: '20px', lineHeight: '1.6' }}>
+                    Your triumph echoes through the divine realms. Your name shall be forever etched in the sacred scrolls, a testament to your unwavering faith and courage.
+                  </p>
+                  <div className="death-screen-buttons">
+                    <button 
+                      className="abandon-button"
+                      onClick={handleBackToMenu}
+                      style={{
+                        background: 'linear-gradient(135deg, #ffd700 0%, #b8860b 100%)',
+                        color: '#000'
+                      }}
+                    >
+                      Return to the Mortal Realm
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bottom-area">
@@ -1351,7 +1376,7 @@ const Game: React.FC = () => {
       />
       <LoadingOverlay 
         isVisible={isChoosingReward} 
-        message={selectedReward ? "Receiving divine blessing..." : "Faith guides you onward..."} 
+        message={isChoosingReward && selectedReward ? "Receiving divine blessing..." : "Faith guides you onward..."} 
       />
       <LoadingOverlay 
         isVisible={isRetrying} 

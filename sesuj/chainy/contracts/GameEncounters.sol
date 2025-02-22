@@ -65,6 +65,18 @@ contract GameEncounters {
             data.currentHealth = [18, 22];
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
+        } else if (floor == 9) {
+            data.types = [ENEMY_TYPE_B];
+            data.maxHealth = [38];
+            data.currentHealth = [38];
+            data.blockAmount = new uint16[](1);
+            data.buffs = new uint8[](1);
+        } else if (floor == 10) {
+            data.types = [ENEMY_TYPE_B];
+            data.maxHealth = [40];
+            data.currentHealth = [40];
+            data.blockAmount = new uint16[](1);
+            data.buffs = new uint8[](1);
         } else {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
             data.maxHealth = [10, 12];
