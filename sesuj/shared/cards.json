@@ -3,7 +3,7 @@
         {
             "numericId": 1,
             "id": "holy_fire",
-            "name": "Strike",
+            "name": "Smite",
             "description": "Deal 6 damage.",
             "manaCost": 1,
             "targeted": true,
@@ -21,7 +21,7 @@
         {
             "numericId": 3,
             "id": "explodicate",
-            "name": "Pommel Strike",
+            "name": "Unfold Truth",
             "description": "Deal 7 damage. Draw a card.",
             "manaCost": 1,
             "targeted": true,
@@ -30,7 +30,7 @@
         {
             "numericId": 4,
             "id": "explodicate",
-            "name": "Pontificate Truth",
+            "name": "Preach",
             "description": "Deal 8 damage to ALL enemies.",
             "manaCost": 2,
             "targeted": true,

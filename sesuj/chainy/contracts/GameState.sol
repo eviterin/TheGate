@@ -64,10 +64,17 @@ contract GameState {
     uint8 constant RUN_STATE_DEATH = 4;
 
     uint8 constant CARD_ID_NONE = 0;
-    uint8 constant CARD_ID_STRIKE = 1;
-    uint8 constant CARD_ID_DEFEND = 2;
-    uint8 constant CARD_ID_POMMEL_STRIKE = 3;
-    uint8 constant CARD_ID_CLEAVE = 4;
+    uint8 constant CARD_ID_SMITE = 1;
+    uint8 constant CARD_ID_PRAY = 2;
+    uint8 constant CARD_ID_UNFOLD_TRUTH = 3;
+    uint8 constant CARD_ID_PREACH = 4;
+    uint8 constant CARD_ID_BALANCE = 5;
+    uint8 constant CARD_ID_UNVEIL = 6;
+    uint8 constant CARD_ID_READ_SCRIPTURE = 7;
+    uint8 constant CARD_ID_SEEK_GUIDANCE = 8;
+    uint8 constant CARD_ID_SACRED_RITUAL = 9;
+    uint8 constant CARD_ID_DIVINE_WRATH = 10;
+    uint8 constant CARD_ID_EXPLODICATE = 11;
 
     constructor(address _encountersContract) {
         encounters = IGameEncounters(_encountersContract);
@@ -93,7 +100,7 @@ contract GameState {
         data.extraCardDrawEnabled = false;
         data.hasProtectionBlessing = false;
         delete data.deck;
-        data.deck = [CARD_ID_STRIKE, CARD_ID_STRIKE, CARD_ID_STRIKE, CARD_ID_DEFEND, CARD_ID_DEFEND];
+        data.deck = [CARD_ID_SMITE, CARD_ID_SMITE, CARD_ID_SMITE, CARD_ID_PRAY, CARD_ID_PRAY];
     }
     
     function abandonRun() public {
@@ -145,29 +152,36 @@ contract GameState {
 
         (uint8[] memory types,,uint16[] memory currentHealth,,,) = encounters.getEnemyData(msg.sender);
 
-        if (playedCardID == CARD_ID_STRIKE || playedCardID == CARD_ID_POMMEL_STRIKE || playedCardID == CARD_ID_CLEAVE) {
+        // Check targeting requirements
+        if (playedCardID == CARD_ID_SMITE || 
+            playedCardID == CARD_ID_UNFOLD_TRUTH || 
+            playedCardID == CARD_ID_PREACH ||
+            playedCardID == CARD_ID_BALANCE || 
+            playedCardID == CARD_ID_UNVEIL || 
+            playedCardID == CARD_ID_EXPLODICATE) {
             require(targetIndex < types.length, "Invalid target");
             require(currentHealth[targetIndex] > 0, "Cannot target a dead enemy");
         }
 
-        if (playedCardID == CARD_ID_STRIKE && data.currentMana >= 1) {
+        // Implemented cards
+        if (playedCardID == CARD_ID_SMITE && data.currentMana >= 1) {
             data.currentMana--;
             if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 6)) {
                 if (checkWinCondition()) return;
             }
             discardCard(playedCardIndex);
-        } else if (playedCardID == CARD_ID_DEFEND && data.currentMana >= 1) {
+        } else if (playedCardID == CARD_ID_PRAY && data.currentMana >= 1) {
             data.currentMana--;
             data.currentBlock += 6;
             discardCard(playedCardIndex);
-        } else if (playedCardID == CARD_ID_POMMEL_STRIKE && data.currentMana >= 1) {
+        } else if (playedCardID == CARD_ID_UNFOLD_TRUTH && data.currentMana >= 1) {
             data.currentMana--;
             if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 7)) {
                 if (checkWinCondition()) return;
             }
             drawCard();
             discardCard(playedCardIndex);
-        } else if (playedCardID == CARD_ID_CLEAVE && data.currentMana >= 2) {
+        } else if (playedCardID == CARD_ID_SACRED_RITUAL && data.currentMana >= 2) {
             data.currentMana -= 2;
             bool anyKilled = false;
             for (uint i = 0; i < types.length; i++) {
@@ -178,6 +192,19 @@ contract GameState {
                 }
             }
             if (anyKilled && checkWinCondition()) return;
+            discardCard(playedCardIndex);
+        }
+        // Default implementation for unimplemented cards (6 block)
+        else if (data.currentMana >= 1 && (
+            playedCardID == CARD_ID_PREACH ||
+            playedCardID == CARD_ID_BALANCE ||
+            playedCardID == CARD_ID_UNVEIL ||
+            playedCardID == CARD_ID_READ_SCRIPTURE ||
+            playedCardID == CARD_ID_SEEK_GUIDANCE ||
+            playedCardID == CARD_ID_DIVINE_WRATH
+        )) {
+            data.currentMana--;
+            data.currentBlock += 6;
             discardCard(playedCardIndex);
         }
     }
@@ -302,7 +329,7 @@ contract GameState {
     function generateRewards() private {
         GameData storage data = playerData[msg.sender];
         delete data.availableCardRewards;
-        data.availableCardRewards = [CARD_ID_POMMEL_STRIKE, CARD_ID_CLEAVE];
+        data.availableCardRewards = [CARD_ID_UNFOLD_TRUTH, CARD_ID_SACRED_RITUAL];
         emit RewardsGenerated(msg.sender, data.currentFloor, data.availableCardRewards);
     }
 
