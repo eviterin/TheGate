@@ -1,5 +1,10 @@
-const { encounters, ENEMY_TYPE } = require('./encounters');
 const { ethers } = require('ethers');
+const fs = require('fs');
+const path = require('path');
+
+// Read the encounters data from shared JSON
+const encountersPath = path.join(__dirname, '../../shared/encounters.json');
+const { encounters } = JSON.parse(fs.readFileSync(encountersPath));
 
 // Function to enrich the GameState contract with encounter data
 async function enrichGameState(contract, deployerAddress) {

@@ -1,0 +1,68 @@
+{
+  "constants": {
+    "ENEMY_TYPE": {
+      "NONE": 0,
+      "TYPE_A": 1,
+      "TYPE_B": 2
+    },
+    "INTENT_TYPES": {
+      "BLOCK_5": 1000
+    }
+  },
+  "encounters": [
+    {
+      "level": 0,
+      "name": "The Gate",
+      "chainData": {
+        "enemyTypes": [],
+        "enemyMaxHealth": [],
+        "baseIntents": []
+      }
+    },
+    {
+      "level": 1,
+      "name": "Dunes",
+      "chainData": {
+        "enemyTypes": [1, 2],
+        "enemyMaxHealth": [10, 12],
+        "baseIntents": {
+          "1": {
+            "damage": { "min": 6, "max": 10 }
+          },
+          "2": {
+            "damage": { "min": 4, "max": 8 },
+            "blockChance": 0.33,
+            "blockAmount": 5
+          }
+        }
+      }
+    },
+    {
+      "level": 2,
+      "name": "Cursed Hamlet",
+      "chainData": {
+        "enemyTypes": [1, 2],
+        "enemyMaxHealth": [12, 14],
+        "baseIntents": {
+          "1": { "damage": { "min": 7, "max": 11 } },
+          "2": { "damage": { "min": 5, "max": 9 } }
+        }
+      }
+    },
+    {
+      "level": 10,
+      "name": "The End of Days",
+      "chainData": {
+        "enemyTypes": [2, 2],
+        "enemyMaxHealth": [20, 20],
+        "baseIntents": {
+          "2": {
+            "damage": { "min": 10, "max": 15 },
+            "blockChance": 0.5,
+            "blockAmount": 8
+          }
+        }
+      }
+    }
+  ]
+} 

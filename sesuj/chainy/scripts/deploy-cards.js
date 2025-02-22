@@ -6,6 +6,10 @@ const path = require('path');
 const cardsPath = path.join(__dirname, '../artifacts/contracts/Cards.sol/Cards.json');
 const cardsArtifact = JSON.parse(fs.readFileSync(cardsPath));
 
+// Read the shared card data
+const sharedDataPath = path.join(__dirname, '../../shared/cards.json');
+const { cards } = JSON.parse(fs.readFileSync(sharedDataPath));
+
 async function deployCards(wallet) {
     console.log('Deploying Cards contract...');
     
@@ -35,42 +39,7 @@ async function deployCards(wallet) {
 async function initializeCards(contract) {
     console.log('Initializing cards...');
     
-    const initialCards = [
-        {
-            numericId: 1,
-            id: 'explodicate',
-            name: 'Strike',
-            description: 'Deal 6 damage.',
-            manaCost: 1,
-            targeted: true
-        },
-        {
-            numericId: 2,
-            id: 'preach',
-            name: 'Defend',
-            description: 'Gain 6 block.',
-            manaCost: 1,
-            targeted: false
-        },
-        {
-            numericId: 3,
-            id: 'fortify_faith',
-            name: 'Pommel Strike',
-            description: 'Deal 7 damage. Draw a card.',
-            manaCost: 1,
-            targeted: true
-        },
-        {
-            numericId: 4,
-            id: 'fasting',
-            name: 'Cleave',
-            description: 'Deal 8 damage to ALL enemies.',
-            manaCost: 2,
-            targeted: true
-        },
-    ];
-
-    for (const card of initialCards) {
+    for (const card of cards) {
         console.log(`Adding card: ${card.name}`);
         const tx = await contract.addCard(
             card.id,

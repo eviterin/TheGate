@@ -1,0 +1,36 @@
+{
+    "cards": [
+        {
+            "numericId": 1,
+            "id": "explodicate",
+            "name": "Strike",
+            "description": "Deal 6 damage.",
+            "manaCost": 1,
+            "targeted": true
+        },
+        {
+            "numericId": 2,
+            "id": "preach",
+            "name": "Defend",
+            "description": "Gain 6 block.",
+            "manaCost": 1,
+            "targeted": false
+        },
+        {
+            "numericId": 3,
+            "id": "fortify_faith",
+            "name": "Pommel Strike",
+            "description": "Deal 7 damage. Draw a card.",
+            "manaCost": 1,
+            "targeted": true
+        },
+        {
+            "numericId": 4,
+            "id": "fasting",
+            "name": "Cleave",
+            "description": "Deal 8 damage to ALL enemies.",
+            "manaCost": 2,
+            "targeted": true
+        }
+    ]
+} 
