@@ -113,13 +113,20 @@ contract GameState {
     function abandonRun() public {
         GameData storage data = playerData[msg.sender];
         encounters.clearEnemyData(msg.sender);
-        startRun();
         data.runState = RUN_STATE_NONE;
+        delete data.hand;
+        delete data.draw;
+        delete data.discard;
+        delete data.deck;
+        delete data.availableCardRewards;
         data.maxHealth = 0;
         data.currentHealth = 0;
         data.maxMana = 0;
         data.currentMana = 0;
-        delete data.deck;
+        data.currentBlock = 0;
+        data.extraCardDrawEnabled = false;
+        data.hasProtectionBlessing = false;
+        data.lastChosenCard = 0;
     }
     
     function chooseRoom(uint8 option) public {
@@ -489,6 +496,7 @@ contract GameState {
     function retryFromDeath() public {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_DEATH, "Not in death state");
-        abandonRun();
+        data.runState = RUN_STATE_NONE;  // Set to NONE before starting new run
+        startRun();
     }
 }
