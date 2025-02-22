@@ -7,6 +7,10 @@
     },
     "INTENT_TYPES": {
       "BLOCK_5": 1000
+    },
+    "ANIMATIONS": {
+      "ATTACK": "jump",
+      "BLOCK": "flip"
     }
   },
   "encounters": [
@@ -26,11 +30,15 @@
         "enemyTypes": [1, 2],
         "enemyMaxHealth": [10, 12],
         "baseIntents": {
-          "1": { "damage": { "min": 6, "max": 10 } },
+          "1": { 
+            "damage": { "min": 6, "max": 10 },
+            "animation": "jump"
+          },
           "2": { 
             "damage": { "min": 4, "max": 8 },
             "blockChance": 0.33,
-            "blockAmount": 5
+            "blockAmount": 5,
+            "animation": "flip"
           }
         }
       }
@@ -42,8 +50,14 @@
         "enemyTypes": [1, 2],
         "enemyMaxHealth": [12, 14],
         "baseIntents": {
-          "1": { "damage": { "min": 7, "max": 11 } },
-          "2": { "damage": { "min": 5, "max": 9 } }
+          "1": { 
+            "damage": { "min": 7, "max": 11 },
+            "animation": "jump"
+          },
+          "2": { 
+            "damage": { "min": 5, "max": 9 },
+            "animation": "jump"
+          }
         }
       }
     },
@@ -54,11 +68,15 @@
         "enemyTypes": [1],
         "enemyMaxHealth": [18],
         "baseIntents": {
-          "1": { "damage": { "min": 8, "max": 12 } },
+          "1": { 
+            "damage": { "min": 8, "max": 12 },
+            "animation": "jump"
+          },
           "2": { 
             "damage": { "min": 6, "max": 10 },
             "blockChance": 0.33,
-            "blockAmount": 8
+            "blockAmount": 8,
+            "animation": "flip"
           }
         }
       }
@@ -70,8 +88,14 @@
         "enemyTypes": [1, 2],
         "enemyMaxHealth": [14, 16],
         "baseIntents": {
-          "1": { "damage": { "min": 8, "max": 12 } },
-          "2": { "damage": { "min": 6, "max": 10 } }
+          "1": { 
+            "damage": { "min": 8, "max": 12 },
+            "animation": "jump"
+          },
+          "2": { 
+            "damage": { "min": 6, "max": 10 },
+            "animation": "jump"
+          }
         }
       }
     },
@@ -85,7 +109,8 @@
           "2": {
             "damage": { "min": 7, "max": 11 },
             "blockChance": 0.4,
-            "blockAmount": 6
+            "blockAmount": 6,
+            "animation": "flip"
           }
         }
       }
@@ -97,11 +122,15 @@
         "enemyTypes": [1, 2],
         "enemyMaxHealth": [16, 18],
         "baseIntents": {
-          "1": { "damage": { "min": 9, "max": 13 } },
+          "1": { 
+            "damage": { "min": 9, "max": 13 },
+            "animation": "jump"
+          },
           "2": { 
             "damage": { "min": 7, "max": 11 },
             "blockChance": 0.33,
-            "blockAmount": 7
+            "blockAmount": 7,
+            "animation": "flip"
           }
         }
       }
@@ -116,7 +145,8 @@
           "2": {
             "damage": { "min": 8, "max": 12 },
             "blockChance": 0.4,
-            "blockAmount": 7
+            "blockAmount": 7,
+            "animation": "flip"
           }
         }
       }
@@ -128,11 +158,15 @@
         "enemyTypes": [1, 2],
         "enemyMaxHealth": [18, 20],
         "baseIntents": {
-          "1": { "damage": { "min": 10, "max": 14 } },
+          "1": { 
+            "damage": { "min": 10, "max": 14 },
+            "animation": "jump"
+          },
           "2": {
             "damage": { "min": 8, "max": 12 },
             "blockChance": 0.4,
-            "blockAmount": 8
+            "blockAmount": 8,
+            "animation": "flip"
           }
         }
       }
@@ -147,7 +181,8 @@
           "2": {
             "damage": { "min": 9, "max": 13 },
             "blockChance": 0.45,
-            "blockAmount": 8
+            "blockAmount": 8,
+            "animation": "flip"
           }
         }
       }
@@ -162,7 +197,8 @@
           "2": {
             "damage": { "min": 10, "max": 15 },
             "blockChance": 0.5,
-            "blockAmount": 8
+            "blockAmount": 8,
+            "animation": "flip"
           }
         }
       }

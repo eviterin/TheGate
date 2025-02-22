@@ -1,5 +1,8 @@
 import React from 'react';
 import { getLevelConfig } from '../game/levelConfigs';
+import { Position } from '../game/encounters';
+import { CardAnimationType } from '../game/cards';
+import encountersData from '../../../shared/encounters.json';
 
 // Import all enemy models
 const enemyModels: { [key: string]: string } = {};
@@ -7,24 +10,42 @@ const enemyModels: { [key: string]: string } = {};
 // Import hero model
 const heroModel = new URL('../assets/misc/hero.png', import.meta.url).href;
 
-// Constants for intent types (matching the contract)
-const INTENT_TYPES = {
-  BLOCK_5: 1000,
-  // Add any other special intents here
-} as const;
+// Define encounters data structure
+interface EncountersData {
+  constants: {
+    ENEMY_TYPE: {
+      NONE: number;
+      TYPE_A: number;
+      TYPE_B: number;
+    };
+    INTENT_TYPES: {
+      BLOCK_5: number;
+    };
+    ANIMATIONS: {
+      ATTACK: string;
+      BLOCK: string;
+    };
+  };
+  encounters: any[]; // We don't need the full encounters type for this usage
+}
+
+// Get intent types and animations from encounters.json
+const INTENT_TYPES = (encountersData as EncountersData).constants.INTENT_TYPES;
+const ANIMATIONS = (encountersData as EncountersData).constants.ANIMATIONS;
 
 // Helper to determine intent type
 interface IntentInfo {
   type: 'attack' | 'block';
   value: number;
+  animation: string;
 }
 
 const getIntentInfo = (intent: number): IntentInfo => {
   if (intent === INTENT_TYPES.BLOCK_5) {
-    return { type: 'block', value: 5 };
+    return { type: 'block', value: 5, animation: ANIMATIONS.BLOCK };
   }
   // Any other number is an attack with that damage value
-  return { type: 'attack', value: intent };
+  return { type: 'attack', value: intent, animation: ANIMATIONS.ATTACK };
 };
 
 // Import room 1-10 enemy models dynamically
@@ -33,26 +54,25 @@ for (let floor = 1; floor <= 10; floor++) {
     const modelKey = `room_${floor}_enemy_${position}`;
     try {
       enemyModels[modelKey] = new URL(`../assets/models/${modelKey}.png`, import.meta.url).href;
-      console.log(`Loaded enemy model: ${modelKey}`);
     } catch (error) {
       console.error(`Failed to load enemy model: ${modelKey}`, error);
     }
   }
 }
 
-// Log all loaded models
-console.log('All loaded enemy models:', enemyModels);
-
 interface GameEntityProps {
   type: 'hero' | 'enemy';
   health: number;
   maxHealth: number;
   block?: number;
-  position: number; // For enemies, this is their index
+  position: number;
   isValidTarget?: boolean;
   onEntityClick?: () => void;
-  currentFloor?: number; // Add currentFloor prop
-  intent?: number; // Add intent prop
+  currentFloor?: number;
+  intent?: number;
+  isAnimating?: boolean;
+  animationType?: CardAnimationType;
+  animationTarget?: Position;
 }
 
 const GameEntity: React.FC<GameEntityProps> = ({ 
@@ -64,10 +84,53 @@ const GameEntity: React.FC<GameEntityProps> = ({
   isValidTarget = false,
   onEntityClick,
   currentFloor = 0,
-  intent = 0
+  intent = 0,
+  isAnimating = false,
+  animationTarget
 }) => {
   const isHero = type === 'hero';
   
+  // Get animation styles based on type and intent
+  const getAnimationStyles = () => {
+    const styles: React.CSSProperties = {
+      position: 'absolute',
+      left: `${entityPosition.x}%`,
+      top: `${entityPosition.y}%`,
+      transform: 'translate(-50%, -50%)',
+      width: '120px',
+      height: '180px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: '10px',
+      color: 'white',
+      cursor: isValidTarget ? 'pointer' : 'default',
+    };
+
+    if (!isAnimating) return styles;
+
+    // For enemies, use their intent to determine animation
+    if (!isHero && intent) {
+      const intentInfo = getIntentInfo(intent);
+      return {
+        ...styles,
+        animation: `${intentInfo.animation} 0.5s ease-in-out`,
+        transition: 'none'
+      };
+    }
+
+    // For hero, always use jump animation when performing an action
+    if (isHero && isAnimating) {
+      return {
+        ...styles,
+        animation: `${ANIMATIONS.ATTACK} 0.5s ease-in-out`,
+        transition: 'none'
+      };
+    }
+
+    return styles;
+  };
+
   // Get the correct enemy model based on floor and position
   const getEnemyModel = () => {
     if (isHero || currentFloor === 0) return '';
@@ -127,97 +190,106 @@ const GameEntity: React.FC<GameEntityProps> = ({
   const entityPosition = getEntityPosition();
   
   return (
-    <div 
-      className={`game-entity ${type} ${isValidTarget ? 'valid-target' : ''}`}
-      style={{
-        position: 'absolute',
-        left: `${entityPosition.x}%`,
-        top: `${entityPosition.y}%`,
-        transform: 'translate(-50%, -50%)',
-        width: '120px',
-        height: '180px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '10px',
-        color: 'white',
-        cursor: isValidTarget ? 'pointer' : 'default',
-        transition: 'all 0.3s ease-in-out'
-      }}
-      onClick={() => isValidTarget && onEntityClick?.()}
-    >
-      {renderIntent()}
-      <div 
-        style={{
-          width: '100%',
-          height: '140px',
-          position: 'relative',
-          backgroundColor: 'transparent',
-          borderRadius: '0',
-          boxShadow: 'none',
-        }}
-      >
-        {/* Entity model (hero or enemy) */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundImage: `url(${isHero ? heroModel : getEnemyModel()})`,
-          backgroundSize: 'contain',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          zIndex: 2
-        }} />
+    <>
+      <style>
+        {`
+          @keyframes jump {
+            0%, 100% { transform: translate(-50%, -50%); }
+            50% { transform: translate(-50%, -100%); }
+          }
 
-        {/* Glow effect for valid target */}
-        {isValidTarget && (
+          @keyframes flip {
+            0% { transform: translate(-50%, -50%) rotateY(0deg); }
+            100% { transform: translate(-50%, -50%) rotateY(360deg); }
+          }
+
+          .game-entity {
+            transition: all 0.3s ease-in-out;
+          }
+
+          .game-entity.animating {
+            transition: none;
+          }
+        `}
+      </style>
+      <div 
+        className={`game-entity ${type} ${isValidTarget ? 'valid-target' : ''} ${isAnimating ? 'animating' : ''}`}
+        style={getAnimationStyles()}
+        onClick={() => isValidTarget && onEntityClick?.()}
+      >
+        {renderIntent()}
+        <div 
+          style={{
+            width: '100%',
+            height: '140px',
+            position: 'relative',
+            backgroundColor: 'transparent',
+            borderRadius: '0',
+            boxShadow: 'none',
+          }}
+        >
+          {/* Entity model (hero or enemy) */}
           <div style={{
             position: 'absolute',
-            top: -12,
-            left: -12,
-            width: 'calc(100% + 24px)',
-            height: 'calc(100% + 24px)',
-            backgroundColor: 'rgba(255, 255, 0, 0.8)',
-            filter: 'blur(20px) brightness(1.5)',
-            WebkitMaskImage: `url(${isHero ? heroModel : getEnemyModel()})`,
-            maskImage: `url(${isHero ? heroModel : getEnemyModel()})`,
-            WebkitMaskSize: 'contain',
-            maskSize: 'contain',
-            WebkitMaskPosition: 'center',
-            maskPosition: 'center',
-            WebkitMaskRepeat: 'no-repeat',
-            maskRepeat: 'no-repeat',
-            zIndex: 1
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundImage: `url(${isHero ? heroModel : getEnemyModel()})`,
+            backgroundSize: 'contain',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            zIndex: 2
           }} />
-        )}
-      </div>
-      
-      <div style={{ 
-        marginTop: '10px', 
-        textAlign: 'center',
-        textShadow: '1px 1px 2px rgba(0, 0, 0, 0.5)',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        padding: '8px 12px',
-        borderRadius: '4px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-          <span>❤️ {health}/{maxHealth}</span>
-          {block > 0 && (
-            <span style={{ 
-              color: '#70ff70',
-              fontWeight: 'bold'
-            }}>
-              🛡️ {block}
-            </span>
+
+          {/* Glow effect for valid target */}
+          {isValidTarget && (
+            <div style={{
+              position: 'absolute',
+              top: -12,
+              left: -12,
+              width: 'calc(100% + 24px)',
+              height: 'calc(100% + 24px)',
+              backgroundColor: 'rgba(255, 255, 0, 0.8)',
+              filter: 'blur(20px) brightness(1.5)',
+              WebkitMaskImage: `url(${isHero ? heroModel : getEnemyModel()})`,
+              maskImage: `url(${isHero ? heroModel : getEnemyModel()})`,
+              WebkitMaskSize: 'contain',
+              maskSize: 'contain',
+              WebkitMaskPosition: 'center',
+              maskPosition: 'center',
+              WebkitMaskRepeat: 'no-repeat',
+              maskRepeat: 'no-repeat',
+              zIndex: 1
+            }} />
           )}
         </div>
+        
+        <div style={{ 
+          marginTop: '10px', 
+          textAlign: 'center',
+          textShadow: '1px 1px 2px rgba(0, 0, 0, 0.5)',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          padding: '8px 12px',
+          borderRadius: '4px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <span>❤️ {health}/{maxHealth}</span>
+            {block > 0 && (
+              <span style={{ 
+                color: '#70ff70',
+                fontWeight: 'bold'
+              }}>
+                🛡️ {block}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

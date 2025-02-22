@@ -9,8 +9,12 @@ interface CardDataJson {
         description: string;
         manaCost: number;
         targeted: boolean;
+        animationType: CardAnimationType;
     }[];
 }
+
+// Define animation types
+export type CardAnimationType = 'jump' | 'flip' | 'none';
 
 export interface CardData {
     numericId: number;
@@ -20,6 +24,7 @@ export interface CardData {
     manaCost: number;
     targeted: boolean;
     imagePath?: string;  // Client-only field
+    animationType: CardAnimationType;
 }
 
 // Assert the type of imported JSON

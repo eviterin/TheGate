@@ -2,6 +2,7 @@ import { createContext, useContext, useCallback } from 'react';
 import { readContract } from '@wagmi/core';
 import { config } from '../../wagmi';
 import { useContracts } from './ContractsContext';
+import { cards as cardDefinitions } from '../game/cards';
 
 export interface CardData {
   id: string;
@@ -13,6 +14,7 @@ export interface CardData {
   lastUpdated: bigint;
   targeted: boolean;
   numericId?: number;
+  animationType?: 'jump' | 'flip' | 'none';
 }
 
 export function useCardsContract() {
@@ -37,11 +39,16 @@ export function useCards() {
         args: [],
       }) as CardData[];
 
-      // Map the cards to include numeric IDs based on their index in the array
-      const mappedCards = cards.map((card, index) => ({
-        ...card,
-        numericId: index + 1 // Since our numeric IDs start from 1
-      }));
+      // Map the cards to include numeric IDs and animation types from our definitions
+      const mappedCards = cards.map((card, index) => {
+        const numericId = index + 1;
+        const cardDefinition = cardDefinitions.find(c => c.numericId === numericId);
+        return {
+          ...card,
+          numericId,
+          animationType: cardDefinition?.animationType || 'none'
+        };
+      });
 
       console.log('📦 Fetched and mapped cards:', mappedCards);
       return mappedCards;

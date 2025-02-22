@@ -9,11 +9,37 @@ import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoo
 import { useCards } from '../hooks/CardsContext';
 import './Game.css';
 import { getBackgroundImage } from '../game/encounters';
+import { getLevelConfig } from '../game/levelConfigs';
+import { Position } from '../game/encounters';
+import { CardAnimationType } from '../game/cards';
+import encountersData from '../../../shared/encounters.json';
 
 // Add InfoBar props interface
 interface InfoBarProps {
   gameState: any;
 }
+
+// Define encounters data structure
+interface EncountersData {
+  constants: {
+    ENEMY_TYPE: {
+      NONE: number;
+      TYPE_A: number;
+      TYPE_B: number;
+    };
+    INTENT_TYPES: {
+      BLOCK_5: number;
+    };
+    ANIMATIONS: {
+      ATTACK: string;
+      BLOCK: string;
+    };
+  };
+  encounters: any[]; // We don't need the full encounters type for this usage
+}
+
+// Get intent types from encounters.json with type assertion
+const INTENT_TYPES = (encountersData as EncountersData).constants.INTENT_TYPES;
 
 const TRANSACTION_TIMEOUT = 10000; // 10 seconds timeout for transactions
 
@@ -44,6 +70,13 @@ const WHALE_ROOM_OPTIONS = [
     effect: '+5 Max HP'
   }
 ];
+
+interface AnimationState {
+  sourceType: 'hero' | 'enemy';
+  sourceIndex: number;
+  targetPosition: Position;
+  timestamp: number;
+}
 
 const Game: React.FC = () => {
   const [hand, setHand] = useState<number[]>([]);
@@ -78,13 +111,14 @@ const Game: React.FC = () => {
   const [isLoadingGameState, setIsLoadingGameState] = useState(true);
   const [isChoosingRoom, setIsChoosingRoom] = useState(false);
   const [isChoosingReward, setIsChoosingReward] = useState(false);
+  const [currentAnimation, setCurrentAnimation] = useState<AnimationState | null>(null);
+  const [animationsEnabled, setAnimationsEnabled] = useState(true);
 
   // Fetch card data
   useEffect(() => {
     const fetchCards = async () => {
       try {
         const cards = await getActiveCards();
-        console.log('Fetched cards from blockchain:', cards);
         setCardData(cards);
       } catch (error) {
         console.error('Failed to fetch cards:', error);
@@ -291,6 +325,30 @@ const Game: React.FC = () => {
         targetIndex
       };
 
+      // Get target position for animation
+      const targetEntity = gameState.enemyTypes[targetIndex] ? 'enemy' : 'hero';
+      const levelConfig = getLevelConfig(gameState.currentFloor);
+      const targetPos = targetEntity === 'enemy' 
+        ? (levelConfig.enemyPositions[targetIndex] || { x: 50, y: 50 })
+        : levelConfig.heroPosition;
+
+      // Only animate if animations are enabled
+      if (animationsEnabled) {
+        const animationState: AnimationState = {
+          sourceType: 'hero',
+          sourceIndex: 0,
+          targetPosition: targetPos,
+          timestamp: Date.now()
+        };
+        
+        setCurrentAnimation(animationState);
+
+        // Clear animation after a delay
+        setTimeout(() => {
+          setCurrentAnimation(null);
+        }, 600);
+      }
+
       // Apply optimistic updates
       const newHand = [...optimisticHand];
       newHand.splice(selectedCardIndex, 1);
@@ -305,8 +363,6 @@ const Game: React.FC = () => {
       // For non-targeted cards, always use target index 0
       const effectiveTargetIndex = card.targeted ? targetIndex : 0;
       await playCard(selectedCardIndex, effectiveTargetIndex);
-      
-      // If optimistic updates are disabled, wait for next state update
     } catch (error) {
       console.error('Failed to play card:', error);
       
@@ -314,6 +370,7 @@ const Game: React.FC = () => {
         // Revert optimistic updates
         setOptimisticHand(gameState.hand);
         setOptimisticMana(gameState.currentMana);
+        setCurrentAnimation(null);
         
         // Update the action status
         setPendingActions(prev => 
@@ -371,6 +428,35 @@ const Game: React.FC = () => {
       setOptimisticHand([]);
       setOptimisticMana(0);
       setPendingActions(prev => [...prev, newAction]);
+
+      // Animate enemy actions
+      if (animationsEnabled && gameState) {
+        for (let i = 0; i < gameState.enemyTypes.length; i++) {
+          if (gameState.enemyCurrentHealth[i] > 0) {
+            const intent = gameState.enemyIntents[i];
+            const enemyType = gameState.enemyTypes[i];
+            const levelConfig = getLevelConfig(gameState.currentFloor);
+            const targetPos = levelConfig.heroPosition;
+
+            // Create animation state for this enemy
+            const animationState: AnimationState = {
+              sourceType: 'enemy',
+              sourceIndex: i,
+              targetPosition: targetPos,
+              timestamp: Date.now()
+            };
+
+            // Set the animation with a delay based on enemy index
+            setTimeout(() => {
+              setCurrentAnimation(animationState);
+              // Clear the animation after it completes
+              setTimeout(() => {
+                setCurrentAnimation(null);
+              }, 600);
+            }, i * 800); // Stagger enemy animations
+          }
+        }
+      }
     }
 
     try {
@@ -383,6 +469,7 @@ const Game: React.FC = () => {
         // Revert optimistic updates
         setOptimisticHand(gameState.hand);
         setOptimisticMana(gameState.currentMana);
+        setCurrentAnimation(null);
         
         setPendingActions(prev => 
           prev.map(a => a.id === actionId ? { ...a, status: 'failed' as const } : a)
@@ -880,6 +967,10 @@ const Game: React.FC = () => {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.8; transform: scale(0.95); }
           }
+
+          .game-entity.animating {
+            z-index: 100;
+          }
         `}
       </style>
       <div className="game-wrapper">
@@ -902,6 +993,8 @@ const Game: React.FC = () => {
                   isValidTarget={isValidTarget('hero', 0)}
                   onEntityClick={() => handleEntityClick(0)}
                   currentFloor={gameState.currentFloor}
+                  isAnimating={currentAnimation?.sourceType === 'hero' && currentAnimation.sourceIndex === 0}
+                  animationTarget={currentAnimation?.sourceType === 'hero' ? currentAnimation.targetPosition : undefined}
                 />
                 {gameState.enemyTypes.map((type: number, index: number) => (
                   <GameEntity
@@ -915,6 +1008,8 @@ const Game: React.FC = () => {
                     onEntityClick={() => handleEntityClick(index)}
                     currentFloor={gameState.currentFloor}
                     intent={gameState.enemyCurrentHealth[index] > 0 ? gameState.enemyIntents[index] : undefined}
+                    isAnimating={currentAnimation?.sourceType === 'enemy' && currentAnimation.sourceIndex === index}
+                    animationTarget={currentAnimation?.sourceType === 'enemy' ? currentAnimation.targetPosition : undefined}
                   />
                 ))}
 
@@ -1106,6 +1201,14 @@ const Game: React.FC = () => {
                     onChange={(e) => setAutoEndTurnEnabled(e.target.checked)}
                   />
                   Auto End Turn
+                </label>
+                <label className="menu-button feature-toggle">
+                  <input
+                    type="checkbox"
+                    checked={animationsEnabled}
+                    onChange={(e) => setAnimationsEnabled(e.target.checked)}
+                  />
+                  Combat Animations
                 </label>
               </div>
             </div>
