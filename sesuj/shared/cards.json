@@ -20,7 +20,7 @@
         },
         {
             "numericId": 3,
-            "id": "explodicate",
+            "id": "ascend",
             "name": "Unfold Truth",
             "description": "Deal 7 damage. Draw a card.",
             "manaCost": 1,
@@ -29,7 +29,7 @@
         },
         {
             "numericId": 4,
-            "id": "explodicate2",
+            "id": "unshakeable_faith",
             "name": "Preach",
             "description": "Deal 8 damage to ALL enemies.",
             "manaCost": 2,
@@ -74,7 +74,7 @@
         },
         {
             "numericId": 9,
-            "id": "explodicate3",
+            "id": "divine_protection",
             "name": "Sacred Ritual",
             "description": "Gain 10 block. Heal 3 HP.",
             "manaCost": 2,
@@ -83,7 +83,7 @@
         },
         {
             "numericId": 10,
-            "id": "explodicate4",
+            "id": "foly_hire",
             "name": "Divine Wrath",
             "description": "Deal 5 damage. If enemy is at full HP, deal double.",
             "manaCost": 1,
@@ -92,7 +92,7 @@
         },
         {
             "numericId": 11,
-            "id": "explodicate5",
+            "id": "explodicate",
             "name": "Explodicate",
             "description": "Deal 7 damage. Ignores block.",
             "manaCost": 3,
