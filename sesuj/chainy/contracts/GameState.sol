@@ -156,7 +156,7 @@ contract GameState {
 
         if (CardLibrary.requiresTarget(playedCardID)) {
             require(targetIndex < types.length, "Invalid target");
-            require(currentHealth[targetIndex] > 0, "Cannot target a dead enemy");
+            //require(currentHealth[targetIndex] > 0, "Cannot target a dead enemy"); 
         }
 
         if (data.currentMana >= 1 && CardLibrary.isUnimplementedCard(playedCardID)) {
