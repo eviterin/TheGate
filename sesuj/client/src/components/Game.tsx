@@ -4,7 +4,7 @@ import Hand from './Hand';
 import Card from './Card';
 import GameEntity from './GameEntity';
 import LoadingOverlay from './LoadingOverlay';
-import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, useSkipCardReward, useRetryFromDeath, usePlayCards } from '../hooks/GameState';
+import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, useRetryFromDeath, usePlayCards } from '../hooks/GameState';
 import { useCards } from '../hooks/CardsContext';
 import './Game.css';
 import { getBackgroundImage } from '../game/encounters';
@@ -113,7 +113,6 @@ const Game: React.FC = () => {
   const [isDiscardVisible, setIsDiscardVisible] = useState(false);
   const [isDrawVisible, setIsDrawVisible] = useState(false);
   const { chooseCardReward } = useChooseCardReward();
-  const { skipCardReward } = useSkipCardReward();
   const { chooseRoom } = useChooseRoom();
   const [selectedReward, setSelectedReward] = useState<number | null>(null);
   const [optimisticHand, setOptimisticHand] = useState<number[]>([]);
@@ -623,20 +622,6 @@ const Game: React.FC = () => {
       setSelectedReward(null);
     } catch (error) {
       console.error('Failed to choose reward:', error);
-    } finally {
-      setIsChoosingReward(false);
-    }
-  };
-
-  const handleSkipReward = async () => {
-    if (isChoosingReward) return;
-    
-    try {
-      setIsChoosingReward(true);
-      await skipCardReward();
-      setSelectedReward(null);
-    } catch (error) {
-      console.error('Failed to skip reward:', error);
     } finally {
       setIsChoosingReward(false);
     }
@@ -1169,13 +1154,6 @@ const Game: React.FC = () => {
                       ))}
                   </div>
                   <div className="reward-buttons">
-                    <button 
-                      className="skip-reward-button"
-                      onClick={handleSkipReward}
-                      disabled={isChoosingReward}
-                    >
-                      {isChoosingReward ? 'Skipping...' : 'Skip'}
-                    </button>
                     <button
                       className={`continue-button ${!selectedReward || isChoosingReward ? 'disabled' : ''}`}
                       onClick={handleConfirmReward}
@@ -1376,7 +1354,7 @@ const Game: React.FC = () => {
       />
       <LoadingOverlay 
         isVisible={isChoosingReward} 
-        message={isChoosingReward && selectedReward ? "Receiving divine blessing..." : "Faith guides you onward..."} 
+        message="Faith guides you onward..." 
       />
       <LoadingOverlay 
         isVisible={isRetrying} 

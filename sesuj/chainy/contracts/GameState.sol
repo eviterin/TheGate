@@ -398,12 +398,6 @@ contract GameState {
         }
     }
 
-    function skipCardReward() public {
-        GameData storage data = playerData[msg.sender];
-        require(data.runState == RUN_STATE_CARD_REWARD, "Not in reward state");
-        chooseCardReward(data.lastChosenCard);
-    }
-
     function getEnemyData(address player) public view returns (
         uint8[] memory types,
         uint16[] memory maxHealth,

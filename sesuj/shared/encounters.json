@@ -9,7 +9,8 @@
       "BLOCK_5": 1000,
       "BLOCK_AND_ATTACK": 1001,
       "HEAL": 1002,
-      "ATTACK_BUFF": 1003
+      "ATTACK_BUFF": 1003,
+      "BLOCK_AND_HEAL": 1004
     },
     "ANIMATIONS": {
       "ATTACK": "jump",

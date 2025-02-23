@@ -4,9 +4,9 @@
 }
 
 .card {
-  width: 140px;
-  height: 196px;
-  border-radius: 8px;
+  width: 170px;
+  height: 238px;
+  border-radius: 10px;
   position: relative;
   transition: transform 0.2s ease-in-out;
   cursor: pointer;
@@ -14,17 +14,17 @@
 }
 
 .card-frame {
-  width: 140px;
-  height: 196px;
-  border-radius: 8px;
-  background-size: 140px 196px;
+  width: 170px;
+  height: 238px;
+  border-radius: 10px;
+  background-size: 170px 238px;
   position: relative;
 }
 
 .card-mana-cost {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 5px;
+  right: 5px;
   display: flex;
   flex-direction: row-reverse;
   gap: 3px;
@@ -32,8 +32,8 @@
 }
 
 .mana-orb {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   position: relative;
   display: flex;
   align-items: center;
@@ -50,9 +50,9 @@
     );
   border-radius: 50%;
   box-shadow: 
-    0 0 8px rgba(255, 215, 0, 0.4),
-    inset 2px 2px 4px rgba(255, 255, 255, 0.3),
-    inset -2px -2px 4px rgba(0, 0, 0, 0.4);
+    0 0 10px rgba(255, 215, 0, 0.4),
+    inset 2px 2px 5px rgba(255, 255, 255, 0.3),
+    inset -2px -2px 5px rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(88, 43, 156, 0.8);
   overflow: hidden;
 }
@@ -60,7 +60,7 @@
 .mana-orb::after {
   content: '✨';
   position: absolute;
-  font-size: 14px;
+  font-size: 17px;
   color: #FFD700;
   filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.6));
   opacity: 0.9;
@@ -68,44 +68,44 @@
 
 .card-image {
   position: absolute;
-  top: 32px;
-  left: 24px;
-  width: 92px;
-  height: 75px;
-  border-radius: 4px;
+  top: 39px;
+  left: 29px;
+  width: 112px;
+  height: 91px;
+  border-radius: 5px;
   overflow: hidden;
 }
 
 .card-artwork {
-  width: 92px;
-  height: 75px;
+  width: 112px;
+  height: 91px;
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 
 .card-content {
   position: absolute;
-  top: 112px;
-  left: 15px;
-  width: 110px;
+  top: 136px;
+  left: 18px;
+  width: 134px;
   text-align: center;
 }
 
 .card-name {
-  margin: 0 0 4px 0;
-  font-size: 12px;
+  margin: 0 0 5px 0;
+  font-size: 15px;
   font-weight: bold;
   color: #000;
   font-family: 'CardFont', sans-serif;
 }
 
 .card-description {
-  font-size: 10px;
+  font-size: 12px;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.3;
   color: #000;
   font-family: 'CardFont', sans-serif;
-  max-height: 60px;
+  max-height: 73px;
   overflow-y: auto;
 }
 
@@ -116,6 +116,6 @@
 }
 
 .card.selected {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  transform: translateY(-6px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 } 

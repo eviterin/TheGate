@@ -776,36 +776,6 @@ export function useGetAvailableRewards() {
     return { getAvailableRewards };
 }
 
-export function useSkipCardReward() {
-    const contractConfig = useGameContract();
-
-    const skipCardReward = useCallback(async () => {
-        const currentUser = getCurrentUser();
-        
-        if (!currentUser) {
-            throw new Error('No user connected');
-        }
-
-        try {
-            console.log('Skipping card reward...');
-            const hash = await writeContract(config, {
-                address: contractConfig.address,
-                abi: contractConfig.abi,
-                functionName: 'skipCardReward',
-                args: [],
-            })
-
-            console.log('Card reward skipped:', { hash });
-            return hash;
-        } catch (error) {   
-            console.error('Error skipping card reward:', error);
-            throw error;
-        }
-    }, [contractConfig]);
-
-    return { skipCardReward };
-}
-
 export function useRetryFromDeath() {
     const contractConfig = useGameContract();
 
