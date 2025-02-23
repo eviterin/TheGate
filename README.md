@@ -3,10 +3,11 @@
 A fully onchain deck-building game using HappyTech.
 https://docs.happy.tech/
 
-## Client
+## Setup Client
 
+Follow the instructions in the [client README](./client/README.md).
 
+## Setup Chainy
 
-## Chain
-
+Follow the instructions in the [chainy README](./chainy/README.md).
 
