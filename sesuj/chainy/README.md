@@ -20,14 +20,15 @@ Card data lives in `/shared/cards.json` and is used by:
 
 ## Development
 
-todo: the .env file!!
-
 ### Install dependencies
 ```bash
 npm install
 ```
 
 ### Deploy contracts
+
+Modify the `.env` file with your private key.
+
 ```bash
 node scripts/deploy-all.js
 ```

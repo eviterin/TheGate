@@ -1,17 +1,29 @@
 import { useState, useRef, useEffect } from 'react';
 import boomboxIcon from '../assets/misc/boombox.svg';
-import backgroundMusic from '../assets/music/background1.mp3';
+import background1 from '../assets/music/background1.mp3';
+import background2 from '../assets/music/background2.mp3';
 import './MusicPlayer.css';
 
-const MusicPlayer = () => {
+interface MusicPlayerProps {
+    track: 'background1.mp3' | 'background2.mp3';
+}
+
+const MusicPlayer: React.FC<MusicPlayerProps> = ({ track }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
         // Create audio element with error handling
-        audioRef.current = new Audio(backgroundMusic);
+        audioRef.current = new Audio(track === 'background1.mp3' ? background1 : background2);
         audioRef.current.loop = true;
         audioRef.current.volume = 0.5; // Set a moderate volume
+
+        // Wait 2 seconds after finishing the song before looping
+        audioRef.current.addEventListener('ended', () => {
+            setTimeout(() => {
+                audioRef.current?.play();
+            }, 2000);
+        });
 
         // Add error handling
         audioRef.current.addEventListener('error', (e) => {
@@ -23,6 +35,10 @@ const MusicPlayer = () => {
             console.log('Audio loaded and ready to play');
         });
 
+        // Activate the audio element (and update the frontend state)
+        audioRef.current.play();
+        setIsPlaying(true);
+
         return () => {
             if (audioRef.current) {
                 audioRef.current.pause();
@@ -30,7 +46,7 @@ const MusicPlayer = () => {
                 audioRef.current = null;
             }
         };
-    }, []);
+    }, [track]);
 
     const toggleMusic = async () => {
         if (audioRef.current) {
@@ -63,7 +79,7 @@ const MusicPlayer = () => {
                 className={`music-toggle ${isPlaying ? 'playing' : ''}`}
                 onClick={toggleMusic}
             >
-                <img src={boomboxIcon} alt="Music toggle" />
+                <img src={boomboxIcon} alt="Toggle music" />
             </button>
         </div>
     );

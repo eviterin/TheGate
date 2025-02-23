@@ -56,7 +56,7 @@ const WHALE_ROOM_OPTIONS = [
   { 
     id: 2, 
     title: '✨ Divine Power', 
-    description: 'Channel additional Faith energy into your actions.',
+    description: 'Channel additional Faith into your actions.',
     effect: '3 → 4 ✨ per turn'
   },
   { 

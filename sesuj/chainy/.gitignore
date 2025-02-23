@@ -84,8 +84,6 @@ typings/
 # DynamoDB Local files
 .dynamodb/
 
-docs/.env.example
-
 # VSCode settings
 .vscode/
 
@@ -104,10 +102,10 @@ Brewfile.lock.json
 # Input to scripts/generate-filters.js; generated in CI
 pnpm-lock.json
 
-#fúck me
-.env
+#j f me
 artifacts/
 artifacts/contracts/
 cache/
 node_modules/
 coverage/
+.env

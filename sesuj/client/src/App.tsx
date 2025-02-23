@@ -197,7 +197,6 @@ function AppContent() {
         <QuickTransactionsPrompt onClose={() => setShowPrompt(false)} />
       )}
       <Game />
-      <MusicPlayer />
     </div>
   );
 }
@@ -208,28 +207,37 @@ function App() {
   
   if (!user) {
     return (
-      <div style={styles.appContainer}>
-        <div style={styles.loginContainer}>
-          <ConnectButton />
+      <>
+        <div style={styles.appContainer}>
+          <div style={styles.loginContainer}>
+            <ConnectButton />
+          </div>
         </div>
-      </div>
+        <MusicPlayer track="background2.mp3" />
+      </>
     );
   }
 
   if (isInitializing) {
     return (
-      <ContractsProvider onInitialized={() => setIsInitializing(false)}>
-        <div style={styles.appContainer}>
-          <LoadingIndicator message="Initializing game..." />
-        </div>
-      </ContractsProvider>
+      <>
+        <ContractsProvider onInitialized={() => setIsInitializing(false)}>
+          <div style={styles.appContainer}>
+            <LoadingIndicator message="Initializing game..." />
+          </div>
+        </ContractsProvider>
+        <MusicPlayer track="background2.mp3" />
+      </>
     );
   }
 
   return (
-    <ContractsProvider>
-      <AppContent />
-    </ContractsProvider>
+    <>
+      <ContractsProvider>
+        <AppContent />
+      </ContractsProvider>
+      <MusicPlayer track="background2.mp3" />
+    </>
   );
 }
 
