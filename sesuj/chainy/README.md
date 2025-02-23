@@ -1,6 +1,21 @@
 # Chainy
 
-Blockchain component for Jesus game.
+## Setup
+
+### Install dependencies
+```bash
+npm install
+```
+
+### Deploy contracts
+
+Modify the `.env` file with your private key. (todo add it there!)
+
+```bash
+node scripts/deploy-all.js
+```
+
+
 
 ## Data Architecture
 
@@ -17,19 +32,4 @@ Future improvements:
 Card data lives in `/shared/cards.json` and is used by:
 - Deployment scripts to initialize the Cards contract
 - Client to render cards with UI-specific data
-
-## Development
-
-### Install dependencies
-```bash
-npm install
-```
-
-### Deploy contracts
-
-Modify the `.env` file with your private key.
-
-```bash
-node scripts/deploy-all.js
-```
 
