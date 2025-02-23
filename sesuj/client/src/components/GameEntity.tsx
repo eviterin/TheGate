@@ -241,9 +241,9 @@ const GameEntity: React.FC<GameEntityProps> = ({
 
   // Function to render intent information
   const renderIntent = () => {
-    if (isHero || !intent) return null;
+    if (runState === 1) return null;
 
-    const intentInfo = getIntentInfo(intent);
+    const intentInfo = intent ? getIntentInfo(intent) : null;
     
     const getIntentColor = (type: string) => {
       switch (type) {
@@ -270,46 +270,92 @@ const GameEntity: React.FC<GameEntityProps> = ({
     return (
       <div style={{
         position: 'absolute',
-        top: '-55px',
+        bottom: `${(isHero ? -25 : -45) * (scale || 1)}px`,
         left: '50%',
         transform: 'translateX(-50%)',
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         padding: '4px 8px',
-        borderRadius: '4px',
-        color: getIntentColor(intentInfo.type),
-        fontSize: '16px',
+        borderRadius: '8px',
+        fontSize: '14px',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         gap: '4px',
-        border: `1px solid ${getBorderColor(intentInfo.type)}`,
+        border: !isHero && intentInfo ? `1px solid ${getBorderColor(intentInfo.type)}` : '1px solid rgba(255, 255, 255, 0.2)',
         zIndex: 3,
         whiteSpace: 'nowrap',
-        cursor: 'help'
-      }} className="stat-container" title={
-        intentInfo.type === 'block' ? 
-          `Intends to: Block ${intentInfo.value} damage` :
-        intentInfo.type === 'block_and_attack' ? 
-          `Intends to: Block ${intentInfo.blockValue} damage and deal ${intentInfo.value} damage` :
-        intentInfo.type === 'heal' ? 
-          `Intends to: Heal self for ${intentInfo.value} HP` :
-        intentInfo.type === 'attack_buff' ? 
-          `Intends to: Increase attack damage by ${intentInfo.value}` :
-        intentInfo.type === 'block_and_heal' ? 
-          `Intends to: Block ${intentInfo.blockValue} damage and heal self for ${intentInfo.healValue} HP` :
-          `Intends to: Deal ${intentInfo.value} damage`
-      }>
-        {intentInfo.type === 'block' ? (
-          <>🛡️{intentInfo.value}</>
-        ) : intentInfo.type === 'block_and_attack' ? (
-          <>🛡️{intentInfo.blockValue}+⚔️{intentInfo.value}</>
-        ) : intentInfo.type === 'heal' ? (
-          <>💚{intentInfo.value}</>
-        ) : intentInfo.type === 'attack_buff' ? (
-          <>💪+{intentInfo.value}</>
-        ) : intentInfo.type === 'block_and_heal' ? (
-          <>🛡️{intentInfo.blockValue}+💚{intentInfo.healValue}</>
-        ) : (
-          <>⚔️{intentInfo.value}</>
+        width: 'fit-content'
+      }}>
+        {/* Stats Row */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          gap: '6px',
+          animation: isShaking ? 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both' : undefined,
+          borderTop: !isHero && intentInfo ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+          paddingTop: !isHero && intentInfo ? '4px' : '0',
+          order: 2
+        }}>
+          <div className="stat-container" data-tooltip="Health Points">
+            <span>{health <= 0 ? '💔' : '❤️'} {health}/{maxHealth}</span>
+          </div>
+          {block > 0 && (
+            <div className="stat-container" data-tooltip="Block">
+              <span style={{ color: '#70ff70', fontWeight: 'bold' }}>
+                🛡️ {block}
+              </span>
+            </div>
+          )}
+          {buff > 0 && (
+            <div className="stat-container" data-tooltip="Permanent Attack+">
+              <span style={{ color: '#ff9070', fontWeight: 'bold' }}>
+                💪 +{buff}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Intent Row */}
+        {!isHero && intentInfo && (
+          <div 
+            style={{
+              color: getIntentColor(intentInfo.type),
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '16px',
+              order: 1
+            }} 
+            className="stat-container" 
+            data-tooltip={
+              intentInfo.type === 'block' ? 
+                `Intends to: Block ${intentInfo.value} damage` :
+              intentInfo.type === 'block_and_attack' ? 
+                `Intends to: Block ${intentInfo.blockValue} damage and deal ${intentInfo.value} damage` :
+              intentInfo.type === 'heal' ? 
+                `Intends to: Heal self for ${intentInfo.value} HP` :
+              intentInfo.type === 'attack_buff' ? 
+                `Intends to: Increase attack damage by ${intentInfo.value}` :
+              intentInfo.type === 'block_and_heal' ? 
+                `Intends to: Block ${intentInfo.blockValue} damage and heal self for ${intentInfo.healValue} HP` :
+                `Intends to: Deal ${intentInfo.value} damage`
+            }
+          >
+            {intentInfo.type === 'block' ? (
+              <>🛡️{intentInfo.value}</>
+            ) : intentInfo.type === 'block_and_attack' ? (
+              <>🛡️{intentInfo.blockValue}+⚔️{intentInfo.value}</>
+            ) : intentInfo.type === 'heal' ? (
+              <>💚{intentInfo.value}</>
+            ) : intentInfo.type === 'attack_buff' ? (
+              <>💪+{intentInfo.value}</>
+            ) : intentInfo.type === 'block_and_heal' ? (
+              <>🛡️{intentInfo.blockValue}+💚{intentInfo.healValue}</>
+            ) : (
+              <>⚔️{intentInfo.value}</>
+            )}
+          </div>
         )}
       </div>
     );
@@ -415,7 +461,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
           }
 
           .stat-container:hover::after {
-            content: attr(title);
+            content: attr(data-tooltip);
             position: absolute;
             bottom: calc(100% + 5px);
             left: 50%;
@@ -493,57 +539,6 @@ const GameEntity: React.FC<GameEntityProps> = ({
             }} />
           )}
         </div>
-        
-        {/* Only show stats if not in whale room (runState !== 1) */}
-        {runState !== 1 && (
-          <div style={{ 
-            position: 'absolute',
-            bottom: '-45px', // Fixed position, no scale dependency
-            left: '50%',
-            transform: 'translateX(-50%)',
-            textAlign: 'center',
-            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.5)',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            zIndex: 2
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              gap: '8px',
-              animation: isShaking ? 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both' : undefined
-            }}>
-              <div className="stat-container" title="Health Points">
-                <span>{health <= 0 ? '💔' : '❤️'} {health}/{maxHealth}</span>
-              </div>
-              {block > 0 && (
-                <div className="stat-container" title="Block">
-                  <span style={{ 
-                    color: '#70ff70',
-                    fontWeight: 'bold'
-                  }}>
-                    🛡️ {block}
-                  </span>
-                </div>
-              )}
-              {buff > 0 && (
-                <div className="stat-container" title="Permanent Attack+">
-                  <span style={{ 
-                    color: '#ff9070',
-                    fontWeight: 'bold'
-                  }}>
-                    💪 +{buff}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </>
   );
