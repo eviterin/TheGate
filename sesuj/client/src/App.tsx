@@ -8,10 +8,8 @@ import MusicPlayer from './components/MusicPlayer'
 import LoadingIndicator from './components/LoadingIndicator'
 import Game from './components/Game'
 import { useQuickTransactions } from './hooks/QuickTransactions'
-import { useContracts } from './hooks/ContractsContext'
 import { useGameState, useStartRun } from './hooks/GameState'
 
-// Add styles at the top
 const styles = {
   appContainer: {
     height: '100vh',
@@ -46,14 +44,16 @@ function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
   const handleEnable = async () => {
     try {
       await enableQuickTransactions();
+      // Wait a bit for the state to update
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setIsSuccess(true);
+      // Wait a bit to show success message before closing
+      setTimeout(() => {
+        onClose();
+      }, 1500);
     } catch (error) {
       console.error('Failed to enable quick transactions:', error);
     }
-  };
-
-  const handleClose = () => {
-    onClose();
   };
 
   return (
@@ -72,64 +72,34 @@ function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
       zIndex: 1000
     }}>
       {isSuccess ? (
-        <>
-          <h2 style={{ marginBottom: '1rem', color: '#48bb78' }}>✅ Quick Transactions Enabled!</h2>
-          <p style={{ marginBottom: '1.5rem', lineHeight: '1.5' }}>
-            You can now play without having to confirm every action.
-          </p>
-          <button
-            onClick={handleClose}
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: '#48bb78',
-              color: '#e0e0e0',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Close
-          </button>
-        </>
+        <div style={{ color: '#48bb78', fontSize: '18px' }}>
+          ✅ Quick Transactions Enabled! Loading game...
+        </div>
       ) : (
         <>
-          <h2 style={{ marginBottom: '1rem' }}>Enable Quick Transactions</h2>
+          <h2 style={{ marginBottom: '1rem' }}>One Last Step</h2>
           <p style={{ marginBottom: '1.5rem', lineHeight: '1.5' }}>
-            Would you like to enable quick transactions? This will allow you to play without having to confirm every action.
+            To play the game, you'll need to enable quick transactions. This allows you to play without having to confirm every action.
           </p>
           {error && (
             <p style={{ color: '#ff6b6b', marginBottom: '1rem' }}>{error}</p>
           )}
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button
-              onClick={handleEnable}
-              disabled={isEnabling}
-              style={{
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#2c5282',
-                color: '#e0e0e0',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                opacity: isEnabling ? 0.7 : 1
-              }}
-            >
-              {isEnabling ? 'Enabling...' : 'Enable'}
-            </button>
-            <button
-              onClick={handleClose}
-              style={{
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#4a5568',
-                color: '#e0e0e0',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Maybe Later
-            </button>
-          </div>
+          <button
+            onClick={handleEnable}
+            disabled={isEnabling}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#2c5282',
+              color: '#e0e0e0',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              opacity: isEnabling ? 0.7 : 1,
+              fontSize: '16px'
+            }}
+          >
+            {isEnabling ? 'Enabling...' : 'Enable Quick Transactions'}
+          </button>
         </>
       )}
     </div>
@@ -138,64 +108,38 @@ function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
 
 function AppContent() {
   const { isEnabled, isLoading } = useQuickTransactions()
-  const [showPrompt, setShowPrompt] = useState(false)
-  const { getGameState } = useGameState()
-  const { startRun } = useStartRun()
-  const [isLoadingGameState, setIsLoadingGameState] = useState(true)
-  const [hasActiveRun, setHasActiveRun] = useState(false)
-  const [isStartingRun, setIsStartingRun] = useState(false)
-  
-  useEffect(() => {
-    const checkGameState = async () => {
-      try {
-        const state = await getGameState()
-        const hasRun = state !== null && (state.runState ?? 0) > 0
-        setHasActiveRun(hasRun)
-        
-        // If no active run, start one
-        if (!hasRun && !isStartingRun) {
-          setIsStartingRun(true)
-          try {
-            await startRun()
-            // Wait a bit for chain state to update
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            const newState = await getGameState()
-            setHasActiveRun(newState !== null && (newState.runState ?? 0) > 0)
-          } catch (error) {
-            console.error('Failed to start run:', error)
-          } finally {
-            setIsStartingRun(false)
-          }
-        }
-      } catch (error) {
-        console.error('Failed to check game state:', error)
-      } finally {
-        setIsLoadingGameState(false)
-      }
-    }
+  const [showQuickTxPrompt, setShowQuickTxPrompt] = useState(false)
 
-    checkGameState()
-  }, [getGameState, startRun, isStartingRun])
-
+  // First handle Quick Transactions
   useEffect(() => {
     if (!isLoading && !isEnabled) {
-      setShowPrompt(true);
+      setShowQuickTxPrompt(true)
     }
-  }, [isLoading, isEnabled]);
+  }, [isLoading, isEnabled])
 
-  if (isLoadingGameState || isStartingRun) {
+  // Show loading state while checking Quick Transactions
+  if (isLoading) {
     return (
       <div style={styles.appContainer}>
-        <LoadingIndicator message={isStartingRun ? "Starting new run..." : "Loading game state..."} />
+        <LoadingIndicator message="Checking settings..." />
       </div>
     )
   }
 
+  // Show Quick Transactions prompt if needed
+  if (showQuickTxPrompt) {
+    return (
+      <div style={styles.appContainer}>
+        <QuickTransactionsPrompt onClose={() => {
+          setShowQuickTxPrompt(false)
+        }} />
+      </div>
+    )
+  }
+
+  // Show the game once Quick Transactions are enabled
   return (
     <div style={styles.appContainer}>
-      {showPrompt && (
-        <QuickTransactionsPrompt onClose={() => setShowPrompt(false)} />
-      )}
       <Game />
     </div>
   );
@@ -207,27 +151,21 @@ function App() {
   
   if (!user) {
     return (
-      <>
-        <div style={styles.appContainer}>
-          <div style={styles.loginContainer}>
-            <ConnectButton />
-          </div>
+      <div style={styles.appContainer}>
+        <div style={styles.loginContainer}>
+          <ConnectButton />
         </div>
-        <MusicPlayer track="background2.mp3" />
-      </>
+      </div>
     );
   }
 
   if (isInitializing) {
     return (
-      <>
-        <ContractsProvider onInitialized={() => setIsInitializing(false)}>
-          <div style={styles.appContainer}>
-            <LoadingIndicator message="Initializing game..." />
-          </div>
-        </ContractsProvider>
-        <MusicPlayer track="background2.mp3" />
-      </>
+      <ContractsProvider onInitialized={() => setIsInitializing(false)}>
+        <div style={styles.appContainer}>
+          <LoadingIndicator message="Initializing game..." />
+        </div>
+      </ContractsProvider>
     );
   }
 

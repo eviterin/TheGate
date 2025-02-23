@@ -142,6 +142,7 @@ const Game: React.FC = () => {
   const [isHandVisible, setIsHandVisible] = useState(true);
   const [isGateOpen, setIsGateOpen] = useState(false);
   const { getGameState } = useGameState();
+  const { startRun } = useStartRun();
   const { playCard } = usePlayCard();
   const { endTurn: endTurnAction } = useEndTurn();
   const { getActiveCards } = useCards();
@@ -178,6 +179,7 @@ const Game: React.FC = () => {
   const { playCards } = usePlayCards();
   const [showAbandonConfirmation, setShowAbandonConfirmation] = useState(false);
   const [isAbandoning, setIsAbandoning] = useState(false);
+  const [isApproaching, setIsApproaching] = useState(false);
 
   // Fetch card data
   useEffect(() => {
@@ -732,6 +734,35 @@ const Game: React.FC = () => {
       setIsHandVisible(true);
     }
   }, [gameState?.runState]);
+
+  // Replace the checkAndApproachGate effect with this simpler version
+  useEffect(() => {
+    let mounted = true;
+
+    const checkAndApproachGate = async () => {
+      if (!gameState || isApproaching) return;
+
+      // Only try to start if we're in the initial state
+      if (gameState.runState === 0) {
+        try {
+          setIsApproaching(true);
+          await startRun();
+        } catch (error) {
+          console.error('Failed to approach the gate:', error);
+          setIsApproaching(false);
+        }
+      } else if (gameState.runState === 1) {
+        // Clear approaching state once we're in the whale room
+        setIsApproaching(false);
+      }
+    };
+
+    checkAndApproachGate();
+
+    return () => {
+      mounted = false;
+    };
+  }, [gameState?.runState, isApproaching]);
 
   return (
     <>
