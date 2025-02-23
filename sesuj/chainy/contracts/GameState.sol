@@ -97,6 +97,9 @@ contract GameState {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_NONE, "Cannot start new run while one is active");
         
+        // Ensure enemy data is cleared when starting a new run
+        encounters.clearEnemyData(msg.sender);
+        
         data.runState = RUN_STATE_WHALE_ROOM;
         data.currentFloor = 0;
         data.maxHealth = 21;
@@ -490,7 +493,14 @@ contract GameState {
     function retryFromDeath() public {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_DEATH, "Not in death state");
-        data.runState = RUN_STATE_NONE;  // Set to NONE before starting new run
+        
+        // First clear enemy data explicitly
+        encounters.clearEnemyData(msg.sender);
+        
+        // Then abandon run to clear player state
+        abandonRun();  // This will clear all state and set runState to NONE
+        
+        // Finally start new run
         startRun();
     }
 }
