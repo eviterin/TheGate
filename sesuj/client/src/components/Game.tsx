@@ -383,14 +383,16 @@ const Game: React.FC = () => {
       setIsCommittingIntents(true);
       setOptimisticUpdatesEnabled(false);  // Disable optimistic updates during commit
 
-      // Convert intents to contract format
-      const plays = cardIntents.map((intent, index) => {
-        const adjustedIndex = intent.cardIndex - cardIntents.slice(0, index).filter(
-          prevIntent => prevIntent.cardIndex < intent.cardIndex
-        ).length;
+      // Calculate correct indices based on the hand state when each card will be played
+      const plays = cardIntents.map((intent) => {
+        // Find how many cards before this one had lower indices
+        const cardsPlayedBefore = cardIntents
+          .slice(0, cardIntents.indexOf(intent))
+          .filter(prev => prev.cardIndex < intent.cardIndex)
+          .length;
         
         return {
-          cardIndex: adjustedIndex,
+          cardIndex: intent.cardIndex - cardsPlayedBefore,
           targetIndex: intent.targetIndex
         };
       });

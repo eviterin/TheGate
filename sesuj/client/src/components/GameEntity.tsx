@@ -52,10 +52,6 @@ interface IntentInfo {
 }
 
 const getIntentInfo = (intent: number): IntentInfo => {
-  console.log('Intent:', intent);
-  console.log('INTENT_TYPES:', INTENT_TYPES);
-  console.log('HEAL_ALL value:', INTENT_TYPES.HEAL_ALL);
-  
   if (intent === INTENT_TYPES.BLOCK_5) {
     return { type: 'block', value: 5, animation: ANIMATIONS.BLOCK };
   }
@@ -75,7 +71,6 @@ const getIntentInfo = (intent: number): IntentInfo => {
     };
   }
   if (intent === INTENT_TYPES.HEAL_ALL) {
-    console.log('Matched HEAL_ALL intent');
     return {
       type: 'heal_all',
       value: 5,
@@ -99,7 +94,6 @@ const getIntentInfo = (intent: number): IntentInfo => {
     };
   }
   // Any other number is an attack with that damage value
-  console.log('Defaulting to attack intent');
   return { type: 'attack', value: intent, animation: ANIMATIONS.ATTACK };
 };
 
@@ -201,15 +195,17 @@ const GameEntity: React.FC<GameEntityProps> = ({
       backgroundSize: 'contain',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',
-      transform: `translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1})`,
+      transform: `translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1})${!isHero && health <= 0 ? ' rotate(90deg)' : ''}`,
       transformOrigin: 'center center',
-      zIndex: 2
+      zIndex: !isHero && health <= 0 ? 1 : 2, // Lower z-index for dead enemies
+      filter: !isHero && health <= 0 ? 'brightness(0.4) grayscale(0.7)' : 'none',
+      transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.5s ease-out, z-index 0s'
     };
 
     if (!isAnimating) return styles;
 
     // For enemies, use their intent to determine animation
-    if (!isHero && intent) {
+    if (!isHero && intent && health > 0) {  // Only animate if enemy is alive
       const intentInfo = getIntentInfo(intent);
       return {
         ...styles,
@@ -249,6 +245,10 @@ const GameEntity: React.FC<GameEntityProps> = ({
     const levelConfig = getLevelConfig(currentFloor);
     if (isHero) {
       return levelConfig.heroPosition;
+    }
+    // Use dead position if enemy is dead and dead position exists
+    if (!isHero && health <= 0 && levelConfig.deadEnemyPositions?.[position]) {
+      return levelConfig.deadEnemyPositions[position];
     }
     return levelConfig.enemyPositions[position] || { x: 50, y: 50 }; // Fallback to center if position not found
   };
