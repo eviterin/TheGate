@@ -1134,26 +1134,58 @@ const Game: React.FC = () => {
 
           .mana-display {
             display: flex;
+            flex-direction: column;
             align-items: center;
             gap: 4px;
+            width: fit-content;
+            padding: 8px;
+            margin-bottom: 10px;
             background: rgba(89, 86, 108, 0.15);
             border: 1px solid rgba(89, 86, 108, 0.3);
-            backdrop-filter: blur(5px);
-            padding: 8px 12px;
             border-radius: 8px;
-            margin-bottom: 10px;
-            min-height: 36px;
+            backdrop-filter: blur(5px);
           }
 
           .mana-icon {
-            font-size: 16px;
-            animation: sparkle 2s infinite;
-            animation-delay: calc(var(--index) * 0.2s);
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center,
+              rgba(88, 43, 156, 0.9) 0%,
+              rgba(45, 13, 99, 0.9) 60%,
+              rgba(31, 9, 67, 0.9) 100%
+            );
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+            border: 1px solid rgba(88, 43, 156, 0.8);
+            position: relative;
           }
 
-          @keyframes sparkle {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(0.95); }
+          .mana-icon::after {
+            content: '✨';
+            position: absolute;
+            font-size: 16px;
+            color: #FFD700;
+            filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.6));
+          }
+
+          .mana-icon.depleted {
+            background: radial-gradient(circle at center,
+              #666 0%,
+              #444 60%,
+              #333 100%
+            );
+            box-shadow: none;
+            border-color: #555;
+          }
+
+          .mana-icon.depleted::after {
+            color: #999;
+            filter: none;
+          }
+
           }
 
           .game-entity.animating {
@@ -1465,9 +1497,10 @@ const Game: React.FC = () => {
                   
                   <div className="mana-display">
                     {[...Array(gameState?.maxMana ?? 0)].map((_, i) => (
-                      <span key={i} className={`mana-icon ${i >= (optimisticMana ?? gameState?.currentMana ?? 0) ? 'depleted' : ''}`}>
-                        ✨
-                      </span>
+                      <div 
+                        key={i} 
+                        className={`mana-icon ${i >= (optimisticMana ?? gameState?.currentMana ?? 0) ? 'depleted' : ''}`}
+                      />
                     ))}
                   </div>
                 </div>

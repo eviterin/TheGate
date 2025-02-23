@@ -33,23 +33,24 @@
     {
       "level": 1,
       "name": "Dunes",
-      "description": "Two desert bandits ambush you. One is aggressive, the other more cautious.",
+      "description": "Two desert bandits ambush you. They coordinate their attacks and defenses.",
       "chainData": {
         "enemyTypes": [1, 2],
         "enemyMaxHealth": [14, 16],
         "baseIntents": {
           "1": { 
-            "damage": { "min": 6, "max": 8 },
+            "damage": { "min": 7, "max": 9 },
+            "blockChance": 0.5,
+            "blockAmount": 6,
             "animation": "jump",
-            "pattern": "aggressive"
+            "pattern": "attack_defend_alternate"
           },
           "2": { 
-            "damage": { "min": 4, "max": 6 },
-            "blockChance": 0.4,
-            "blockAmount": 5,
-            "blockAndAttackChance": 0.3,
+            "damage": { "min": 6, "max": 8 },
+            "blockChance": 0.5,
+            "blockAmount": 6,
             "animation": "flip",
-            "pattern": "defensive"
+            "pattern": "defend_attack_alternate"
           }
         }
       }
@@ -77,20 +78,20 @@
     {
       "level": 3,
       "name": "Outpost",
-      "description": "A lone corrupted guardian blocks your path. It grows stronger as the battle progresses.",
+      "description": "A lone corrupted guardian blocks your path. It grows stronger as the battle progresses, then alternates between attacking and defending.",
       "chainData": {
         "enemyTypes": [2],
         "enemyMaxHealth": [32],
         "baseIntents": {
           "2": { 
             "damage": { "min": 8, "max": 12 },
-            "blockChance": 0.3,
+            "blockChance": 1.0,
             "blockAmount": 8,
-            "blockAndAttackChance": 0.3,
-            "buffChance": 0.4,
+            "blockAndAttackChance": 1.0,
+            "buffChance": 1.0,
             "buffAmount": 2,
             "animation": "power-up",
-            "pattern": "buff_guardian"
+            "pattern": "buff_then_block_attack"
           }
         }
       }

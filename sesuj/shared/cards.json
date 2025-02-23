@@ -67,8 +67,8 @@
             "numericId": 8,
             "id": "pray",
             "name": "Seek Guidance",
-            "description": "Gain 3 cards.",
-            "manaCost": 1,
+            "description": "Draw 3 cards. Gain an extra Faith next turn.",
+            "manaCost": 2,
             "targeted": false,
             "animationType": "flip"
         },
@@ -85,7 +85,7 @@
             "numericId": 10,
             "id": "explodicate4",
             "name": "Divine Wrath",
-            "description": "Deal 8 damage. If enemy is at full HP, deal double.",
+            "description": "Deal 5 damage. If enemy is at full HP, deal double.",
             "manaCost": 1,
             "targeted": true,
             "animationType": "flip"
@@ -94,8 +94,8 @@
             "numericId": 11,
             "id": "explodicate5",
             "name": "Explodicate",
-            "description": "Deal 15 damage to ALL.",
-            "manaCost": 1,
+            "description": "Deal 7 damage. Ignores block.",
+            "manaCost": 3,
             "targeted": true,
             "animationType": "flip"
         }

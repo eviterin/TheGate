@@ -129,23 +129,45 @@ contract GameEncounters {
     function setNewEnemyIntents(address player, uint8 floor) public onlyGameState {
         EnemyData storage data = enemyData[player];
         uint256 seed = uint256(keccak256(abi.encodePacked(block.timestamp, player)));
+        
+        // Store previous intents before creating new array
+        uint16[] memory previousIntents = data.intents;
         data.intents = new uint16[](data.types.length);
         
         if (floor == 1) {
-            for (uint i = 0; i < data.types.length; i++) {
-                if (data.currentHealth[i] > 0) {
-                    if (data.types[i] == ENEMY_TYPE_A) {
-                        data.intents[i] = uint16(6 + (seed % 3));
-                    } else if (data.types[i] == ENEMY_TYPE_B) {
-                        uint256 action = seed % 10;
-                        if (action < 4) {
-                            data.intents[i] = INTENT_BLOCK_5;
-                        } else {
-                            data.intents[i] = uint16(8 + (seed % 3));
-                        }
+            if (data.currentHealth[0] > 0 && data.currentHealth[1] > 0) {
+                // Get previous intents to determine next pattern
+                bool wasFirstAttacking = previousIntents.length > 0 && previousIntents[0] > INTENT_BLOCK_5;
+                bool wasSecondAttacking = previousIntents.length > 0 && previousIntents[1] > INTENT_BLOCK_5;
+                
+                // If no previous intents (first turn), first enemy attacks
+                if (previousIntents.length == 0) {
+                    data.intents[0] = uint16(7 + (seed % 3)); // 7-9 damage
+                    data.intents[1] = INTENT_BLOCK_5;
+                }
+                // Otherwise swap their previous actions
+                else {
+                    if (wasFirstAttacking) {
+                        data.intents[0] = INTENT_BLOCK_5;
+                        data.intents[1] = uint16(6 + (seed % 3)); // 6-8 damage
+                    } else if (wasSecondAttacking) {
+                        data.intents[0] = uint16(7 + (seed % 3)); // 7-9 damage
+                        data.intents[1] = INTENT_BLOCK_5;
+                    } else {
+                        // If somehow neither was attacking, restart the pattern
+                        data.intents[0] = uint16(7 + (seed % 3)); // 7-9 damage
+                        data.intents[1] = INTENT_BLOCK_5;
                     }
                 }
-                seed = uint256(keccak256(abi.encodePacked(seed)));
+            }
+            // If only one enemy alive, they alternate between attack and block
+            else if (data.currentHealth[0] > 0) {
+                bool wasAttacking = previousIntents.length > 0 && previousIntents[0] > INTENT_BLOCK_5;
+                data.intents[0] = wasAttacking ? INTENT_BLOCK_5 : uint16(7 + (seed % 3));
+            }
+            else if (data.currentHealth[1] > 0) {
+                bool wasAttacking = previousIntents.length > 0 && previousIntents[1] > INTENT_BLOCK_5;
+                data.intents[1] = wasAttacking ? INTENT_BLOCK_5 : uint16(6 + (seed % 3));
             }
         }
         else if (floor == 2) {
@@ -169,7 +191,7 @@ contract GameEncounters {
                 if (data.buffs[0] == 0) {
                     data.intents[0] = INTENT_ATTACK_BUFF;
                 } else {
-                    data.intents[0] = uint16(8 + (seed % 5) + data.buffs[0]);
+                    data.intents[0] = INTENT_BLOCK_AND_ATTACK;
                 }
             }
         }

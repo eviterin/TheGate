@@ -291,11 +291,11 @@ const GameEntity: React.FC<GameEntityProps> = ({
         intentInfo.type === 'block_and_attack' ? 
           `Intends to: Block ${intentInfo.blockValue} damage and deal ${intentInfo.value} damage` :
         intentInfo.type === 'heal' ? 
-          `Intends to: Heal ${intentInfo.value} HP` :
+          `Intends to: Heal self for ${intentInfo.value} HP` :
         intentInfo.type === 'attack_buff' ? 
           `Intends to: Increase attack damage by ${intentInfo.value}` :
         intentInfo.type === 'block_and_heal' ? 
-          `Intends to: Block ${intentInfo.blockValue} damage and heal ${intentInfo.healValue} HP` :
+          `Intends to: Block ${intentInfo.blockValue} damage and heal self for ${intentInfo.healValue} HP` :
           `Intends to: Deal ${intentInfo.value} damage`
       }>
         {intentInfo.type === 'block' ? (
@@ -322,31 +322,31 @@ const GameEntity: React.FC<GameEntityProps> = ({
       <style>
         {`
           @keyframes jump {
-            0%, 100% { transform: translate(-50%, -50%); }
-            50% { transform: translate(-50%, -100%); }
+            0%, 100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
+            50% { transform: translate(-50%, calc(-50% - ${50 * scale}px)) scale(${scale}) scaleX(${invert ? -1 : 1}); }
           }
 
           @keyframes flip {
-            0%, 100% { transform: translate(-50%, -50%) rotateY(0deg); }
-            100% { transform: translate(-50%, -50%) rotateY(360deg); }
+            0%, 100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}) rotateY(0deg); }
+            100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}) rotateY(360deg); }
           }
 
           @keyframes flip-attack {
-            0%, 100% { transform: translate(-50%, -50%) rotateY(0deg); }
-            50% { transform: translate(-50%, -50%) rotateY(360deg) scale(1.2); }
+            0%, 100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}) rotateY(0deg); }
+            50% { transform: translate(-50%, -50%) scale(${scale * 1.2}) scaleX(${invert ? -1 : 1}) rotateY(360deg); }
           }
 
           @keyframes heal-pulse {
-            0% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
-            50% { transform: translate(-50%, -50%) scale(1.1); filter: brightness(1.5) hue-rotate(90deg); }
-            100% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
+            0% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); filter: brightness(1); }
+            50% { transform: translate(-50%, -50%) scale(${scale * 1.1}) scaleX(${invert ? -1 : 1}); filter: brightness(1.5) hue-rotate(90deg); }
+            100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); filter: brightness(1); }
           }
 
           @keyframes power-up {
-            0% { transform: translate(-50%, -50%); filter: brightness(1); }
-            50% { transform: translate(-50%, -50%) scale(1.15); filter: brightness(1.5) saturate(1.5); }
-            75% { transform: translate(-50%, -50%) scale(1.1) rotate(5deg); }
-            100% { transform: translate(-50%, -50%); filter: brightness(1); }
+            0% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); filter: brightness(1); }
+            50% { transform: translate(-50%, -50%) scale(${scale * 1.15}) scaleX(${invert ? -1 : 1}); filter: brightness(1.5) saturate(1.5); }
+            75% { transform: translate(-50%, -50%) scale(${scale * 1.1}) scaleX(${invert ? -1 : 1}) rotate(5deg); }
+            100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); filter: brightness(1); }
           }
 
           @keyframes shake {
@@ -362,28 +362,28 @@ const GameEntity: React.FC<GameEntityProps> = ({
           }
 
           @keyframes zigzag {
-            0% { transform: translate(-60%, -50%); }
-            25% { transform: translate(-40%, -60%); }
-            50% { transform: translate(-60%, -50%); }
-            75% { transform: translate(-40%, -40%); }
-            100% { transform: translate(-60%, -50%); }
+            0% { transform: translate(-60%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
+            25% { transform: translate(-40%, -60%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
+            50% { transform: translate(-60%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
+            75% { transform: translate(-40%, -40%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
+            100% { transform: translate(-60%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
           }
 
           @keyframes float {
-            0%, 100% { transform: translate(-50%, -50%); }
-            50% { transform: translate(-50%, -70%); }
+            0%, 100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
+            50% { transform: translate(-50%, -70%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
           }
 
           @keyframes pulse {
-            0% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.2); }
-            100% { transform: translate(-50%, -50%) scale(1); }
+            0% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
+            50% { transform: translate(-50%, -50%) scale(${scale * 1.2}) scaleX(${invert ? -1 : 1}); }
+            100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
           }
 
           @keyframes slash {
-            0% { transform: translate(-50%, -50%) rotate(-45deg); }
-            50% { transform: translate(-50%, -50%) rotate(45deg) scale(1.2); }
-            100% { transform: translate(-50%, -50%) rotate(-45deg); }
+            0% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}) rotate(-45deg); }
+            50% { transform: translate(-50%, -50%) scale(${scale * 1.2}) scaleX(${invert ? -1 : 1}) rotate(45deg); }
+            100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}) rotate(-45deg); }
           }
 
           .game-entity {
