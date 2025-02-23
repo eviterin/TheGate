@@ -118,6 +118,7 @@ interface GameEntityProps {
   previousBlock?: number;
   buff?: number;
   scale?: number;
+  runState?: number;
 }
 
 const GameEntity: React.FC<GameEntityProps> = ({ 
@@ -135,7 +136,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
   previousHealth = health,
   previousBlock = block,
   buff = 0,
-  scale
+  scale,
+  runState = 2
 }) => {
   const isHero = type === 'hero';
   const [isShaking, setIsShaking] = useState(false);
@@ -459,53 +461,56 @@ const GameEntity: React.FC<GameEntityProps> = ({
           )}
         </div>
         
-        <div style={{ 
-          position: 'absolute',
-          top: '-45px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          textAlign: 'center',
-          textShadow: '1px 1px 2px rgba(0, 0, 0, 0.5)',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          padding: '8px 12px',
-          borderRadius: '4px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
-          zIndex: 2  // Ensure stats show above background but below intents
-        }}>
+        {/* Only show stats if not in whale room (runState !== 1) */}
+        {runState !== 1 && (
           <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            gap: '8px',
-            animation: isShaking ? 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both' : undefined
+            position: 'absolute',
+            top: '-45px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            textAlign: 'center',
+            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.5)',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            padding: '8px 12px',
+            borderRadius: '4px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            zIndex: 2
           }}>
-            <div className="stat-container" title="Health Points">
-              <span>{health <= 0 ? '💔' : '❤️'} {health}/{maxHealth}</span>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '8px',
+              animation: isShaking ? 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both' : undefined
+            }}>
+              <div className="stat-container" title="Health Points">
+                <span>{health <= 0 ? '💔' : '❤️'} {health}/{maxHealth}</span>
+              </div>
+              {block > 0 && (
+                <div className="stat-container" title="Block">
+                  <span style={{ 
+                    color: '#70ff70',
+                    fontWeight: 'bold'
+                  }}>
+                    🛡️ {block}
+                  </span>
+                </div>
+              )}
+              {buff > 0 && (
+                <div className="stat-container" title="Permanent Attack+">
+                  <span style={{ 
+                    color: '#ff9070',
+                    fontWeight: 'bold'
+                  }}>
+                    💪 +{buff}
+                  </span>
+                </div>
+              )}
             </div>
-            {block > 0 && (
-              <div className="stat-container" title="Block">
-                <span style={{ 
-                  color: '#70ff70',
-                  fontWeight: 'bold'
-                }}>
-                  🛡️ {block}
-                </span>
-              </div>
-            )}
-            {buff > 0 && (
-              <div className="stat-container" title="Permanent Attack+">
-                <span style={{ 
-                  color: '#ff9070',
-                  fontWeight: 'bold'
-                }}>
-                  💪 +{buff}
-                </span>
-              </div>
-            )}
           </div>
-        </div>
+        )}
       </div>
     </>
   );

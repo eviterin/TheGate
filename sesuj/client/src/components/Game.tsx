@@ -1058,30 +1058,34 @@ const Game: React.FC = () => {
 
           .whale-room-gate {
             position: absolute;
-            right: 40px;
             top: 50%;
-            transform: translateY(-50%);
-            padding: 12px 24px;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 1.5rem 2rem;
+            width: 200px;
             background: rgba(0, 0, 0, 0.6);
             border: 2px solid #ffd700;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             z-index: 10;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
           }
 
           .whale-room-gate:hover {
             background: rgba(0, 0, 0, 0.8);
-            box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);
-            transform: translateY(-50%) scale(1.02);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+            transform: translate(-50%, -50%) scale(1.05);
           }
 
           .whale-room-gate-text {
             color: #ffd700;
-            font-size: 16px;
+            font-size: 24px;
             font-weight: bold;
             text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            white-space: nowrap;
           }
 
           .resource-bars {
@@ -1213,8 +1217,10 @@ const Game: React.FC = () => {
               isVisible={showTurnBanner}
               type={turnBannerType}
             />
-            {/* Info Bar */}
-            <InfoBar />
+            {/* Info Bar - Only show when not in whale room */}
+            {gameState && gameState.runState !== 1 && (
+              <InfoBar />
+            )}
 
             {/* Game Entities */}
             {gameState && (
@@ -1232,6 +1238,7 @@ const Game: React.FC = () => {
                   animationTarget={currentAnimation?.sourceType === 'hero' ? currentAnimation.targetPosition : undefined}
                   previousHealth={previousHealth}
                   previousBlock={previousBlock}
+                  runState={gameState.runState}
                 />
                 {gameState.enemyTypes.map((type: number, index: number) => (
                   <GameEntity
@@ -1251,6 +1258,7 @@ const Game: React.FC = () => {
                     previousBlock={previousEnemyBlock[index]}
                     buff={gameState.enemyBuffs[index]}
                     scale={getLevelConfig(gameState.currentFloor).enemyScales?.[index]}
+                    runState={gameState.runState}
                   />
                 ))}
               </>
