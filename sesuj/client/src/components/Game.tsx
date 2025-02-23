@@ -94,6 +94,43 @@ const calculateTotalManaCost = (intents: CardIntent[], cardData: Array<{ numeric
   }, 0);
 };
 
+// Add AbandonConfirmation component near the top of the file
+interface AbandonConfirmationProps {
+  isOpen: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}
+
+const AbandonConfirmation: React.FC<AbandonConfirmationProps> = ({ isOpen, onConfirm, onCancel, isLoading }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="abandon-confirmation-overlay">
+      <div className="abandon-confirmation-content">
+        <h2>Abandon Run?</h2>
+        <p>Are you sure you want to abandon your current run? This action cannot be undone.</p>
+        <div className="abandon-confirmation-buttons">
+          <button 
+            className="confirm-button"
+            onClick={onConfirm}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Abandoning...' : 'Yes, Abandon Run'}
+          </button>
+          <button 
+            className="cancel-button"
+            onClick={onCancel}
+            disabled={isLoading}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Game: React.FC = () => {
   const [hand, setHand] = useState<number[]>([]);
   const [deck, setDeck] = useState<number[]>([]);
@@ -139,6 +176,8 @@ const Game: React.FC = () => {
   const [cardIntents, setCardIntents] = useState<CardIntent[]>([]);
   const [isCommittingIntents, setIsCommittingIntents] = useState(false);
   const { playCards } = usePlayCards();
+  const [showAbandonConfirmation, setShowAbandonConfirmation] = useState(false);
+  const [isAbandoning, setIsAbandoning] = useState(false);
 
   // Fetch card data
   useEffect(() => {
@@ -659,12 +698,15 @@ const Game: React.FC = () => {
     }
   };
 
-  const handleAbandonAndExit = async () => {
+  const handleAbandonRun = async () => {
+    setIsAbandoning(true);
     try {
       await abandonRun();
-      handleBackToMenu();
+      window.location.reload(); // Refresh the page to start fresh
     } catch (error) {
       console.error('Failed to abandon run:', error);
+      setIsAbandoning(false);
+      setShowAbandonConfirmation(false);
     }
   };
 
@@ -1080,6 +1122,85 @@ const Game: React.FC = () => {
           .game-entity.animating {
             z-index: 100;
           }
+
+          .abandon-confirmation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1100;
+          }
+
+          .abandon-confirmation-content {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+          }
+
+          .abandon-confirmation-content h2 {
+            color: #ff4444;
+            margin-bottom: 16px;
+          }
+
+          .abandon-confirmation-content p {
+            color: #cccccc;
+            margin-bottom: 24px;
+            line-height: 1.5;
+          }
+
+          .abandon-confirmation-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+          }
+
+          .confirm-button {
+            background: #a44;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+          }
+
+          .confirm-button:hover:not(:disabled) {
+            background: #b55;
+          }
+
+          .confirm-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+          }
+
+          .cancel-button {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+          }
+
+          .cancel-button:hover:not(:disabled) {
+            background: #777;
+          }
+
+          .cancel-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+          }
         `}
       </style>
       <div className="game-wrapper">
@@ -1235,10 +1356,10 @@ const Game: React.FC = () => {
                     </button>
                     <button 
                       className="abandon-button" 
-                      onClick={handleAbandonAndExit}
+                      onClick={() => setShowAbandonConfirmation(true)}
                       disabled={isRetrying}
                     >
-                      Back to Menu
+                      Abandon Run
                     </button>
                   </div>
                 </div>
@@ -1306,10 +1427,14 @@ const Game: React.FC = () => {
                 </div>
               )}
               <button 
-                className="menu-button"
-                onClick={handleBackToMenu}
+                className="menu-button abandon-button"
+                onClick={() => setShowAbandonConfirmation(true)}
+                style={{
+                  background: 'rgba(220, 53, 69, 0.8)',
+                  borderColor: 'rgba(220, 53, 69, 0.3)'
+                }}
               >
-                Back to Menu
+                Abandon Run
               </button>
             </div>
 
@@ -1404,6 +1529,14 @@ const Game: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Add AbandonConfirmation component */}
+      <AbandonConfirmation
+        isOpen={showAbandonConfirmation}
+        onConfirm={handleAbandonRun}
+        onCancel={() => setShowAbandonConfirmation(false)}
+        isLoading={isAbandoning}
+      />
     </>
   );
 };

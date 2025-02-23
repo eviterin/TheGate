@@ -1,7 +1,6 @@
 import './App.css'
 import './styles/fonts.css'
 import { useHappyChain, ConnectButton } from '@happy.tech/react'
-import MainMenu from './components/MainMenu'
 import Playground from './components/Playground'
 import { useState, useEffect } from 'react'
 import { ContractsProvider } from './hooks/ContractsContext'
@@ -10,6 +9,7 @@ import LoadingIndicator from './components/LoadingIndicator'
 import Game from './components/Game'
 import { useQuickTransactions } from './hooks/QuickTransactions'
 import { useContracts } from './hooks/ContractsContext'
+import { useGameState, useStartRun } from './hooks/GameState'
 
 function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
   const { enableQuickTransactions, isEnabling, error } = useQuickTransactions();
@@ -25,7 +25,6 @@ function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
   };
 
   const handleClose = () => {
-    // Always call onClose to close the prompt
     onClose();
   };
 
@@ -110,39 +109,66 @@ function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
 }
 
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState('menu')
   const { isEnabled, isLoading } = useQuickTransactions()
   const [showPrompt, setShowPrompt] = useState(false)
+  const { getGameState } = useGameState()
+  const { startRun } = useStartRun()
+  const [isLoadingGameState, setIsLoadingGameState] = useState(true)
+  const [hasActiveRun, setHasActiveRun] = useState(false)
+  const [isStartingRun, setIsStartingRun] = useState(false)
   
-  // Show quick transactions prompt when user connects and hasn't enabled it
+  useEffect(() => {
+    const checkGameState = async () => {
+      try {
+        const state = await getGameState()
+        const hasRun = state !== null && (state.runState ?? 0) > 0
+        setHasActiveRun(hasRun)
+        
+        // If no active run, start one
+        if (!hasRun && !isStartingRun) {
+          setIsStartingRun(true)
+          try {
+            await startRun()
+            // Wait a bit for chain state to update
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            const newState = await getGameState()
+            setHasActiveRun(newState !== null && (newState.runState ?? 0) > 0)
+          } catch (error) {
+            console.error('Failed to start run:', error)
+          } finally {
+            setIsStartingRun(false)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check game state:', error)
+      } finally {
+        setIsLoadingGameState(false)
+      }
+    }
+
+    checkGameState()
+  }, [getGameState, startRun, isStartingRun])
+
   useEffect(() => {
     if (!isLoading && !isEnabled) {
       setShowPrompt(true);
     }
   }, [isLoading, isEnabled]);
 
+  if (isLoadingGameState || isStartingRun) {
+    return (
+      <div className="app-container">
+        <LoadingIndicator message={isStartingRun ? "Starting new run..." : "Loading game state..."} />
+      </div>
+    )
+  }
+
   return (
     <div className="app-container">
-      {/* Quick Transactions Prompt */}
       {showPrompt && (
         <QuickTransactionsPrompt onClose={() => setShowPrompt(false)} />
       )}
-
-      {/* Current page content */}
-      {currentPage === 'menu' && <MainMenu onNavigate={setCurrentPage} />}
-      {currentPage === 'playground' && <Playground />}
-      {currentPage === 'game' && <Game />}
-      
-      {/* Back button for non-menu pages (except game page) */}
-      {currentPage !== 'menu' && currentPage !== 'game' && (
-        <button 
-          onClick={() => setCurrentPage('menu')} 
-          className="back-button"
-        >
-          Back to Menu
-        </button>
-      )}
-      
+      <Game />
       <MusicPlayer />
     </div>
   );
@@ -152,7 +178,6 @@ function App() {
   const { user } = useHappyChain()
   const [isInitializing, setIsInitializing] = useState(true)
   
-  // Login page
   if (!user) {
     return (
       <div className="app-container login-page">
@@ -162,7 +187,6 @@ function App() {
     );
   }
 
-  // Show loading while contracts initialize
   if (isInitializing) {
     return (
       <ContractsProvider onInitialized={() => setIsInitializing(false)}>
@@ -173,7 +197,6 @@ function App() {
     );
   }
 
-  // Main app with initialized contracts
   return (
     <ContractsProvider>
       <AppContent />
