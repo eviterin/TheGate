@@ -10,7 +10,11 @@ interface EncounterJson {
         };
         INTENT_TYPES: {
             BLOCK_5: 1000;
-            BLOCK_AND_ATTACK: number;
+            BLOCK_AND_ATTACK: 1001;
+            HEAL: 1002;
+            ATTACK_BUFF: 1003;
+            BLOCK_AND_HEAL: 1004;
+            HEAL_ALL: 1005;
         };
         ANIMATIONS: {
             ATTACK: string;

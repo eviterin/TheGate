@@ -20,6 +20,7 @@ contract GameEncounters {
     uint16 constant INTENT_HEAL = 1002;
     uint16 constant INTENT_ATTACK_BUFF = 1003;
     uint16 constant INTENT_BLOCK_AND_HEAL = 1004;
+    uint16 constant INTENT_HEAL_ALL = 1005;
 
     address public gameStateContract;
     mapping(address => EnemyData) private enemyData;
@@ -138,41 +139,45 @@ contract GameEncounters {
             if (data.currentHealth[0] > 0 && data.currentHealth[1] > 0) {
                 // On first turn, enemy 1 attacks and enemy 2 blocks
                 if (previousIntents.length == 0) {
-                    data.intents[0] = 8; // Fixed 8 damage
+                    data.intents[0] = 8; // Attack for 8 damage
                     data.intents[1] = INTENT_BLOCK_5;
                 } else {
                     // After first turn, they swap roles each turn
                     bool wasFirstBlocking = previousIntents[0] == INTENT_BLOCK_5;
                     if (wasFirstBlocking) {
-                        data.intents[0] = 8; 
+                        data.intents[0] = 8;
                         data.intents[1] = INTENT_BLOCK_5;
                     } else {
                         data.intents[0] = INTENT_BLOCK_5;
-                        data.intents[1] = 7; 
+                        data.intents[1] = 7;
                     }
                 }
             }
             // If only one enemy alive, they continuously attack (harder)
             else if (data.currentHealth[0] > 0) {
-                data.intents[0] = 12; 
+                data.intents[0] = 12;
             }
             else if (data.currentHealth[1] > 0) {
-                data.intents[1] = 11; 
+                data.intents[1] = 11;
             }
         }
         else if (floor == 2) {
-            // First enemy is the attacker
+            // First enemy alternates between attack and defend
             if (data.currentHealth[0] > 0) {
-                data.intents[0] = uint16(6 + (seed % 3));
+                // Check previous intent to alternate
+                if (previousIntents.length == 0 || previousIntents[0] == INTENT_BLOCK_5) {
+                    data.intents[0] = 7; // Fixed 7 damage - raw damage number (1-999 range)
+                } else {
+                    data.intents[0] = INTENT_BLOCK_5;
+                }
             }
             
-            // Second enemy is the healer
+            // Second enemy heals all while first is alive, attacks when alone
             if (data.currentHealth[1] > 0) {
-                uint256 action = seed % 10;
-                if (action < 6) {
-                    data.intents[1] = INTENT_BLOCK_AND_HEAL;
+                if (data.currentHealth[0] > 0) {
+                    data.intents[1] = INTENT_HEAL_ALL; // Using constant for special intent
                 } else {
-                    data.intents[1] = INTENT_HEAL;
+                    data.intents[1] = 9; // Attacks for 9 when alone
                 }
             }
         }

@@ -24,6 +24,7 @@ interface EncountersData {
       HEAL: number;
       ATTACK_BUFF: number;
       BLOCK_AND_HEAL: number;
+      HEAL_ALL: number;
     };
     ANIMATIONS: {
       ATTACK: string;
@@ -42,7 +43,7 @@ const ANIMATIONS = (encountersData as EncountersData).constants.ANIMATIONS;
 
 // Helper to determine intent type
 interface IntentInfo {
-  type: 'attack' | 'block' | 'block_and_attack' | 'heal' | 'attack_buff' | 'block_and_heal';
+  type: 'attack' | 'block' | 'block_and_attack' | 'heal' | 'attack_buff' | 'block_and_heal' | 'heal_all';
   value: number;
   blockValue?: number;
   buffValue?: number;
@@ -51,6 +52,10 @@ interface IntentInfo {
 }
 
 const getIntentInfo = (intent: number): IntentInfo => {
+  console.log('Intent:', intent);
+  console.log('INTENT_TYPES:', INTENT_TYPES);
+  console.log('HEAL_ALL value:', INTENT_TYPES.HEAL_ALL);
+  
   if (intent === INTENT_TYPES.BLOCK_5) {
     return { type: 'block', value: 5, animation: ANIMATIONS.BLOCK };
   }
@@ -65,6 +70,14 @@ const getIntentInfo = (intent: number): IntentInfo => {
   if (intent === INTENT_TYPES.HEAL) {
     return {
       type: 'heal',
+      value: 5,
+      animation: ANIMATIONS.HEAL
+    };
+  }
+  if (intent === INTENT_TYPES.HEAL_ALL) {
+    console.log('Matched HEAL_ALL intent');
+    return {
+      type: 'heal_all',
       value: 5,
       animation: ANIMATIONS.HEAL
     };
@@ -86,6 +99,7 @@ const getIntentInfo = (intent: number): IntentInfo => {
     };
   }
   // Any other number is an attack with that damage value
+  console.log('Defaulting to attack intent');
   return { type: 'attack', value: intent, animation: ANIMATIONS.ATTACK };
 };
 
@@ -250,6 +264,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         case 'block': return '#70ff70';
         case 'block_and_attack': return '#ffff70';
         case 'heal': return '#ff70ff';
+        case 'heal_all': return '#ff70ff';
         case 'attack_buff': return '#ff9070';
         case 'block_and_heal': return '#70ffff';
         default: return '#ff7070';
@@ -261,6 +276,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         case 'block': return '#40ff40';
         case 'block_and_attack': return '#ffff40';
         case 'heal': return '#ff40ff';
+        case 'heal_all': return '#ff40ff';
         case 'attack_buff': return '#ff6040';
         case 'block_and_heal': return '#40ffff';
         default: return '#ff4040';
@@ -335,6 +351,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
                 `Intends to: Block ${intentInfo.blockValue} damage and deal ${intentInfo.value} damage` :
               intentInfo.type === 'heal' ? 
                 `Intends to: Heal self for ${intentInfo.value} HP` :
+              intentInfo.type === 'heal_all' ? 
+                `Intends to: Heal all allies for ${intentInfo.value} HP` :
               intentInfo.type === 'attack_buff' ? 
                 `Intends to: Increase attack damage by ${intentInfo.value}` :
               intentInfo.type === 'block_and_heal' ? 
@@ -348,6 +366,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
               <>🛡️{intentInfo.blockValue}+⚔️{intentInfo.value}</>
             ) : intentInfo.type === 'heal' ? (
               <>💚{intentInfo.value}</>
+            ) : intentInfo.type === 'heal_all' ? (
+              <>💚💚{intentInfo.value}</>
             ) : intentInfo.type === 'attack_buff' ? (
               <>💪+{intentInfo.value}</>
             ) : intentInfo.type === 'block_and_heal' ? (
@@ -396,10 +416,10 @@ const GameEntity: React.FC<GameEntityProps> = ({
           }
 
           @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 0, 0); }
-            20%, 80% { transform: translate3d(2px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-            40%, 60% { transform: translate3d(4px, 0, 0); }
+            10%, 90% { transform: translate3d(-1px, 0, 0) scaleX(${invert ? -1 : 1}); }
+            20%, 80% { transform: translate3d(2px, 0, 0) scaleX(${invert ? -1 : 1}); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0) scaleX(${invert ? -1 : 1}); }
+            40%, 60% { transform: translate3d(4px, 0, 0) scaleX(${invert ? -1 : 1}); }
           }
 
           @keyframes flash {

@@ -240,6 +240,13 @@ contract GameState {
                 } else if (intent == 1004) { // INTENT_BLOCK_AND_HEAL
                     encounters.setEnemyBlock(msg.sender, uint8(i), 5);
                     encounters.healEnemy(msg.sender, uint8(i), 5);
+                } else if (intent == 1005) { // INTENT_HEAL_ALL
+                    // Heal all living enemies
+                    for (uint j = 0; j < types.length; j++) {
+                        if (currentHealth[j] > 0) {
+                            encounters.healEnemy(msg.sender, uint8(j), 5);
+                        }
+                    }
                 } else {
                     require(i < buffs.length, "Invalid enemy index for buff");
                     uint8 totalDamage = uint8(intent) + buffs[i];
