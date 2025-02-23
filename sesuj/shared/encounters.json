@@ -56,7 +56,7 @@
     },
     {
       "level": 2,
-      "name": "Cursed Hamlet",
+      "name": "Outskirts",
       "description": "Two possessed villagers. They move in perfect sync, occasionally healing each other.",
       "chainData": {
         "enemyTypes": [1, 1],
@@ -76,7 +76,7 @@
     },
     {
       "level": 3,
-      "name": "Forsaken Outpost",
+      "name": "Outpost",
       "description": "A lone corrupted guardian blocks your path. It grows stronger as the battle progresses.",
       "chainData": {
         "enemyTypes": [2],

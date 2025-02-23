@@ -118,6 +118,7 @@ interface GameEntityProps {
   previousBlock?: number;
   buff?: number;
   scale?: number;
+  invert?: boolean;
   runState?: number;
 }
 
@@ -136,7 +137,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
   previousHealth = health,
   previousBlock = block,
   buff = 0,
-  scale,
+  scale = 1,
+  invert = false,
   runState = 2
 }) => {
   const isHero = type === 'hero';
@@ -167,11 +169,6 @@ const GameEntity: React.FC<GameEntityProps> = ({
       color: 'white',
       cursor: isValidTarget ? 'pointer' : 'default',
     };
-
-    // Apply scale if provided
-    if (scale) {
-      styles.transform = `translate(-50%, -50%) scale(${scale})`;
-    }
 
     if (!isAnimating) return styles;
 
@@ -253,7 +250,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
     return (
       <div style={{
         position: 'absolute',
-        top: '-105px',
+        top: '-55px',
         left: '50%',
         transform: 'translateX(-50%)',
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -427,14 +424,16 @@ const GameEntity: React.FC<GameEntityProps> = ({
           {/* Entity model (hero or enemy) */}
           <div style={{
             position: 'absolute',
-            top: 0,
-            left: 0,
+            top: '50%',
+            left: '50%',
             width: '100%',
             height: '100%',
             backgroundImage: `url(${isHero ? heroModel : getEnemyModel()})`,
             backgroundSize: 'contain',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
+            transform: `translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1})`,
+            transformOrigin: 'center center',
             zIndex: 2
           }} />
 
@@ -442,8 +441,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
           {isValidTarget && (
             <div style={{
               position: 'absolute',
-              top: -12,
-              left: -12,
+              top: '50%',
+              left: '50%',
               width: 'calc(100% + 24px)',
               height: 'calc(100% + 24px)',
               backgroundColor: 'rgba(255, 255, 0, 0.8)',
@@ -456,6 +455,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
               maskPosition: 'center',
               WebkitMaskRepeat: 'no-repeat',
               maskRepeat: 'no-repeat',
+              transform: `translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1})`,
+              transformOrigin: 'center center',
               zIndex: 1
             }} />
           )}
@@ -465,7 +466,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         {runState !== 1 && (
           <div style={{ 
             position: 'absolute',
-            top: '-45px',
+            bottom: '-45px', // Fixed position, no scale dependency
             left: '50%',
             transform: 'translateX(-50%)',
             textAlign: 'center',

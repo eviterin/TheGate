@@ -1269,6 +1269,8 @@ const Game: React.FC = () => {
                   animationTarget={currentAnimation?.sourceType === 'hero' ? currentAnimation.targetPosition : undefined}
                   previousHealth={previousHealth}
                   previousBlock={previousBlock}
+                  scale={getLevelConfig(gameState.currentFloor).heroScale}
+                  invert={getLevelConfig(gameState.currentFloor).heroInvert}
                   runState={gameState.runState}
                 />
                 {gameState.enemyTypes.map((type: number, index: number) => (
@@ -1289,6 +1291,7 @@ const Game: React.FC = () => {
                     previousBlock={previousEnemyBlock[index]}
                     buff={gameState.enemyBuffs[index]}
                     scale={getLevelConfig(gameState.currentFloor).enemyScales?.[index]}
+                    invert={getLevelConfig(gameState.currentFloor).enemyInverted?.[index]}
                     runState={gameState.runState}
                   />
                 ))}

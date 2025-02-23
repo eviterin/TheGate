@@ -33,8 +33,11 @@ export interface Position {
 
 export interface ClientData {
     heroPosition: Position;
+    heroScale?: number;
+    heroInvert?: boolean;
     enemyPositions: Position[];
     enemyScales?: number[];
+    enemyInverted?: boolean[];
 }
 
 export interface ChainData {
@@ -77,58 +80,91 @@ export const BASE_POSITIONS = {
 const positions: Record<number, ClientData> = {
     0: {
         heroPosition: BASE_POSITIONS.HERO.BOTTOMCENTER,
+        heroScale: 1,
+        heroInvert: false,
         enemyPositions: [],
-        enemyScales: []
+        enemyScales: [],
+        enemyInverted: []
     },
     1: {
         heroPosition: BASE_POSITIONS.HERO.LEFT,
+        heroScale: 1,
+        heroInvert: false,
         enemyPositions: [{x: 90, y: 80}, {x: 80, y: 70}],
-        enemyScales: [1, 1]
+        enemyScales: [1, 1],
+        enemyInverted: [false, false]
     },
     2: {
-        heroPosition: {x: 20, y: 70},
-        enemyPositions: [{x: 95, y: 87}, {x: 55, y: 78}],
-        enemyScales: [1.3, 0.8]
+        heroPosition: {x: 25, y: 77},
+        heroScale: 1.5,
+        heroInvert: false,
+        enemyPositions: [{x: 35, y: 77}, {x: 65, y: 70}],
+        enemyScales: [1.4, 1],
+        enemyInverted: [false, false]
     },
     3: {
         heroPosition: {x: 70, y: 89},
+        heroScale: 1,
+        heroInvert: true,
         enemyPositions: [{x: 28, y: 68}],
-        enemyScales: [1.2]
+        enemyScales: [1.2],
+        enemyInverted: [false]
     },
     4: {
         heroPosition: {x: 40, y: 95},
+        heroScale: 1,
+        heroInvert: false,
         enemyPositions: [{x: 82, y: 70}, {x: 10, y: 35}],
-        enemyScales: [1, 1]
+        enemyScales: [1, 1],
+        enemyInverted: [false, false]
     },
     5: {
         heroPosition: BASE_POSITIONS.HERO.RIGHT,
+        heroScale: 1,
+        heroInvert: true,
         enemyPositions: [BASE_POSITIONS.ENEMY.FAR_LEFT, BASE_POSITIONS.ENEMY.LEFT],
-        enemyScales: [1, 1]
+        enemyScales: [1, 1],
+        enemyInverted: [false, false]
     },
     6: {
         heroPosition: BASE_POSITIONS.HERO.CENTER,
+        heroScale: 1,
+        heroInvert: false,
         enemyPositions: [BASE_POSITIONS.ENEMY.LEFT, BASE_POSITIONS.ENEMY.RIGHT],
-        enemyScales: [1, 1]
+        enemyScales: [1, 1],
+        enemyInverted: [false, true]
     },
     7: {
         heroPosition: BASE_POSITIONS.HERO.LEFT,
+        heroScale: 1,
+        heroInvert: false,
         enemyPositions: [BASE_POSITIONS.ENEMY.CENTER, BASE_POSITIONS.ENEMY.FAR_RIGHT],
-        enemyScales: [1, 1]
+        enemyScales: [1, 1],
+        enemyInverted: [true, true]
     },
     8: {
         heroPosition: {x: 80, y: 92},
+        heroScale: 1,
+        heroInvert: true,
         enemyPositions: [{x: 50, y: 79}, {x: 20, y: 90}],
-        enemyScales: [1, 1]
+        enemyScales: [1, 1],
+        enemyInverted: [false, false]
     },
     9: {
         heroPosition: {x: 50, y: 92},
+        heroScale: 1,
+        heroInvert: false,
         enemyPositions: [{x: 50, y: 75}],
-        enemyScales: [1.3]
+        enemyScales: [1.3],
+        enemyInverted: [true]
     },
     10: {
         heroPosition: {x: 30, y: 80},
+        heroScale: 1,
+        heroInvert: false,
         enemyPositions: [{x: 70, y: 75}],
-        enemyScales: [2.0]
+        enemyScales: [2.0],
+        enemyInverted: [true]
     }
 } as const;
 

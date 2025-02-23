@@ -4,8 +4,11 @@ export interface LevelConfig {
   level: number;
   name: string;
   heroPosition: Position;
+  heroScale?: number;
+  heroInvert?: boolean;
   enemyPositions: Position[];
   enemyScales?: number[];
+  enemyInverted?: boolean[];
 }
 
 // Convert encounter data to level configs
@@ -13,8 +16,11 @@ export const levelConfigs: LevelConfig[] = encounters.map((encounter: Encounter)
   level: encounter.level,
   name: encounter.name,
   heroPosition: encounter.clientData.heroPosition,
+  heroScale: encounter.clientData.heroScale,
+  heroInvert: encounter.clientData.heroInvert,
   enemyPositions: encounter.clientData.enemyPositions,
-  enemyScales: encounter.clientData.enemyScales
+  enemyScales: encounter.clientData.enemyScales,
+  enemyInverted: encounter.clientData.enemyInverted
 }));
 
 // Utility function to get level configuration
