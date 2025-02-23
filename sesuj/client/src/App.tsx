@@ -11,6 +11,34 @@ import { useQuickTransactions } from './hooks/QuickTransactions'
 import { useContracts } from './hooks/ContractsContext'
 import { useGameState, useStartRun } from './hooks/GameState'
 
+// Add styles at the top
+const styles = {
+  appContainer: {
+    height: '100vh',
+    width: '100vw',
+    margin: 0,
+    padding: 0,
+    backgroundImage: 'url(/src/assets/arenas/room_0.png)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  loginContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+    width: '100%',
+    transform: 'translateY(20vh)' // Move down by 20% of viewport height
+  }
+};
+
 function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
   const { enableQuickTransactions, isEnabling, error } = useQuickTransactions();
   const [isSuccess, setIsSuccess] = useState(false);
@@ -157,14 +185,14 @@ function AppContent() {
 
   if (isLoadingGameState || isStartingRun) {
     return (
-      <div className="app-container">
+      <div style={styles.appContainer}>
         <LoadingIndicator message={isStartingRun ? "Starting new run..." : "Loading game state..."} />
       </div>
     )
   }
 
   return (
-    <div className="app-container">
+    <div style={styles.appContainer}>
       {showPrompt && (
         <QuickTransactionsPrompt onClose={() => setShowPrompt(false)} />
       )}
@@ -180,9 +208,10 @@ function App() {
   
   if (!user) {
     return (
-      <div className="app-container login-page">
-        <h1>Welcome to Game</h1>
-        <ConnectButton />
+      <div style={styles.appContainer}>
+        <div style={styles.loginContainer}>
+          <ConnectButton />
+        </div>
       </div>
     );
   }
@@ -190,7 +219,7 @@ function App() {
   if (isInitializing) {
     return (
       <ContractsProvider onInitialized={() => setIsInitializing(false)}>
-        <div className="app-container">
+        <div style={styles.appContainer}>
           <LoadingIndicator message="Initializing game..." />
         </div>
       </ContractsProvider>
