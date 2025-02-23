@@ -33,7 +33,7 @@
     {
       "level": 1,
       "name": "Dunes",
-      "description": "Two desert bandits ambush you. They coordinate their attacks and defenses.",
+      "description": "Two desert bandits ambush you. They coordinate their attacks and defenses when together, but become reckless when alone.",
       "chainData": {
         "enemyTypes": [1, 2],
         "enemyMaxHealth": [14, 16],
@@ -43,14 +43,14 @@
             "blockChance": 0.5,
             "blockAmount": 6,
             "animation": "jump",
-            "pattern": "attack_defend_alternate"
+            "pattern": "attack_defend_alternate_when_paired_continuous_attack_when_alone"
           },
           "2": { 
             "damage": { "min": 6, "max": 8 },
             "blockChance": 0.5,
             "blockAmount": 6,
             "animation": "flip",
-            "pattern": "defend_attack_alternate"
+            "pattern": "defend_attack_alternate_when_paired_continuous_attack_when_alone"
           }
         }
       }

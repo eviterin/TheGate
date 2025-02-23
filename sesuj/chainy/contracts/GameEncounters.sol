@@ -136,38 +136,28 @@ contract GameEncounters {
         
         if (floor == 1) {
             if (data.currentHealth[0] > 0 && data.currentHealth[1] > 0) {
-                // Get previous intents to determine next pattern
-                bool wasFirstAttacking = previousIntents.length > 0 && previousIntents[0] > INTENT_BLOCK_5;
-                bool wasSecondAttacking = previousIntents.length > 0 && previousIntents[1] > INTENT_BLOCK_5;
-                
-                // If no previous intents (first turn), first enemy attacks
+                // On first turn, enemy 1 attacks and enemy 2 blocks
                 if (previousIntents.length == 0) {
-                    data.intents[0] = uint16(7 + (seed % 3)); // 7-9 damage
+                    data.intents[0] = 8; // Fixed 8 damage
                     data.intents[1] = INTENT_BLOCK_5;
-                }
-                // Otherwise swap their previous actions
-                else {
-                    if (wasFirstAttacking) {
-                        data.intents[0] = INTENT_BLOCK_5;
-                        data.intents[1] = uint16(6 + (seed % 3)); // 6-8 damage
-                    } else if (wasSecondAttacking) {
-                        data.intents[0] = uint16(7 + (seed % 3)); // 7-9 damage
+                } else {
+                    // After first turn, they swap roles each turn
+                    bool wasFirstBlocking = previousIntents[0] == INTENT_BLOCK_5;
+                    if (wasFirstBlocking) {
+                        data.intents[0] = 8; 
                         data.intents[1] = INTENT_BLOCK_5;
                     } else {
-                        // If somehow neither was attacking, restart the pattern
-                        data.intents[0] = uint16(7 + (seed % 3)); // 7-9 damage
-                        data.intents[1] = INTENT_BLOCK_5;
+                        data.intents[0] = INTENT_BLOCK_5;
+                        data.intents[1] = 7; 
                     }
                 }
             }
-            // If only one enemy alive, they alternate between attack and block
+            // If only one enemy alive, they continuously attack (harder)
             else if (data.currentHealth[0] > 0) {
-                bool wasAttacking = previousIntents.length > 0 && previousIntents[0] > INTENT_BLOCK_5;
-                data.intents[0] = wasAttacking ? INTENT_BLOCK_5 : uint16(7 + (seed % 3));
+                data.intents[0] = 12; 
             }
             else if (data.currentHealth[1] > 0) {
-                bool wasAttacking = previousIntents.length > 0 && previousIntents[1] > INTENT_BLOCK_5;
-                data.intents[1] = wasAttacking ? INTENT_BLOCK_5 : uint16(6 + (seed % 3));
+                data.intents[1] = 11; 
             }
         }
         else if (floor == 2) {
