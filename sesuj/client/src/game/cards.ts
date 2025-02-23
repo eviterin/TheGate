@@ -12,7 +12,7 @@ interface CardDataJson {
     }[];
 }
 
-export type CardAnimationType = 'jump' | 'flip' | 'none';
+export type CardAnimationType = 'jump' | 'flip' | 'none' | 'slash' | 'float' | 'zigzag' | 'pulse';
 
 export interface CardData {
     numericId: number;

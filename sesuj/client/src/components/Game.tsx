@@ -78,6 +78,7 @@ interface AnimationState {
   sourceIndex: number;
   targetPosition: Position;
   timestamp: number;
+  animationType?: CardAnimationType;
 }
 
 // Add helper to calculate damage after block
@@ -412,7 +413,8 @@ const Game: React.FC = () => {
             sourceType: 'hero',
             sourceIndex: 0,
             targetPosition: targetPos,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            animationType: card.animationType
           };
 
           // If not the first animation, add small delay
@@ -1266,6 +1268,7 @@ const Game: React.FC = () => {
                   onEntityClick={() => handleEntityClick(0)}
                   currentFloor={gameState.currentFloor}
                   isAnimating={currentAnimation?.sourceType === 'hero' && currentAnimation.sourceIndex === 0}
+                  animationType={currentAnimation?.sourceType === 'hero' ? currentAnimation.animationType : undefined}
                   animationTarget={currentAnimation?.sourceType === 'hero' ? currentAnimation.targetPosition : undefined}
                   previousHealth={previousHealth}
                   previousBlock={previousBlock}
@@ -1286,6 +1289,7 @@ const Game: React.FC = () => {
                     currentFloor={gameState.currentFloor}
                     intent={gameState.enemyCurrentHealth[index] > 0 ? gameState.enemyIntents[index] : undefined}
                     isAnimating={currentAnimation?.sourceType === 'enemy' && currentAnimation.sourceIndex === index}
+                    animationType={currentAnimation?.sourceType === 'enemy' ? currentAnimation.animationType : undefined}
                     animationTarget={currentAnimation?.sourceType === 'enemy' ? currentAnimation.targetPosition : undefined}
                     previousHealth={previousEnemyHealth[index]}
                     previousBlock={previousEnemyBlock[index]}

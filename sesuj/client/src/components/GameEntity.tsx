@@ -133,6 +133,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
   currentFloor = 0,
   intent = 0,
   isAnimating = false,
+  animationType,
   animationTarget,
   previousHealth = health,
   previousBlock = block,
@@ -170,6 +171,27 @@ const GameEntity: React.FC<GameEntityProps> = ({
       cursor: isValidTarget ? 'pointer' : 'default',
     };
 
+    // Move animation to sprite container
+    return styles;
+  };
+
+  // Get sprite animation styles
+  const getSpriteStyles = () => {
+    const styles: React.CSSProperties = {
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      width: '100%',
+      height: '100%',
+      backgroundImage: `url(${isHero ? heroModel : getEnemyModel()})`,
+      backgroundSize: 'contain',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      transform: `translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1})`,
+      transformOrigin: 'center center',
+      zIndex: 2
+    };
+
     if (!isAnimating) return styles;
 
     // For enemies, use their intent to determine animation
@@ -178,16 +200,14 @@ const GameEntity: React.FC<GameEntityProps> = ({
       return {
         ...styles,
         animation: `${intentInfo.animation} 0.5s ease-in-out`,
-        transition: 'none'
       };
     }
 
-    // For hero, always use jump animation when performing an action
+    // For hero, use the provided animation type or fall back to jump
     if (isHero && isAnimating) {
       return {
         ...styles,
-        animation: `${ANIMATIONS.ATTACK} 0.5s ease-in-out`,
-        transition: 'none'
+        animation: `${animationType || 'jump'} 0.5s ease-in-out`,
       };
     }
 
@@ -341,6 +361,31 @@ const GameEntity: React.FC<GameEntityProps> = ({
             50% { filter: brightness(2) saturate(2); }
           }
 
+          @keyframes zigzag {
+            0% { transform: translate(-60%, -50%); }
+            25% { transform: translate(-40%, -60%); }
+            50% { transform: translate(-60%, -50%); }
+            75% { transform: translate(-40%, -40%); }
+            100% { transform: translate(-60%, -50%); }
+          }
+
+          @keyframes float {
+            0%, 100% { transform: translate(-50%, -50%); }
+            50% { transform: translate(-50%, -70%); }
+          }
+
+          @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+          }
+
+          @keyframes slash {
+            0% { transform: translate(-50%, -50%) rotate(-45deg); }
+            50% { transform: translate(-50%, -50%) rotate(45deg) scale(1.2); }
+            100% { transform: translate(-50%, -50%) rotate(-45deg); }
+          }
+
           .game-entity {
             transition: all 0.3s ease-in-out;
           }
@@ -422,20 +467,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
           }}
         >
           {/* Entity model (hero or enemy) */}
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            width: '100%',
-            height: '100%',
-            backgroundImage: `url(${isHero ? heroModel : getEnemyModel()})`,
-            backgroundSize: 'contain',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            transform: `translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1})`,
-            transformOrigin: 'center center',
-            zIndex: 2
-          }} />
+          <div style={getSpriteStyles()} />
 
           {/* Glow effect for valid target */}
           {isValidTarget && (

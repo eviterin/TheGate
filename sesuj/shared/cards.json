@@ -7,7 +7,7 @@
             "description": "Deal 6 damage.",
             "manaCost": 1,
             "targeted": true,
-            "animationType": "jump"
+            "animationType": "slash"
         },
         {
             "numericId": 2,
@@ -16,7 +16,7 @@
             "description": "Gain 6 block.",
             "manaCost": 1,
             "targeted": false,
-            "animationType": "none"
+            "animationType": "float"
         },
         {
             "numericId": 3,
@@ -25,7 +25,7 @@
             "description": "Deal 7 damage. Draw a card.",
             "manaCost": 1,
             "targeted": true,
-            "animationType": "jump"
+            "animationType": "zigzag"
         },
         {
             "numericId": 4,
@@ -34,7 +34,7 @@
             "description": "Deal 8 damage to ALL enemies.",
             "manaCost": 2,
             "targeted": true,
-            "animationType": "flip"
+            "animationType": "zigzag"
         },
         {
             "numericId": 5,
