@@ -3,13 +3,26 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-// Read the contract artifacts
-const encountersPath = path.join(__dirname, '../artifacts/contracts/GameEncounters.sol/GameEncounters.json');
-const gameStatePath = path.join(__dirname, '../artifacts/contracts/GameState.sol/GameState.json');
-const victoryTrackerPath = path.join(__dirname, '../artifacts/contracts/VictoryTracker.sol/VictoryTracker.json');
-const encountersArtifact = JSON.parse(fs.readFileSync(encountersPath));
-const gameStateArtifact = JSON.parse(fs.readFileSync(gameStatePath));
-const victoryTrackerArtifact = JSON.parse(fs.readFileSync(victoryTrackerPath));
+let encountersArtifact;
+let gameStateArtifact;
+let victoryTrackerArtifact;
+let cardLibraryArtifact;
+let deckManagerArtifact;
+
+async function loadArtifacts() {
+    // Read the contract artifacts
+    const encountersPath = path.join(__dirname, '../artifacts/contracts/GameEncounters.sol/GameEncounters.json');
+    const gameStatePath = path.join(__dirname, '../artifacts/contracts/GameState.sol/GameState.json');
+    const victoryTrackerPath = path.join(__dirname, '../artifacts/contracts/VictoryTracker.sol/VictoryTracker.json');
+    const cardLibraryPath = path.join(__dirname, '../artifacts/contracts/CardLibrary.sol/CardLibrary.json');
+    const deckManagerPath = path.join(__dirname, '../artifacts/contracts/DeckManager.sol/DeckManager.json');
+
+    encountersArtifact = JSON.parse(fs.readFileSync(encountersPath));
+    gameStateArtifact = JSON.parse(fs.readFileSync(gameStatePath));
+    victoryTrackerArtifact = JSON.parse(fs.readFileSync(victoryTrackerPath));
+    cardLibraryArtifact = JSON.parse(fs.readFileSync(cardLibraryPath));
+    deckManagerArtifact = JSON.parse(fs.readFileSync(deckManagerPath));
+}
 
 async function runStep(name, command) {
     console.log(`\n📝 ${name}...`);
@@ -95,6 +108,54 @@ async function deployGameState(wallet, encountersAddress, victoryTrackerAddress)
     return contract;
 }
 
+async function deployCardLibrary(wallet) {
+    console.log('\n📝 Deploying CardLibrary library...');
+    
+    const factory = new ethers.ContractFactory(
+        cardLibraryArtifact.abi,
+        cardLibraryArtifact.bytecode,
+        wallet
+    );
+
+    const contract = await factory.deploy();
+    await contract.waitForDeployment();
+
+    const deployedAddress = await contract.getAddress();
+    console.log('✅ CardLibrary deployed to:', deployedAddress);
+    
+    appendToDeployedContracts({
+        name: 'CardLibrary.sol',
+        address: deployedAddress,
+        abi: cardLibraryArtifact.abi
+    });
+
+    return contract;
+}
+
+async function deployDeckManager(wallet, cardLibraryAddress) {
+    console.log('\n📝 Deploying DeckManager library...');
+    
+    const factory = new ethers.ContractFactory(
+        deckManagerArtifact.abi,
+        deckManagerArtifact.bytecode,
+        wallet
+    );
+
+    const contract = await factory.deploy();
+    await contract.waitForDeployment();
+
+    const deployedAddress = await contract.getAddress();
+    console.log('✅ DeckManager deployed to:', deployedAddress);
+    
+    appendToDeployedContracts({
+        name: 'DeckManager.sol',
+        address: deployedAddress,
+        abi: deckManagerArtifact.abi
+    });
+
+    return contract;
+}
+
 function appendToDeployedContracts(contractInfo) {
     const dirPath = path.join(__dirname, "../artifacts/contracts");
     if (!fs.existsSync(dirPath)) {
@@ -128,6 +189,9 @@ async function main() {
             'npx hardhat compile'
         )) throw new Error('Compilation failed');
 
+        // Step 2: Load artifacts
+        await loadArtifacts();
+
         // Connect to HappyChain Sepolia
         const provider = new ethers.JsonRpcProvider("https://happy-testnet-sepolia.rpc.caldera.xyz/http");
         
@@ -137,25 +201,32 @@ async function main() {
         
         console.log("Deploying from address:", wallet.address);
 
-        // Step 2: Deploy VictoryTracker contract
+        // Step 3: Deploy libraries first
+        const cardLibrary = await deployCardLibrary(wallet);
+        const cardLibraryAddress = await cardLibrary.getAddress();
+
+        const deckManager = await deployDeckManager(wallet, cardLibraryAddress);
+        const deckManagerAddress = await deckManager.getAddress();
+
+        // Step 4: Deploy VictoryTracker contract
         const victoryTracker = await deployVictoryTracker(wallet);
         const victoryTrackerAddress = await victoryTracker.getAddress();
 
-        // Step 3: Deploy GameEncounters contract
+        // Step 5: Deploy GameEncounters contract
         const encounters = await deployEncounters(wallet);
         const encountersAddress = await encounters.getAddress();
 
-        // Step 4: Deploy GameState contract with GameEncounters and VictoryTracker addresses
+        // Step 6: Deploy GameState contract with all dependencies
         const gameState = await deployGameState(wallet, encountersAddress, victoryTrackerAddress);
         const gameStateAddress = await gameState.getAddress();
 
-        // Step 5: Update GameEncounters with GameState address
+        // Step 7: Update GameEncounters with GameState address
         console.log('\n📝 Updating GameEncounters with GameState address...');
         const tx = await encounters.setGameStateContract(gameStateAddress);
         await tx.wait();
         console.log('✅ GameEncounters updated with GameState address');
 
-        // Step 6: Deploy cards
+        // Step 8: Deploy cards
         if (!await runStep(
             'Deploying cards',
             'node scripts/deploy-cards.js'

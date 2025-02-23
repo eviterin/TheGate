@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+import "./CardLibrary.sol";
+import "./DeckManager.sol";
+
 interface IGameEncounters {
     struct EnemyData {
         uint8[] types;
@@ -35,6 +38,9 @@ interface IVictoryTracker {
 }
 
 contract GameState {
+    using CardLibrary for uint8;
+    using DeckManager for uint8[];
+
     struct GameData {
         uint8 runState;
         uint8 currentFloor;
@@ -68,19 +74,6 @@ contract GameState {
     uint8 constant RUN_STATE_CARD_REWARD = 3;
     uint8 constant RUN_STATE_DEATH = 4;
 
-    uint8 constant CARD_ID_NONE = 0;
-    uint8 constant CARD_ID_SMITE = 1;
-    uint8 constant CARD_ID_PRAY = 2;
-    uint8 constant CARD_ID_UNFOLD_TRUTH = 3;
-    uint8 constant CARD_ID_PREACH = 4;
-    uint8 constant CARD_ID_BALANCE = 5; 
-    uint8 constant CARD_ID_UNVEIL = 6;
-    uint8 constant CARD_ID_READ_SCRIPTURE = 7;
-    uint8 constant CARD_ID_SEEK_GUIDANCE = 8;
-    uint8 constant CARD_ID_SACRED_RITUAL = 9;
-    uint8 constant CARD_ID_DIVINE_WRATH = 10;
-    uint8 constant CARD_ID_EXPLODICATE = 11;
-
     constructor(address _encountersContract, address _victoryTracker) {
         encounters = IGameEncounters(_encountersContract);
         victoryTracker = IVictoryTracker(_victoryTracker);
@@ -97,7 +90,6 @@ contract GameState {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_NONE, "Cannot start new run while one is active");
         
-        // Ensure enemy data is cleared when starting a new run
         encounters.clearEnemyData(msg.sender);
         
         data.runState = RUN_STATE_WHALE_ROOM;
@@ -108,9 +100,9 @@ contract GameState {
         data.currentMana = 0;
         data.extraCardDrawEnabled = false;
         data.hasProtectionBlessing = false;
-        data.lastChosenCard = 0;  // Reset last chosen card
+        data.lastChosenCard = 0;
         delete data.deck;
-        data.deck = [CARD_ID_SMITE, CARD_ID_SMITE, CARD_ID_SMITE, CARD_ID_PRAY, CARD_ID_PRAY];
+        data.deck = [CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_PRAY, CardLibrary.CARD_ID_PRAY];
     }
     
     function abandonRun() public {
@@ -155,22 +147,6 @@ contract GameState {
         startEncounter();
     }
 
-    function requiresTarget(uint8 cardId) private pure returns (bool) {
-        return cardId != CARD_ID_PRAY && 
-               cardId != CARD_ID_SACRED_RITUAL && 
-               cardId != CARD_ID_READ_SCRIPTURE && 
-               cardId != CARD_ID_SEEK_GUIDANCE;
-    }
-
-    function isUnimplementedCard(uint8 cardId) private pure returns (bool) {
-        return cardId == CARD_ID_PREACH ||
-               cardId == CARD_ID_BALANCE ||
-               cardId == CARD_ID_UNVEIL ||
-               cardId == CARD_ID_READ_SCRIPTURE ||
-               cardId == CARD_ID_SEEK_GUIDANCE ||
-               cardId == CARD_ID_DIVINE_WRATH;
-    }
-
     function playCard(uint8 playedCardIndex, uint8 targetIndex) public {
         GameData storage data = playerData[msg.sender];
         require(playedCardIndex < data.hand.length, "Invalid card index");
@@ -178,39 +154,36 @@ contract GameState {
 
         (uint8[] memory types,,uint16[] memory currentHealth,,,) = encounters.getEnemyData(msg.sender);
 
-        // Check targeting requirements
-        if (requiresTarget(playedCardID)) {
+        if (CardLibrary.requiresTarget(playedCardID)) {
             require(targetIndex < types.length, "Invalid target");
             require(currentHealth[targetIndex] > 0, "Cannot target a dead enemy");
         }
 
-        // Default implementation for unimplemented cards (6 block)
-        if (data.currentMana >= 1 && isUnimplementedCard(playedCardID)) {
+        if (data.currentMana >= 1 && CardLibrary.isUnimplementedCard(playedCardID)) {
             data.currentMana--;
             data.currentBlock += 6;
-            discardCard(playedCardIndex);
+            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
             return;
         }
 
-        // Implemented cards
-        if (playedCardID == CARD_ID_SMITE && data.currentMana >= 1) {
+        if (playedCardID == CardLibrary.CARD_ID_SMITE && data.currentMana >= 1) {
             data.currentMana--;
             if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 6)) {
                 if (checkWinCondition()) return;
             }
-            discardCard(playedCardIndex);
-        } else if (playedCardID == CARD_ID_PRAY && data.currentMana >= 1) {
+            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
+        } else if (playedCardID == CardLibrary.CARD_ID_PRAY && data.currentMana >= 1) {
             data.currentMana--;
             data.currentBlock += 6;
-            discardCard(playedCardIndex);
-        } else if (playedCardID == CARD_ID_UNFOLD_TRUTH && data.currentMana >= 1) {
+            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
+        } else if (playedCardID == CardLibrary.CARD_ID_UNFOLD_TRUTH && data.currentMana >= 1) {
             data.currentMana--;
             if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 7)) {
                 if (checkWinCondition()) return;
             }
-            drawCard();
-            discardCard(playedCardIndex);
-        } else if (playedCardID == CARD_ID_SACRED_RITUAL && data.currentMana >= 2) {
+            DeckManager.drawCard(data.hand, data.draw, data.discard);
+            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
+        } else if (playedCardID == CardLibrary.CARD_ID_SACRED_RITUAL && data.currentMana >= 2) {
             data.currentMana -= 2;
             bool anyKilled = false;
             for (uint i = 0; i < types.length; i++) {
@@ -221,7 +194,7 @@ contract GameState {
                 }
             }
             if (anyKilled && checkWinCondition()) return;
-            discardCard(playedCardIndex);
+            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
         }
     }
 
@@ -235,13 +208,9 @@ contract GameState {
         require(data.runState == RUN_STATE_ENCOUNTER, "Not in encounter");
         require(plays.length > 0, "No cards to play");
 
-        // Play each card in sequence
-        // If any card fails (reverts), the entire transaction will revert automatically
         for (uint i = 0; i < plays.length; i++) {
-            // Stop if we're no longer in combat (e.g., all enemies died)
             if (data.runState != RUN_STATE_ENCOUNTER) break;
             
-            // Play the card - any failure here will revert the whole transaction
             playCard(plays[i].cardIndex, plays[i].targetIndex);
         }
     }
@@ -292,9 +261,9 @@ contract GameState {
             data.currentBlock = 0;
             encounters.setNewEnemyIntents(msg.sender, data.currentFloor);
             data.currentMana = data.maxMana;
-            drawCard();
-            drawCard();
-            drawCard();
+            DeckManager.drawCard(data.hand, data.draw, data.discard);
+            DeckManager.drawCard(data.hand, data.draw, data.discard);
+            DeckManager.drawCard(data.hand, data.draw, data.discard);
         }
     }
 
@@ -319,9 +288,9 @@ contract GameState {
         delete data.hand;
         delete data.discard;
         data.currentBlock = data.hasProtectionBlessing ? 5 : 0;
-        copyDeckIntoDrawpile();
-        shuffleDrawPile();
-        drawNewHand();
+        DeckManager.copyDeckIntoDrawpile(data.draw, data.deck);
+        DeckManager.shuffleDrawPile(data.draw);
+        DeckManager.drawNewHand(data.hand, data.draw, data.discard, data.extraCardDrawEnabled);
         data.currentMana = data.maxMana;
     }
 
@@ -342,34 +311,11 @@ contract GameState {
         generateRewards();
     }
 
-    function getRewardPair(uint8 lastChosen) private pure returns (uint8, uint8) {
-        if (lastChosen == 0) { // First floor
-            return (CARD_ID_UNFOLD_TRUTH, CARD_ID_PREACH);
-        } else if (lastChosen == CARD_ID_UNFOLD_TRUTH) {
-            return (CARD_ID_PREACH, CARD_ID_BALANCE);
-        } else if (lastChosen == CARD_ID_PREACH) {
-            return (CARD_ID_UNFOLD_TRUTH, CARD_ID_BALANCE);
-        } else if (lastChosen == CARD_ID_BALANCE) {
-            return (CARD_ID_UNVEIL, CARD_ID_READ_SCRIPTURE);
-        } else if (lastChosen == CARD_ID_UNVEIL) {
-            return (CARD_ID_READ_SCRIPTURE, CARD_ID_SEEK_GUIDANCE);
-        } else if (lastChosen == CARD_ID_READ_SCRIPTURE) {
-            return (CARD_ID_UNVEIL, CARD_ID_SEEK_GUIDANCE);
-        } else if (lastChosen == CARD_ID_SEEK_GUIDANCE) {
-            return (CARD_ID_SACRED_RITUAL, CARD_ID_DIVINE_WRATH);
-        } else if (lastChosen == CARD_ID_SACRED_RITUAL) {
-            return (CARD_ID_DIVINE_WRATH, CARD_ID_EXPLODICATE);
-        } else if (lastChosen == CARD_ID_DIVINE_WRATH) {
-            return (CARD_ID_SACRED_RITUAL, CARD_ID_EXPLODICATE);
-        }
-        return (0, 0); // Should never happen
-    }
-
     function generateRewards() private {
         GameData storage data = playerData[msg.sender];
         delete data.availableCardRewards;
 
-        (uint8 reward1, uint8 reward2) = getRewardPair(data.currentFloor == 1 ? 0 : data.lastChosenCard);
+        (uint8 reward1, uint8 reward2) = CardLibrary.getRewardPair(data.lastChosenCard, data.currentFloor);
         data.availableCardRewards = [reward1, reward2];
         emit RewardsGenerated(msg.sender, data.currentFloor, data.availableCardRewards);
     }
@@ -431,76 +377,14 @@ contract GameState {
         return playerData[player].hasEnabledQuickTransactions;
     }
 
-    function drawCard() private {
-        GameData storage data = playerData[msg.sender];
-        if (data.draw.length == 0) {
-            if (data.discard.length == 0) return;
-            moveDiscardIntoDrawpile();
-            shuffleDrawPile();
-        }
-        data.hand.push(data.draw[data.draw.length - 1]);
-        data.draw.pop();
-    }
-
-    function drawNewHand() private {
-        GameData storage data = playerData[msg.sender];
-        uint8 cardsToDraw = data.extraCardDrawEnabled ? 4 : 3;
-        
-        for (uint8 i = 0; i < cardsToDraw; i++) {
-            drawCard();
-        }
-    }
-
-    function discardCard(uint cardIndex) private {
-        GameData storage data = playerData[msg.sender];
-        uint8 cardID = data.hand[cardIndex];
-        if (cardID != CARD_ID_NONE) {
-            data.discard.push(cardID);
-            for (uint i = cardIndex; i < data.hand.length - 1; i++) {
-                data.hand[i] = data.hand[i + 1];
-            }
-            data.hand.pop();
-        }
-    }
-
-    function copyDeckIntoDrawpile() private {
-        GameData storage data = playerData[msg.sender];
-        delete data.draw;
-        for (uint i = 0; i < data.deck.length; i++) {
-            data.draw.push(data.deck[i]);
-        }
-    }
-
-    function moveDiscardIntoDrawpile() private {
-        GameData storage data = playerData[msg.sender];
-        delete data.draw;
-        for (uint i = 0; i < data.discard.length; i++) {
-            data.draw.push(data.discard[i]);
-        }
-        delete data.discard;
-    }
-
-    function shuffleDrawPile() private {
-        GameData storage data = playerData[msg.sender];
-        uint256 seed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
-        uint256 len = data.draw.length;
-        for (uint256 i = len - 1; i > 0; i--) {
-            uint256 j = uint256(keccak256(abi.encodePacked(seed, i))) % (i + 1);
-            (data.draw[i], data.draw[j]) = (data.draw[j], data.draw[i]);
-        }
-    }
-
     function retryFromDeath() public {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_DEATH, "Not in death state");
         
-        // First clear enemy data explicitly
         encounters.clearEnemyData(msg.sender);
         
-        // Then abandon run to clear player state
-        abandonRun();  // This will clear all state and set runState to NONE
+        abandonRun();
         
-        // Finally start new run
         startRun();
     }
 }
