@@ -315,83 +315,6 @@ const FloatingMana: React.FC<FloatingManaProps> = ({ currentMana, maxMana, posit
   );
 };
 
-// Add a ManaFlow component for the animation
-interface ManaFlowProps {
-  startPosition: Position;
-  endPosition: Position;
-  onComplete: () => void;
-}
-
-const ManaFlow: React.FC<ManaFlowProps> = ({ startPosition, endPosition, onComplete }) => {
-  const [particles, setParticles] = useState<Array<{ id: number; left: number; top: number; delay: number }>>([]);
-  
-  useEffect(() => {
-    // Create particles
-    const newParticles = [];
-    for (let i = 0; i < 8; i++) {
-      newParticles.push({
-        id: i,
-        left: 0,
-        top: 0,
-        delay: i * 50 // Stagger the particles
-      });
-    }
-    setParticles(newParticles);
-    
-    // Trigger onComplete after animation
-    const timer = setTimeout(() => {
-      onComplete();
-    }, 800);
-    
-    return () => clearTimeout(timer);
-  }, [onComplete]);
-  
-  return (
-    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 100 }}>
-      {particles.map(particle => (
-        <div
-          key={particle.id}
-          style={{
-            position: 'absolute',
-            left: `${startPosition.x}%`,
-            top: `${startPosition.y}%`,
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle at center, rgba(255, 215, 0, 0.9) 0%, rgba(88, 43, 156, 0.9) 100%)',
-            boxShadow: '0 0 10px rgba(255, 215, 0, 0.8)',
-            zIndex: 100,
-            animation: `manaFlow 0.8s ease-in forwards ${particle.delay}ms`,
-            opacity: 0
-          }}
-        />
-      ))}
-      <style>
-        {`
-          @keyframes manaFlow {
-            0% {
-              opacity: 0;
-              transform: translate(-50%, -50%) scale(0.5);
-              left: ${startPosition.x}%;
-              top: ${startPosition.y}%;
-            }
-            10% {
-              opacity: 1;
-              transform: translate(-50%, -50%) scale(1);
-            }
-            100% {
-              opacity: 0;
-              transform: translate(-50%, -50%) scale(0.5);
-              left: ${endPosition.x}%;
-              top: ${endPosition.y}%;
-            }
-          }
-        `}
-      </style>
-    </div>
-  );
-};
-
 const Game: React.FC = () => {
   const [hand, setHand] = useState<number[]>([]);
   const [deck, setDeck] = useState<number[]>([]);
@@ -440,11 +363,6 @@ const Game: React.FC = () => {
   const [showAbandonConfirmation, setShowAbandonConfirmation] = useState(false);
   const [isAbandoning, setIsAbandoning] = useState(false);
   const [isApproaching, setIsApproaching] = useState(false);
-  const [manaFlowAnimation, setManaFlowAnimation] = useState<{
-    startPosition: Position;
-    endPosition: Position;
-    onComplete: () => void;
-  } | null>(null);
 
   // Fetch card data
   useEffect(() => {
@@ -715,30 +633,23 @@ const Game: React.FC = () => {
           await new Promise(resolve => setTimeout(resolve, 200));
         }
 
-        // Show mana flow animation from player to card target
-        if (card.manaCost > 0) {
-          const heroPosition = getLevelConfig(stateBeforeAnimations.currentFloor).heroPosition;
-          const targetPosition = getLevelConfig(stateBeforeAnimations.currentFloor).enemyPositions[intent.targetIndex];
-          const heroScale = getLevelConfig(stateBeforeAnimations.currentFloor).heroScale || 1;
-          const verticalOffset = 15 + (heroScale - 1) * 15;
-          
-          setManaFlowAnimation({
-            startPosition: { x: heroPosition.x, y: heroPosition.y - verticalOffset }, // Start from floating mana position
-            endPosition: targetPosition,
-            onComplete: () => setManaFlowAnimation(null)
-          });
-          
-          // Wait for mana flow animation
-          await new Promise(resolve => setTimeout(resolve, 400));
-        }
-
         // Animate this card's effect
         const levelConfig = getLevelConfig(stateBeforeAnimations.currentFloor);
+        
+        // Determine target position based on whether the card targets the hero or an enemy
+        const isTargetingHero = !card.targeted;
+        let targetPosition: Position;
+        
+        if (isTargetingHero) {
+          targetPosition = levelConfig.heroPosition;
+        } else {
+          targetPosition = levelConfig.enemyPositions[intent.targetIndex];
+        }
 
         const animationState: AnimationState = {
           sourceType: 'hero',
           sourceIndex: 0,
-          targetPosition: levelConfig.enemyPositions[intent.targetIndex],
+          targetPosition: targetPosition,
           timestamp: Date.now(),
           animationType: card.animationType
         };
@@ -1683,15 +1594,15 @@ const Game: React.FC = () => {
                   <div className="reward-cards">
                     {cardData
                       .filter(card => gameState.availableCardRewards.includes(card.numericId))
-                      .map(card => (
-                        <div
-                          key={card.numericId}
-                          className={`reward-card-container ${selectedReward === card.numericId ? 'selected' : ''} ${isChoosingReward ? 'disabled' : ''}`}
-                          onClick={() => !isChoosingReward && handleSelectReward(card.numericId)}
-                        >
-                          <Card {...card} />
-                        </div>
-                      ))}
+                        .map(card => (
+                          <div
+                            key={card.numericId}
+                            className={`reward-card-container ${selectedReward === card.numericId ? 'selected' : ''} ${isChoosingReward ? 'disabled' : ''}`}
+                            onClick={() => !isChoosingReward && handleSelectReward(card.numericId)}
+                          >
+                            <Card {...card} />
+                          </div>
+                        ))}
                   </div>
                   <div className="reward-buttons">
                     <button
@@ -1948,15 +1859,6 @@ const Game: React.FC = () => {
         onCancel={() => setShowAbandonConfirmation(false)}
         isLoading={isAbandoning}
       />
-
-      {/* Add ManaFlow animation when active */}
-      {manaFlowAnimation && (
-        <ManaFlow
-          startPosition={manaFlowAnimation.startPosition}
-          endPosition={manaFlowAnimation.endPosition}
-          onComplete={manaFlowAnimation.onComplete}
-        />
-      )}
     </>
   );
 };
