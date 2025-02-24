@@ -776,51 +776,6 @@ export function useGetAvailableRewards() {
     return { getAvailableRewards };
 }
 
-export function useRetryFromDeath() {
-    const contractConfig = useGameContract();
-
-    const retryFromDeath = useCallback(async () => {
-        const currentUser = getCurrentUser();
-        
-        if (!currentUser) {
-            throw new Error('No user connected');
-        }
-
-        try {
-            console.log('Retrying from death...');
-            
-            // First simulate the transaction to check for potential errors
-            await simulateContract(config, {
-                address: contractConfig.address,
-                abi: contractConfig.abi,
-                functionName: 'retryFromDeath',
-                args: [],
-                account: currentUser.address,
-            });
-
-            // If simulation succeeds, send the actual transaction
-            const hash = await writeContract(config, {
-                address: contractConfig.address,
-                abi: contractConfig.abi,
-                functionName: 'retryFromDeath',
-                args: [],
-            });
-
-            // Wait for transaction to be confirmed
-            console.log('Waiting for retry transaction to be confirmed...');
-            await waitForTransaction(config, { hash });
-
-            console.log('Retry successful:', { hash });
-            return hash;
-        } catch (error) {   
-            console.error('Error retrying from death:', error);
-            throw error;
-        }
-    }, [contractConfig]);
-
-    return { retryFromDeath };
-}
-
 // VictoryTracker hooks
 export function useHasPlayerWon() {
     const contractConfig = useVictoryTrackerContract();

@@ -4,7 +4,7 @@ import Hand from './Hand';
 import Card from './Card';
 import GameEntity from './GameEntity';
 import LoadingOverlay from './LoadingOverlay';
-import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, useRetryFromDeath, usePlayCards } from '../hooks/GameState';
+import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, usePlayCards } from '../hooks/GameState';
 import { useCards } from '../hooks/CardsContext';
 import './Game.css';
 import { getBackgroundImage } from '../game/encounters';
@@ -159,7 +159,6 @@ const Game: React.FC = () => {
   const [optimisticUpdatesEnabled, setOptimisticUpdatesEnabled] = useState(true);
   const [autoEndTurnEnabled, setAutoEndTurnEnabled] = useState(true);
   const [hasAutoEndedTurn, setHasAutoEndedTurn] = useState(false);
-  const { retryFromDeath } = useRetryFromDeath();
   const { abandonRun } = useAbandonRun();
   const [isRetrying, setIsRetrying] = useState(false);
   const [isLoadingGameState, setIsLoadingGameState] = useState(true);
@@ -686,7 +685,8 @@ const Game: React.FC = () => {
   const handleRetry = async () => {
     setIsRetrying(true);
     try {
-      await retryFromDeath();
+      await abandonRun();
+      await startRun();
       
       // Refresh game state after retrying
       const newState = await getGameState();

@@ -48,4 +48,12 @@ library CardLibrary {
         }
         return (0, 0); // Should never happen
     }
+
+    function generateRewards(uint8 lastChosenCard, uint8 currentFloor) internal pure returns (uint8[] memory) {
+        (uint8 reward1, uint8 reward2) = getRewardPair(lastChosenCard, currentFloor);
+        uint8[] memory rewards = new uint8[](2);
+        rewards[0] = reward1;
+        rewards[1] = reward2;
+        return rewards;
+    }
 } 

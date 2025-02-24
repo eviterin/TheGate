@@ -53,7 +53,6 @@ contract GameState {
         uint8[] discard;
         uint8[] availableCardRewards;
         bool hasEnabledQuickTransactions;
-        uint256 quickTransactionsEnabledAt;
         bool extraCardDrawEnabled;
         bool hasProtectionBlessing;
         uint8 lastChosenCard;
@@ -80,7 +79,6 @@ contract GameState {
     function enableQuickTransactions() public {
         require(!playerData[msg.sender].hasEnabledQuickTransactions, "Already enabled");
         playerData[msg.sender].hasEnabledQuickTransactions = true;
-        playerData[msg.sender].quickTransactionsEnabledAt = block.timestamp;
         emit QuickTransactionsEnabled(msg.sender, block.timestamp);
     }
     
@@ -184,20 +182,17 @@ contract GameState {
         if (playedCardID == CardLibrary.CARD_ID_SMITE && data.currentMana >= 1) {
             data.currentMana--;
             if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 6)) {
-                if (checkWinCondition()) return;
+                checkWinCondition();
             }
-            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
         } else if (playedCardID == CardLibrary.CARD_ID_PRAY && data.currentMana >= 1) {
             data.currentMana--;
             data.currentBlock += 6;
-            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
         } else if (playedCardID == CardLibrary.CARD_ID_UNFOLD_TRUTH && data.currentMana >= 1) {
             data.currentMana--;
             if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 7)) {
-                if (checkWinCondition()) return;
+                checkWinCondition();
             }
             DeckManager.drawCard(data.hand, data.draw, data.discard);
-            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
         } else if (playedCardID == CardLibrary.CARD_ID_PREACH && data.currentMana >= 2) {
             data.currentMana -= 2;
             bool anyKilled = false;
@@ -208,8 +203,9 @@ contract GameState {
                     }
                 }
             }
-            if (anyKilled && checkWinCondition()) return;
-            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
+            if (anyKilled) {
+                checkWinCondition();
+            }
         } else if (playedCardID == CardLibrary.CARD_ID_SACRED_RITUAL && data.currentMana >= 2) {
             data.currentMana -= 2;
             data.currentBlock += 10;
@@ -218,7 +214,6 @@ contract GameState {
             } else {
                 data.currentHealth += 3;
             }
-            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
         } else if (playedCardID == CardLibrary.CARD_ID_DIVINE_WRATH && data.currentMana >= 1) {
             data.currentMana--;
             (,uint16[] memory maxHealth, uint16[] memory enemyHealth,,,) = encounters.getEnemyData(msg.sender);
@@ -227,28 +222,24 @@ contract GameState {
                 damage = 10;
             }
             if (encounters.dealDamageToEnemy(msg.sender, targetIndex, damage)) {
-                if (checkWinCondition()) return;
+                checkWinCondition();
             }
-            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
         } else if (playedCardID == CardLibrary.CARD_ID_BALANCE && data.currentMana >= 1) {
             data.currentMana--;
             if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 5)) {
-                if (checkWinCondition()) return;
+                checkWinCondition();
             }
             data.currentBlock += 5;
-            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
         } else if (playedCardID == CardLibrary.CARD_ID_SEEK_GUIDANCE && data.currentMana >= 1) {
             data.currentMana--;
             DeckManager.drawCard(data.hand, data.draw, data.discard);
             DeckManager.drawCard(data.hand, data.draw, data.discard);
-            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
         } else if (playedCardID == CardLibrary.CARD_ID_UNVEIL && data.currentMana >= 3) {
             data.currentMana -= 3;
             data.currentBlock += 100;
             DeckManager.drawCard(data.hand, data.draw, data.discard);
             DeckManager.drawCard(data.hand, data.draw, data.discard);
             DeckManager.drawCard(data.hand, data.draw, data.discard);
-            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
         } else if (playedCardID == CardLibrary.CARD_ID_READ_SCRIPTURE && data.currentMana >= 2) {
             data.currentMana -= 2;
             uint8 damage = 8;
@@ -256,10 +247,11 @@ contract GameState {
                 damage = 16;
             }
             if (encounters.dealDamageToEnemy(msg.sender, targetIndex, damage)) {
-                if (checkWinCondition()) return;
+                checkWinCondition();
             }
-            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
         }
+
+        DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
     }
 
     struct CardPlay {
@@ -379,15 +371,7 @@ contract GameState {
     function completeEncounter() private {
         GameData storage data = playerData[msg.sender];
         data.runState = RUN_STATE_CARD_REWARD;
-        generateRewards();
-    }
-
-    function generateRewards() private {
-        GameData storage data = playerData[msg.sender];
-        delete data.availableCardRewards;
-
-        (uint8 reward1, uint8 reward2) = CardLibrary.getRewardPair(data.lastChosenCard, data.currentFloor);
-        data.availableCardRewards = [reward1, reward2];
+        data.availableCardRewards = CardLibrary.generateRewards(data.lastChosenCard, data.currentFloor);
         emit RewardsGenerated(msg.sender, data.currentFloor, data.availableCardRewards);
     }
 
@@ -441,16 +425,5 @@ contract GameState {
 
     function getQuickTransactionsEnabled(address player) public view returns (bool) {
         return playerData[player].hasEnabledQuickTransactions;
-    }
-
-    function retryFromDeath() public {
-        GameData storage data = playerData[msg.sender];
-        require(data.runState == RUN_STATE_DEATH, "Not in death state");
-        
-        encounters.clearEnemyData(msg.sender);
-        
-        abandonRun();
-        
-        startRun();
     }
 }
