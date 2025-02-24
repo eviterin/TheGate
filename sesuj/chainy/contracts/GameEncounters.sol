@@ -117,7 +117,24 @@ contract GameEncounters {
         }
     }
 
+    function dealDirectDamage(address player, uint8 enemyIndex, uint8 damage) external onlyGameState returns (bool isDead) {
+        EnemyData storage data = enemyData[player];
+        require(enemyIndex < data.currentHealth.length, "Invalid enemy index");
+        
+        if (data.currentHealth[enemyIndex] <= damage) {
+            data.currentHealth[enemyIndex] = 0;
+            return true;
+        } else {
+            data.currentHealth[enemyIndex] -= damage;
+            return false;
+        }
+    }
+
     function healEnemy(address player, uint8 enemyIndex, uint8 amount) external onlyGameState {
+        _healEnemy(player, enemyIndex, amount);
+    }
+
+    function _healEnemy(address player, uint8 enemyIndex, uint8 amount) internal {
         EnemyData storage data = enemyData[player];
         uint16 newHealth = data.currentHealth[enemyIndex] + amount;
         if (newHealth > data.maxHealth[enemyIndex]) {
@@ -242,6 +259,40 @@ contract GameEncounters {
         EnemyData storage data = enemyData[player];
         require(enemyIndex < data.buffs.length, "Invalid enemy index");
         data.buffs[enemyIndex] = amount;
+    }
+
+    function processIntent(address player, uint8 enemyIndex, uint16 intent) external onlyGameState returns (uint8 damageToHero) {
+        EnemyData storage data = enemyData[player];
+        require(enemyIndex < data.types.length, "Invalid enemy index");
+        
+        if (intent == INTENT_BLOCK_5) {
+            data.blockAmount[enemyIndex] = 5;
+            return 0;
+        } else if (intent == INTENT_BLOCK_AND_ATTACK) {
+            data.blockAmount[enemyIndex] = 5;
+            return 6;
+        } else if (intent == INTENT_HEAL) {
+            _healEnemy(player, enemyIndex, 5);
+            return 0;
+        } else if (intent == INTENT_ATTACK_BUFF) {
+            require(enemyIndex < data.buffs.length, "Invalid enemy index for buff");
+            data.buffs[enemyIndex] += 2;
+            return 0;
+        } else if (intent == INTENT_BLOCK_AND_HEAL) {
+            data.blockAmount[enemyIndex] = 5;
+            _healEnemy(player, enemyIndex, 5);
+            return 0;
+        } else if (intent == INTENT_HEAL_ALL) {
+            for (uint i = 0; i < data.types.length; i++) {
+                if (data.currentHealth[i] > 0) {
+                    _healEnemy(player, uint8(i), 5);
+                }
+            }
+            return 0;
+        } else {
+            require(enemyIndex < data.buffs.length, "Invalid enemy index for buff");
+            return uint8(intent) + data.buffs[enemyIndex];
+        }
     }
 
     function getEnemyData(address player) external view returns (

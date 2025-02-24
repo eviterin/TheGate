@@ -95,7 +95,7 @@
             "id": "explodicate",
             "name": "Explodicate",
             "description": "Deal 7 damage. Ignores block.",
-            "manaCost": 3,
+            "manaCost": 1,
             "targeted": true,
             "animationType": "flip"
         }

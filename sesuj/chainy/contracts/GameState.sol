@@ -16,10 +16,12 @@ interface IGameEncounters {
     
     function startEncounter(address player, uint8 floor) external returns (IEnemyData memory);
     function dealDamageToEnemy(address player, uint8 enemyIndex, uint8 damage) external returns (bool);
+    function dealDirectDamage(address player, uint8 enemyIndex, uint8 damage) external returns (bool);
     function healEnemy(address player, uint8 enemyIndex, uint8 amount) external;
     function setNewEnemyIntents(address player, uint8 floor) external;
     function setEnemyBlock(address player, uint8 enemyIndex, uint16 amount) external;
     function setEnemyBuff(address player, uint8 enemyIndex, uint8 amount) external;
+    function processIntent(address player, uint8 enemyIndex, uint16 intent) external returns (uint8 damageToHero);
     function getEnemyData(address player) external view returns (
         uint8[] memory types,
         uint16[] memory maxHealth,
@@ -249,6 +251,11 @@ contract GameState {
             if (encounters.dealDamageToEnemy(msg.sender, targetIndex, damage)) {
                 checkWinCondition();
             }
+        } else if (playedCardID == CardLibrary.CARD_ID_EXPLODICATE && data.currentMana >= 1) {
+            data.currentMana -= 1;
+            if (encounters.dealDirectDamage(msg.sender, targetIndex, 7)) {
+                checkWinCondition();
+            }
         }
 
         DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
@@ -275,38 +282,15 @@ contract GameState {
         GameData storage data = playerData[msg.sender];
         require(data.runState == RUN_STATE_ENCOUNTER, "Not in encounter");
         
-        (uint8[] memory types,,uint16[] memory currentHealth,uint16[] memory intents,,uint8[] memory buffs) = encounters.getEnemyData(msg.sender);
+        (uint8[] memory types,,uint16[] memory currentHealth,uint16[] memory intents,,) = encounters.getEnemyData(msg.sender);
 
         bool shouldContinue = true;
 
         for (uint i = 0; i < types.length; i++) {
             if (currentHealth[i] > 0) {
-                uint16 intent = intents[i];
-                if (intent == 1000) { // INTENT_BLOCK_5
-                    encounters.setEnemyBlock(msg.sender, uint8(i), 5);
-                } else if (intent == 1001) { // INTENT_BLOCK_AND_ATTACK
-                    encounters.setEnemyBlock(msg.sender, uint8(i), 5);
-                    dealDamageToHero(6);
-                } else if (intent == 1002) { // INTENT_HEAL
-                    encounters.healEnemy(msg.sender, uint8(i), 5);
-                } else if (intent == 1003) { // INTENT_ATTACK_BUFF
-                    require(i < buffs.length, "Invalid enemy index for buff");
-                    uint8 newBuff = buffs[i] + 2;
-                    encounters.setEnemyBuff(msg.sender, uint8(i), newBuff);
-                } else if (intent == 1004) { // INTENT_BLOCK_AND_HEAL
-                    encounters.setEnemyBlock(msg.sender, uint8(i), 5);
-                    encounters.healEnemy(msg.sender, uint8(i), 5);
-                } else if (intent == 1005) { // INTENT_HEAL_ALL
-                    // Heal all living enemies
-                    for (uint j = 0; j < types.length; j++) {
-                        if (currentHealth[j] > 0) {
-                            encounters.healEnemy(msg.sender, uint8(j), 5);
-                        }
-                    }
-                } else {
-                    require(i < buffs.length, "Invalid enemy index for buff");
-                    uint8 totalDamage = uint8(intent) + buffs[i];
-                    dealDamageToHero(totalDamage);
+                uint8 damage = encounters.processIntent(msg.sender, uint8(i), intents[i]);
+                if (damage > 0) {
+                    dealDamageToHero(damage);
                 }
             }
         }
