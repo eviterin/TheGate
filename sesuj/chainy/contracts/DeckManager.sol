@@ -22,7 +22,7 @@ library DeckManager {
         uint8[] storage hand,
         uint8[] storage draw,
         uint8[] storage discard,
-        bool extraCardDrawEnabled
+        bool
     ) internal {
         // DEBUG: Draw all cards in draw pile
         while (draw.length > 0) {

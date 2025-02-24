@@ -5,7 +5,7 @@ import "./CardLibrary.sol";
 import "./DeckManager.sol";
 
 interface IGameEncounters {
-    struct EnemyData {
+    struct IEnemyData {
         uint8[] types;
         uint16[] maxHealth;
         uint16[] currentHealth;
@@ -14,7 +14,7 @@ interface IGameEncounters {
         uint8[] buffs;
     }
     
-    function startEncounter(address player, uint8 floor) external returns (EnemyData memory);
+    function startEncounter(address player, uint8 floor) external returns (IEnemyData memory);
     function dealDamageToEnemy(address player, uint8 enemyIndex, uint8 damage) external returns (bool);
     function healEnemy(address player, uint8 enemyIndex, uint8 amount) external;
     function setNewEnemyIntents(address player, uint8 floor) external;
@@ -33,8 +33,6 @@ interface IGameEncounters {
 
 interface IVictoryTracker {
     function recordVictory(address player) external;
-    function hasPlayerWon(address player) external view returns (bool);
-    function getAllWinners() external view returns (address[] memory);
 }
 
 contract GameState {
@@ -200,7 +198,7 @@ contract GameState {
             }
             DeckManager.drawCard(data.hand, data.draw, data.discard);
             DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
-        } else if (playedCardID == CardLibrary.CARD_ID_SACRED_RITUAL && data.currentMana >= 2) {
+        } else if (playedCardID == CardLibrary.CARD_ID_PREACH && data.currentMana >= 2) {
             data.currentMana -= 2;
             bool anyKilled = false;
             for (uint i = 0; i < types.length; i++) {
@@ -211,6 +209,55 @@ contract GameState {
                 }
             }
             if (anyKilled && checkWinCondition()) return;
+            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
+        } else if (playedCardID == CardLibrary.CARD_ID_SACRED_RITUAL && data.currentMana >= 2) {
+            data.currentMana -= 2;
+            data.currentBlock += 10;
+            if (data.currentHealth + 3 > data.maxHealth) {
+                data.currentHealth = data.maxHealth;
+            } else {
+                data.currentHealth += 3;
+            }
+            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
+        } else if (playedCardID == CardLibrary.CARD_ID_DIVINE_WRATH && data.currentMana >= 1) {
+            data.currentMana--;
+            (,uint16[] memory maxHealth, uint16[] memory enemyHealth,,,) = encounters.getEnemyData(msg.sender);
+            uint8 damage = 5;
+            if (enemyHealth[targetIndex] == maxHealth[targetIndex]) {
+                damage = 10;
+            }
+            if (encounters.dealDamageToEnemy(msg.sender, targetIndex, damage)) {
+                if (checkWinCondition()) return;
+            }
+            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
+        } else if (playedCardID == CardLibrary.CARD_ID_BALANCE && data.currentMana >= 1) {
+            data.currentMana--;
+            if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 5)) {
+                if (checkWinCondition()) return;
+            }
+            data.currentBlock += 5;
+            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
+        } else if (playedCardID == CardLibrary.CARD_ID_SEEK_GUIDANCE && data.currentMana >= 1) {
+            data.currentMana--;
+            DeckManager.drawCard(data.hand, data.draw, data.discard);
+            DeckManager.drawCard(data.hand, data.draw, data.discard);
+            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
+        } else if (playedCardID == CardLibrary.CARD_ID_UNVEIL && data.currentMana >= 3) {
+            data.currentMana -= 3;
+            data.currentBlock += 100;
+            DeckManager.drawCard(data.hand, data.draw, data.discard);
+            DeckManager.drawCard(data.hand, data.draw, data.discard);
+            DeckManager.drawCard(data.hand, data.draw, data.discard);
+            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
+        } else if (playedCardID == CardLibrary.CARD_ID_READ_SCRIPTURE && data.currentMana >= 2) {
+            data.currentMana -= 2;
+            uint8 damage = 8;
+            if (data.hand.length >= 4) {
+                damage = 16;
+            }
+            if (encounters.dealDamageToEnemy(msg.sender, targetIndex, damage)) {
+                if (checkWinCondition()) return;
+            }
             DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
         }
     }
@@ -380,11 +427,6 @@ contract GameState {
         uint8[] memory buffs
     ) {
         (types, maxHealth, currentHealth, intents, blockAmount, buffs) = encounters.getEnemyData(player);
-    }
-
-    function getEnemyBlock(address player) public view returns (uint16[] memory) {
-        (,,,,uint16[] memory blockAmount,) = encounters.getEnemyData(player);
-        return blockAmount;
     }
 
     function getPlayerData(address player) public view returns (

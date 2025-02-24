@@ -17,18 +17,13 @@ library CardLibrary {
 
     function requiresTarget(uint8 cardId) internal pure returns (bool) {
         return cardId != CARD_ID_PRAY && 
-               cardId != CARD_ID_SACRED_RITUAL && 
-               cardId != CARD_ID_READ_SCRIPTURE && 
-               cardId != CARD_ID_SEEK_GUIDANCE;
+               cardId != CARD_ID_SACRED_RITUAL &&
+               cardId != CARD_ID_SEEK_GUIDANCE &&
+               cardId != CARD_ID_UNVEIL;
     }
 
-    function isUnimplementedCard(uint8 cardId) internal pure returns (bool) {
-        return cardId == CARD_ID_PREACH ||
-               cardId == CARD_ID_BALANCE ||
-               cardId == CARD_ID_UNVEIL ||
-               cardId == CARD_ID_READ_SCRIPTURE ||
-               cardId == CARD_ID_SEEK_GUIDANCE ||
-               cardId == CARD_ID_DIVINE_WRATH;
+    function isUnimplementedCard(uint8) internal pure returns (bool) {
+        return false;
     }
 
     function getRewardPair(uint8 lastChosen, uint8 currentFloor) internal pure returns (uint8, uint8) {

@@ -40,7 +40,7 @@
             "numericId": 5,
             "id": "judgement",
             "name": "Balance the Scales",
-            "description": "Deal 3 damage to self. Deal 13 damage.",
+            "description": "Deal 5 damage. Gain 5 block.",
             "manaCost": 1,
             "targeted": true,
             "animationType": "flip"
@@ -58,7 +58,7 @@
             "numericId": 7,
             "id": "read_scripture",
             "name": "Read Scripture",
-            "description": "Gain 2 strength for the rest of combat.",
+            "description": "Deal 8 damage. If you have 4 or more cards in hand, deal 8 more.",
             "manaCost": 2,
             "targeted": true,
             "animationType": "flip"
@@ -67,8 +67,8 @@
             "numericId": 8,
             "id": "pray",
             "name": "Seek Guidance",
-            "description": "Draw 3 cards. Gain an extra Faith next turn.",
-            "manaCost": 2,
+            "description": "Draw 2 cards.",
+            "manaCost": 1,
             "targeted": false,
             "animationType": "flip"
         },
