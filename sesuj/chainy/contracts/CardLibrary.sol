@@ -26,25 +26,27 @@ library CardLibrary {
         return false;
     }
 
+    // getRewardPair ensures every non-starter card (IDs 3-11) is available as a reward
+    // through some path in the reward tree, making all cards obtainable during gameplay.
     function getRewardPair(uint8 lastChosen, uint8 currentFloor) internal pure returns (uint8, uint8) {
-        if (currentFloor == 1) { // First floor
-            return (CARD_ID_UNFOLD_TRUTH, CARD_ID_PREACH);
-        } else if (lastChosen == CARD_ID_UNFOLD_TRUTH) {
-            return (CARD_ID_PREACH, CARD_ID_BALANCE);
-        } else if (lastChosen == CARD_ID_PREACH) {
-            return (CARD_ID_UNFOLD_TRUTH, CARD_ID_BALANCE);
+        if (currentFloor == 1) {
+            return (CARD_ID_BALANCE, CARD_ID_READ_SCRIPTURE);
         } else if (lastChosen == CARD_ID_BALANCE) {
-            return (CARD_ID_UNVEIL, CARD_ID_READ_SCRIPTURE);
-        } else if (lastChosen == CARD_ID_UNVEIL) {
-            return (CARD_ID_READ_SCRIPTURE, CARD_ID_SEEK_GUIDANCE);
+            return (CARD_ID_DIVINE_WRATH, CARD_ID_UNFOLD_TRUTH);
         } else if (lastChosen == CARD_ID_READ_SCRIPTURE) {
-            return (CARD_ID_UNVEIL, CARD_ID_SEEK_GUIDANCE);
-        } else if (lastChosen == CARD_ID_SEEK_GUIDANCE) {
-            return (CARD_ID_SACRED_RITUAL, CARD_ID_DIVINE_WRATH);
-        } else if (lastChosen == CARD_ID_SACRED_RITUAL) {
-            return (CARD_ID_DIVINE_WRATH, CARD_ID_EXPLODICATE);
+            return (CARD_ID_DIVINE_WRATH, CARD_ID_PREACH);
         } else if (lastChosen == CARD_ID_DIVINE_WRATH) {
+            return (CARD_ID_UNVEIL, CARD_ID_SEEK_GUIDANCE);
+        } else if (lastChosen == CARD_ID_UNFOLD_TRUTH) {
+            return (CARD_ID_UNVEIL, CARD_ID_SACRED_RITUAL);
+        } else if (lastChosen == CARD_ID_PREACH) {
+            return (CARD_ID_SEEK_GUIDANCE, CARD_ID_SACRED_RITUAL);
+        } else if (lastChosen == CARD_ID_UNVEIL) {
             return (CARD_ID_SACRED_RITUAL, CARD_ID_EXPLODICATE);
+        } else if (lastChosen == CARD_ID_SEEK_GUIDANCE) {
+            return (CARD_ID_SACRED_RITUAL, CARD_ID_EXPLODICATE);
+        } else if (lastChosen == CARD_ID_SACRED_RITUAL) {
+            return (CARD_ID_EXPLODICATE, CARD_ID_DIVINE_WRATH);
         }
         return (0, 0); // Should never happen
     }
