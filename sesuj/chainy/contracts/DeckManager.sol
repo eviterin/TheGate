@@ -24,11 +24,16 @@ library DeckManager {
         uint8[] storage discard,
         bool extraCardDrawEnabled
     ) internal {
-        uint8 cardsToDraw = extraCardDrawEnabled ? 4 : 3;
-        
-        for (uint8 i = 0; i < cardsToDraw; i++) {
+        // DEBUG: Draw all cards in draw pile
+        while (draw.length > 0) {
             drawCard(hand, draw, discard);
         }
+        
+        // Original code (commented out for debug)
+        // uint8 cardsToDraw = extraCardDrawEnabled ? 4 : 3;
+        // for (uint8 i = 0; i < cardsToDraw; i++) {
+        //     drawCard(hand, draw, discard);
+        // }
     }
 
     function discardCard(

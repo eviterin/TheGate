@@ -102,7 +102,24 @@ contract GameState {
         data.hasProtectionBlessing = false;
         data.lastChosenCard = 0;
         delete data.deck;
-        data.deck = [CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_PRAY, CardLibrary.CARD_ID_PRAY];
+        
+        // DEBUG: Start with all cards
+        data.deck = [
+            CardLibrary.CARD_ID_SMITE,
+            CardLibrary.CARD_ID_PRAY,
+            CardLibrary.CARD_ID_UNFOLD_TRUTH,
+            CardLibrary.CARD_ID_PREACH,
+            CardLibrary.CARD_ID_BALANCE,
+            CardLibrary.CARD_ID_UNVEIL,
+            CardLibrary.CARD_ID_READ_SCRIPTURE,
+            CardLibrary.CARD_ID_SEEK_GUIDANCE,
+            CardLibrary.CARD_ID_SACRED_RITUAL,
+            CardLibrary.CARD_ID_DIVINE_WRATH,
+            CardLibrary.CARD_ID_EXPLODICATE
+        ];
+        
+        // Original starting deck (commented out for debug)
+        // data.deck = [CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_PRAY, CardLibrary.CARD_ID_PRAY];
     }
     
     function abandonRun() public {
