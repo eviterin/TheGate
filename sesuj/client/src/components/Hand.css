@@ -6,7 +6,7 @@
   transition: transform 0.3s ease;
   overflow: visible;
   z-index: 200;
-  transform: translateY(30px);
+  transform: translateY(60px);
 }
 
 .hand {

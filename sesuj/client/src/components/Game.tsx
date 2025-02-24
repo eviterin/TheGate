@@ -15,6 +15,8 @@ import encountersData from '../../../shared/encounters.json';
 import TurnBanner from './TurnBanner';
 import Intent, { CardIntent } from './Intent';
 import './Intent.css';
+import { predictMultipleCardEffects, predictCardEffect } from '../game/damageUtils';
+import { predictEnemyTurn } from '../game/enemyTurnUtils';
 
 // Add InfoBar props interface
 interface InfoBarProps {
@@ -382,6 +384,10 @@ const Game: React.FC = () => {
       setIsCommittingIntents(true);
       setOptimisticUpdatesEnabled(false);  // Disable optimistic updates during commit
 
+      // Capture state before any changes for animations
+      const stateBeforeAnimations = { ...gameState };
+      setFrozenState(stateBeforeAnimations);
+
       // Calculate correct indices based on the hand state when each card will be played
       const plays = cardIntents.map((intent) => {
         // Find how many cards before this one had lower indices
@@ -396,53 +402,100 @@ const Game: React.FC = () => {
         };
       });
 
-      // Freeze the current state for animations
-      const stateBeforeAnimations = gameState;
-      setFrozenState(stateBeforeAnimations);
-
-      // Start animations immediately while transaction is processing
-      const animationPromise = (async () => {
-        for (let i = 0; i < cardIntents.length; i++) {
-          const intent = cardIntents[i];
-          const card = cardData.find(c => c.numericId === intent.cardId);
-          if (!card) continue;
-
-          const levelConfig = getLevelConfig(stateBeforeAnimations.currentFloor);
-          const targetPos = levelConfig.enemyPositions[intent.targetIndex];
-
-          const animationState: AnimationState = {
-            sourceType: 'hero',
-            sourceIndex: 0,
-            targetPosition: targetPos,
-            timestamp: Date.now(),
-            animationType: card.animationType
-          };
-
-          // If not the first animation, add small delay
-          if (i > 0) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-          }
-
-          // Show and wait for this animation
-          setCurrentAnimation(animationState);
-          await new Promise(resolve => setTimeout(resolve, 600));
-          setCurrentAnimation(null);
-        }
-      })();
-
       // Submit transaction in parallel with animations
       const transactionPromise = playCards(plays);
 
-      // Wait for both animations and transaction to complete
-      await Promise.all([animationPromise, transactionPromise]);
+      // Start with the original game state
+      let currentState = {
+        enemyHealth: [...stateBeforeAnimations.enemyCurrentHealth],
+        enemyBlock: [...stateBeforeAnimations.enemyBlock],
+        heroHealth: stateBeforeAnimations.currentHealth,
+        heroBlock: stateBeforeAnimations.currentBlock,
+        mana: stateBeforeAnimations.currentMana
+      };
+
+      // Process and animate each card one by one
+      for (let i = 0; i < cardIntents.length; i++) {
+        const intent = cardIntents[i];
+        const card = cardData.find(c => c.numericId === intent.cardId);
+        if (!card) continue;
+        
+        // If not the first card, add small delay between cards
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
+        // Create a temporary state that represents the game state before this card
+        const tempState = {
+          ...stateBeforeAnimations,
+          enemyCurrentHealth: [...currentState.enemyHealth],
+          enemyBlock: [...currentState.enemyBlock],
+          currentHealth: currentState.heroHealth,
+          currentBlock: currentState.heroBlock,
+          currentMana: currentState.mana
+        };
+        
+        // Predict just this card's effect
+        const cardEffect = predictCardEffect(
+          intent.cardId, 
+          intent.targetIndex, 
+          tempState
+        );
+
+        // Animate this card's effect
+        const levelConfig = getLevelConfig(stateBeforeAnimations.currentFloor);
+        const targetPos = levelConfig.enemyPositions[intent.targetIndex];
+
+        const animationState: AnimationState = {
+          sourceType: 'hero',
+          sourceIndex: 0,
+          targetPosition: targetPos,
+          timestamp: Date.now(),
+          animationType: card.animationType
+        };
+
+        // Show animation
+        setCurrentAnimation(animationState);
+        
+        // Wait for animation to mostly complete
+        await new Promise(resolve => setTimeout(resolve, 450));
+        
+        // Now update the UI state based on this card's effect
+        currentState.enemyHealth = cardEffect.enemyHealth;
+        currentState.enemyBlock = cardEffect.enemyBlock;
+        currentState.heroHealth = cardEffect.heroHealth;
+        currentState.heroBlock = cardEffect.heroBlock;
+        currentState.mana -= cardEffect.manaSpent;
+
+        // Update UI with this card's effect
+        setGameState((prevState: any) => ({
+          ...prevState,
+          currentHealth: currentState.heroHealth,
+          currentBlock: currentState.heroBlock,
+          enemyCurrentHealth: currentState.enemyHealth,
+          enemyBlock: currentState.enemyBlock,
+          currentMana: currentState.mana
+        }));
+        
+        // Wait a moment to show the updated values
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Complete animation
+        setCurrentAnimation(null);
+      }
+
+      // Wait for transaction to complete
+      await transactionPromise;
 
       // Add a small delay to ensure chain state is updated
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Clear frozen state and update with new state
+      // Clear frozen state and synchronize with blockchain state
       setFrozenState(null);
       const newState = await getGameState();
       if (newState) {
+        // If there's a discrepancy between predicted state and actual blockchain state,
+        // always use the blockchain state as source of truth
         setGameState(newState);
         setOptimisticHand(newState.hand || []);
         setOptimisticMana(newState.currentMana || 0);
@@ -517,16 +570,18 @@ const Game: React.FC = () => {
       
       // Freeze the state for the enemy turn
       setFrozenState(stateBeforeEnemyTurn);
-      setGameState(stateBeforeEnemyTurn);
-
-      // Show enemy turn banner with initial delay
+      
+      // Show enemy turn banner
       setTurnState('transitioning');
       setTurnBannerMessage("Enemy Turn");
       setTurnBannerType('enemy');
       setShowTurnBanner(true);
       
-      // Now call end turn after freezing state
-      await endTurnAction();
+      // Apply client-side predictions for enemy turn
+      const enemyTurnPrediction = predictEnemyTurn(stateBeforeEnemyTurn);
+      
+      // Start blockchain transaction immediately
+      const txPromise = endTurnAction();
       
       // Wait shorter for banner animation and transition feel
       await new Promise(resolve => setTimeout(resolve, 800));
@@ -535,85 +590,115 @@ const Game: React.FC = () => {
       // Add shorter delay before enemies start acting
       await new Promise(resolve => setTimeout(resolve, 400));
 
-      // Animate enemy actions with delays
-      if (animationsEnabled && stateBeforeEnemyTurn) {
-        for (let i = 0; i < stateBeforeEnemyTurn.enemyTypes.length; i++) {
-          if (stateBeforeEnemyTurn.enemyCurrentHealth[i] > 0) {
-            const intent = stateBeforeEnemyTurn.enemyIntents[i];
-            const levelConfig = getLevelConfig(stateBeforeEnemyTurn.currentFloor);
-            const targetPos = levelConfig.heroPosition;
+      // Animate enemy actions with delays and incremental updates
+      if (animationsEnabled) {
+        // Start with initial state
+        let currentState = {
+          enemyHealth: [...stateBeforeEnemyTurn.enemyCurrentHealth],
+          enemyBlock: [...stateBeforeEnemyTurn.enemyBlock],
+          heroHealth: stateBeforeEnemyTurn.currentHealth,
+          heroBlock: stateBeforeEnemyTurn.currentBlock
+        };
 
-            // Create animation state for this enemy
-            const animationState: AnimationState = {
-              sourceType: 'enemy',
-              sourceIndex: i,
-              targetPosition: targetPos,
-              timestamp: Date.now()
-            };
-
-            // Add shorter delay before each enemy acts
+        for (let i = 0; i < enemyTurnPrediction.animations.length; i++) {
+          const animation = enemyTurnPrediction.animations[i];
+          // Skip dead enemies
+          if (stateBeforeEnemyTurn.enemyCurrentHealth[animation.enemyIndex] <= 0) continue;
+          
+          // Add delay between enemy actions
+          if (i > 0) {
             await new Promise(resolve => setTimeout(resolve, 400));
-            
-            setCurrentAnimation(animationState);
-            
-            // Keep animation duration the same
-            await new Promise(resolve => setTimeout(resolve, 600));
-            setCurrentAnimation(null);
           }
+          
+          const levelConfig = getLevelConfig(stateBeforeEnemyTurn.currentFloor);
+          const targetPos = levelConfig.heroPosition;
+          
+          // Create animation state for this enemy
+          const animationState: AnimationState = {
+            sourceType: 'enemy',
+            sourceIndex: animation.enemyIndex,
+            targetPosition: targetPos,
+            timestamp: Date.now(),
+            animationType: animation.intent < 1000 ? 'slash' : 
+                          animation.intent === 1000 ? 'float' : 
+                          animation.intent === 1002 || animation.intent === 1005 ? 'pulse' :
+                          animation.intent === 1003 ? 'pulse' : 'slash'
+          };
+          
+          // Start animation
+          setCurrentAnimation(animationState);
+          
+          // Wait for animation to mostly complete
+          await new Promise(resolve => setTimeout(resolve, 450));
+          
+          // Update state for this enemy's action
+          currentState.enemyHealth[animation.enemyIndex] = enemyTurnPrediction.newEnemyHealth[animation.enemyIndex];
+          currentState.enemyBlock[animation.enemyIndex] = enemyTurnPrediction.newEnemyBlock[animation.enemyIndex];
+          
+          // If this enemy deals damage, apply it to hero
+          if (animation.damageToHero > 0) {
+            currentState.heroHealth = enemyTurnPrediction.newHeroHealth;
+            currentState.heroBlock = enemyTurnPrediction.newHeroBlock;
+          }
+          
+          // Update UI with this incremental change after animation is mostly done
+          setGameState((prevState: any) => ({
+            ...prevState,
+            currentHealth: currentState.heroHealth,
+            currentBlock: currentState.heroBlock,
+            enemyCurrentHealth: currentState.enemyHealth,
+            enemyBlock: currentState.enemyBlock
+          }));
+          
+          // Wait a moment to show the updated values
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // Finish animation
+          setCurrentAnimation(null);
         }
 
-        // Add shorter delay after enemies finish
+        // Add delay after all enemies have acted
         await new Promise(resolve => setTimeout(resolve, 400));
         
         // Hide enemy turn banner
         setShowTurnBanner(false);
         
-        // Add shorter delay before player turn
+        // Add delay before player turn
         await new Promise(resolve => setTimeout(resolve, 400));
-
-        // Clear frozen state and force multiple state refreshes to ensure we have latest state
-        setFrozenState(null);
-        let newState = await getGameState();
-        
-        // Add a small delay and try to get state again to ensure chain has processed everything
-        await new Promise(resolve => setTimeout(resolve, 200));
-        newState = await getGameState();
-        
-        if (newState) {
-          setGameState(newState);
-          setPreviousHealth(newState.currentHealth);
-          setPreviousBlock(newState.currentBlock);
-          setPreviousEnemyHealth(newState.enemyCurrentHealth);
-          setPreviousEnemyBlock(newState.enemyBlock);
-          setOptimisticHand(newState.hand || []);
-          setOptimisticMana(newState.currentMana || 0);
-        }
-
-        setTurnBannerMessage("Your Turn");
-        setTurnBannerType('player');
-        setShowTurnBanner(true);
-        
-        // Keep player turn banner visible shorter
-        setTimeout(() => {
-          setShowTurnBanner(false);
-          setTurnState('player');
-        }, 1000);
-      } else {
-        // If animations are disabled, just force a state refresh
-        setFrozenState(null);
-        let newState = await getGameState();
-        
-        // Add a small delay and try to get state again to ensure chain has processed everything
-        await new Promise(resolve => setTimeout(resolve, 200));
-        newState = await getGameState();
-        
-        if (newState) {
-          setGameState(newState);
-          setOptimisticHand(newState.hand || []);
-          setOptimisticMana(newState.currentMana || 0);
-        }
-        setTurnState('player');
       }
+      
+      // Wait for transaction to complete
+      await txPromise;
+
+      // Clear frozen state and force multiple state refreshes to ensure we have latest state
+      setFrozenState(null);
+      let newState = await getGameState();
+      
+      // Add a small delay and try to get state again to ensure chain has processed everything
+      await new Promise(resolve => setTimeout(resolve, 200));
+      newState = await getGameState();
+      
+      if (newState) {
+        // Synchronize with blockchain state (source of truth)
+        setGameState(newState);
+        setPreviousHealth(newState.currentHealth);
+        setPreviousBlock(newState.currentBlock);
+        setPreviousEnemyHealth(newState.enemyCurrentHealth);
+        setPreviousEnemyBlock(newState.enemyBlock);
+        setOptimisticHand(newState.hand || []);
+        setOptimisticMana(newState.currentMana || 0);
+      }
+
+      setTurnBannerMessage("Your Turn");
+      setTurnBannerType('player');
+      setShowTurnBanner(true);
+      
+      // Keep player turn banner visible shorter
+      setTimeout(() => {
+        setShowTurnBanner(false);
+        setTurnState('player');
+      }, 1000);
+      
     } catch (error) {
       console.error('Failed to end turn:', error);
       
