@@ -134,6 +134,264 @@ const AbandonConfirmation: React.FC<AbandonConfirmationProps> = ({ isOpen, onCon
   );
 };
 
+// Add FloatingMana component near the top of the file
+interface FloatingManaProps {
+  currentMana: number;
+  maxMana: number;
+  position: Position;
+  heroScale?: number;
+}
+
+const FloatingMana: React.FC<FloatingManaProps> = ({ currentMana, maxMana, position, heroScale = 1 }) => {
+  // Track previous mana to detect changes
+  const [prevMana, setPrevMana] = useState(currentMana);
+  const [animatingOrbs, setAnimatingOrbs] = useState<number[]>([]);
+  const [showTooltip, setShowTooltip] = useState(false);
+  
+  // Detect mana changes and trigger animations
+  useEffect(() => {
+    if (currentMana !== prevMana) {
+      // Determine which orbs are changing
+      const changedOrbs: number[] = [];
+      if (currentMana > prevMana) {
+        // Mana gained - animate the new orbs
+        for (let i = prevMana; i < currentMana; i++) {
+          changedOrbs.push(i);
+        }
+      } else {
+        // Mana spent - animate the lost orbs
+        for (let i = currentMana; i < prevMana; i++) {
+          changedOrbs.push(i);
+        }
+      }
+      
+      // Set animating orbs
+      setAnimatingOrbs(changedOrbs);
+      
+      // Clear animation after a delay
+      const timer = setTimeout(() => {
+        setAnimatingOrbs([]);
+      }, 1000);
+      
+      setPrevMana(currentMana);
+      return () => clearTimeout(timer);
+    }
+  }, [currentMana, prevMana]);
+
+  // Calculate vertical offset based on heroScale
+  const verticalOffset = 15 + (heroScale - 1) * 15;
+  
+  // Calculate arc properties
+  const arcRadius = 55; // Increased radius for more spacing
+  const orbSize = 24; // Larger orbs
+  const totalAngle = Math.min(140, maxMana * 30); // Increased angle spread
+  const arcWidth = Math.sin(totalAngle * Math.PI / 180) * arcRadius * 2 + orbSize;
+  const arcHeight = (1 - Math.cos(totalAngle * Math.PI / 180)) * arcRadius + orbSize;
+
+  return (
+    <div 
+      className="floating-mana-container" 
+      style={{
+        position: 'absolute',
+        left: `${position.x}%`,
+        top: `${position.y - verticalOffset}%`, // Adjust position based on heroScale
+        transform: 'translate(-50%, -50%)',
+        zIndex: 5,
+        width: `${Math.max(130, arcWidth)}px`, // Width based on arc span
+        height: `${arcHeight}px`, // Height based on arc curvature
+        pointerEvents: 'none', // Allow clicks to pass through
+        cursor: 'help'
+      }}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      {/* Tooltip */}
+      {showTooltip && (
+        <div style={{
+          position: 'absolute',
+          bottom: 'calc(100% - 10px)',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0, 0, 0, 0.8)',
+          color: 'white',
+          padding: '6px 10px',
+          borderRadius: '6px',
+          fontSize: '14px',
+          whiteSpace: 'nowrap',
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+          border: '1px solid rgba(88, 43, 156, 0.4)',
+          zIndex: 10,
+          pointerEvents: 'auto' // Enable mouse interaction
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ color: '#FFD700', filter: 'drop-shadow(0 0 2px rgba(255, 215, 0, 0.6))' }}>✨</span>
+            <span>{currentMana}/{maxMana} Faith</span>
+          </div>
+        </div>
+      )}
+      
+      {/* Mana Orbs */}
+      {[...Array(maxMana)].map((_, i) => {
+        const isAnimating = animatingOrbs.includes(i);
+        const isActive = i < currentMana;
+        
+        // Calculate arc position for each orb
+        // For 3-4 orbs, create a gentle arc above the player
+        const startAngle = 180 + (180 - totalAngle) / 2; // Center the arc
+        const angle = startAngle + (i / (maxMana - 1 || 1)) * totalAngle;
+        const radian = angle * Math.PI / 180;
+        
+        // Position each orb along the arc relative to container center
+        const orbX = 50 + arcRadius * Math.cos(radian);
+        const orbY = 100 + arcRadius * Math.sin(radian);
+        
+        // Calculate orb background for each orb
+        const orbBackground = 
+          `radial-gradient(circle at center, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.7) 40%, rgba(0, 0, 0, 0.6) 100%)`;
+        
+        return (
+          <React.Fragment key={i}>
+            {/* Individual orb background */}
+            <div
+              style={{
+                width: `${orbSize + 12}px`,
+                height: `${orbSize + 12}px`,
+                position: 'absolute',
+                left: `${orbX}%`,
+                top: `${orbY}%`,
+                transform: 'translate(-50%, -50%)',
+                borderRadius: '50%',
+                background: orbBackground,
+                border: '1px solid rgba(88, 43, 156, 0.3)',
+                boxShadow: '0 0 8px rgba(0, 0, 0, 0.4)',
+                zIndex: 1
+              }}
+            />
+            
+            {/* Mana orb */}
+            <div 
+              className={`floating-mana-orb ${isActive ? 'active' : 'depleted'} ${isAnimating ? 'animating' : ''}`}
+              style={{
+                width: `${orbSize}px`,
+                height: `${orbSize}px`,
+                position: 'absolute',
+                left: `${orbX}%`,
+                top: `${orbY}%`,
+                transform: `translate(-50%, -50%) ${isAnimating && isActive ? 'scale(1.3)' : 'scale(1)'}`,
+                borderRadius: '50%',
+                background: isActive 
+                  ? 'radial-gradient(circle at center, rgba(88, 43, 156, 0.9) 0%, rgba(45, 13, 99, 0.9) 60%, rgba(31, 9, 67, 0.9) 100%)'
+                  : 'radial-gradient(circle at center, #666 0%, #444 60%, #333 100%)',
+                boxShadow: isActive 
+                  ? '0 0 12px rgba(88, 43, 156, 0.8)'
+                  : 'none',
+                border: isActive 
+                  ? '1px solid rgba(88, 43, 156, 0.8)'
+                  : '1px solid #555',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                animation: isAnimating 
+                  ? isActive 
+                    ? 'manaGain 1s ease-out'
+                    : 'manaLoss 1s ease-out'
+                  : 'none',
+                transition: 'transform 0.3s ease-out, background 0.3s ease-out, box-shadow 0.3s ease-out',
+                zIndex: 2,
+                pointerEvents: 'auto' // Enable mouse interaction
+              }}
+            >
+              <span style={{
+                fontSize: '12px',
+                color: isActive ? '#FFD700' : '#999',
+                filter: isActive ? 'drop-shadow(0 0 2px rgba(255, 215, 0, 0.6))' : 'none',
+                animation: isAnimating ? 'sparkle 1s ease-out' : 'none'
+              }}>✨</span>
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+};
+
+// Add a ManaFlow component for the animation
+interface ManaFlowProps {
+  startPosition: Position;
+  endPosition: Position;
+  onComplete: () => void;
+}
+
+const ManaFlow: React.FC<ManaFlowProps> = ({ startPosition, endPosition, onComplete }) => {
+  const [particles, setParticles] = useState<Array<{ id: number; left: number; top: number; delay: number }>>([]);
+  
+  useEffect(() => {
+    // Create particles
+    const newParticles = [];
+    for (let i = 0; i < 8; i++) {
+      newParticles.push({
+        id: i,
+        left: 0,
+        top: 0,
+        delay: i * 50 // Stagger the particles
+      });
+    }
+    setParticles(newParticles);
+    
+    // Trigger onComplete after animation
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 800);
+    
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+  
+  return (
+    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 100 }}>
+      {particles.map(particle => (
+        <div
+          key={particle.id}
+          style={{
+            position: 'absolute',
+            left: `${startPosition.x}%`,
+            top: `${startPosition.y}%`,
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at center, rgba(255, 215, 0, 0.9) 0%, rgba(88, 43, 156, 0.9) 100%)',
+            boxShadow: '0 0 10px rgba(255, 215, 0, 0.8)',
+            zIndex: 100,
+            animation: `manaFlow 0.8s ease-in forwards ${particle.delay}ms`,
+            opacity: 0
+          }}
+        />
+      ))}
+      <style>
+        {`
+          @keyframes manaFlow {
+            0% {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(0.5);
+              left: ${startPosition.x}%;
+              top: ${startPosition.y}%;
+            }
+            10% {
+              opacity: 1;
+              transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(0.5);
+              left: ${endPosition.x}%;
+              top: ${endPosition.y}%;
+            }
+          }
+        `}
+      </style>
+    </div>
+  );
+};
+
 const Game: React.FC = () => {
   const [hand, setHand] = useState<number[]>([]);
   const [deck, setDeck] = useState<number[]>([]);
@@ -182,6 +440,11 @@ const Game: React.FC = () => {
   const [showAbandonConfirmation, setShowAbandonConfirmation] = useState(false);
   const [isAbandoning, setIsAbandoning] = useState(false);
   const [isApproaching, setIsApproaching] = useState(false);
+  const [manaFlowAnimation, setManaFlowAnimation] = useState<{
+    startPosition: Position;
+    endPosition: Position;
+    onComplete: () => void;
+  } | null>(null);
 
   // Fetch card data
   useEffect(() => {
@@ -402,10 +665,14 @@ const Game: React.FC = () => {
         };
       });
 
+      // Calculate all card effects upfront for reference
+      // But we won't apply them all at once
+      const fullPrediction = predictMultipleCardEffects(plays, stateBeforeAnimations, cardData);
+      
       // Submit transaction in parallel with animations
       const transactionPromise = playCards(plays);
 
-      // Start with the original game state
+      // Track cumulative state that we'll update incrementally
       let currentState = {
         enemyHealth: [...stateBeforeAnimations.enemyCurrentHealth],
         enemyBlock: [...stateBeforeAnimations.enemyBlock],
@@ -419,13 +686,14 @@ const Game: React.FC = () => {
         const intent = cardIntents[i];
         const card = cardData.find(c => c.numericId === intent.cardId);
         if (!card) continue;
-        
-        // If not the first card, add small delay between cards
-        if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
 
-        // Create a temporary state that represents the game state before this card
+        // Calculate effect of just this one card
+        const singleCardPlay = {
+          cardIndex: plays[i].cardIndex,
+          targetIndex: plays[i].targetIndex
+        };
+        
+        // Create a temporary state that represents the game state after all previous cards
         const tempState = {
           ...stateBeforeAnimations,
           enemyCurrentHealth: [...currentState.enemyHealth],
@@ -442,14 +710,35 @@ const Game: React.FC = () => {
           tempState
         );
 
+        // If not the first card, add small delay between cards
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
+        // Show mana flow animation from player to card target
+        if (card.manaCost > 0) {
+          const heroPosition = getLevelConfig(stateBeforeAnimations.currentFloor).heroPosition;
+          const targetPosition = getLevelConfig(stateBeforeAnimations.currentFloor).enemyPositions[intent.targetIndex];
+          const heroScale = getLevelConfig(stateBeforeAnimations.currentFloor).heroScale || 1;
+          const verticalOffset = 15 + (heroScale - 1) * 15;
+          
+          setManaFlowAnimation({
+            startPosition: { x: heroPosition.x, y: heroPosition.y - verticalOffset }, // Start from floating mana position
+            endPosition: targetPosition,
+            onComplete: () => setManaFlowAnimation(null)
+          });
+          
+          // Wait for mana flow animation
+          await new Promise(resolve => setTimeout(resolve, 400));
+        }
+
         // Animate this card's effect
         const levelConfig = getLevelConfig(stateBeforeAnimations.currentFloor);
-        const targetPos = levelConfig.enemyPositions[intent.targetIndex];
 
         const animationState: AnimationState = {
           sourceType: 'hero',
           sourceIndex: 0,
-          targetPosition: targetPos,
+          targetPosition: levelConfig.enemyPositions[intent.targetIndex],
           timestamp: Date.now(),
           animationType: card.animationType
         };
@@ -457,17 +746,18 @@ const Game: React.FC = () => {
         // Show animation
         setCurrentAnimation(animationState);
         
-        // Wait for animation to mostly complete
-        await new Promise(resolve => setTimeout(resolve, 450));
+        // Wait for animation to complete (most of the way)
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Now update the UI state based on this card's effect
+        // Update the cumulative state with this card's effects
         currentState.enemyHealth = cardEffect.enemyHealth;
         currentState.enemyBlock = cardEffect.enemyBlock;
         currentState.heroHealth = cardEffect.heroHealth;
         currentState.heroBlock = cardEffect.heroBlock;
         currentState.mana -= cardEffect.manaSpent;
 
-        // Update UI with this card's effect
+        // Update UI with this card's effect after animation is mostly done
         setGameState((prevState: any) => ({
           ...prevState,
           currentHealth: currentState.heroHealth,
@@ -477,10 +767,8 @@ const Game: React.FC = () => {
           currentMana: currentState.mana
         }));
         
-        // Wait a moment to show the updated values
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
         // Complete animation
+        await new Promise(resolve => setTimeout(resolve, 100));
         setCurrentAnimation(null);
       }
 
@@ -590,28 +878,25 @@ const Game: React.FC = () => {
       // Add shorter delay before enemies start acting
       await new Promise(resolve => setTimeout(resolve, 400));
 
+      // Track current state that we'll update with each enemy action
+      let currentState = {
+        enemyHealth: [...stateBeforeEnemyTurn.enemyCurrentHealth],
+        enemyBlock: [...stateBeforeEnemyTurn.enemyBlock],
+        heroHealth: stateBeforeEnemyTurn.currentHealth,
+        heroBlock: stateBeforeEnemyTurn.currentBlock
+      };
+
       // Animate enemy actions with delays and incremental updates
       if (animationsEnabled) {
-        // Start with initial state
-        let currentState = {
-          enemyHealth: [...stateBeforeEnemyTurn.enemyCurrentHealth],
-          enemyBlock: [...stateBeforeEnemyTurn.enemyBlock],
-          heroHealth: stateBeforeEnemyTurn.currentHealth,
-          heroBlock: stateBeforeEnemyTurn.currentBlock
-        };
-
         for (let i = 0; i < enemyTurnPrediction.animations.length; i++) {
           const animation = enemyTurnPrediction.animations[i];
-          // Skip dead enemies
           if (stateBeforeEnemyTurn.enemyCurrentHealth[animation.enemyIndex] <= 0) continue;
-          
-          // Add delay between enemy actions
-          if (i > 0) {
-            await new Promise(resolve => setTimeout(resolve, 400));
-          }
           
           const levelConfig = getLevelConfig(stateBeforeEnemyTurn.currentFloor);
           const targetPos = levelConfig.heroPosition;
+
+          // Add shorter delay before each enemy acts
+          await new Promise(resolve => setTimeout(resolve, 400));
           
           // Create animation state for this enemy
           const animationState: AnimationState = {
@@ -628,8 +913,8 @@ const Game: React.FC = () => {
           // Start animation
           setCurrentAnimation(animationState);
           
-          // Wait for animation to mostly complete
-          await new Promise(resolve => setTimeout(resolve, 450));
+          // Wait for most of the animation to complete
+          await new Promise(resolve => setTimeout(resolve, 500));
           
           // Update state for this enemy's action
           currentState.enemyHealth[animation.enemyIndex] = enemyTurnPrediction.newEnemyHealth[animation.enemyIndex];
@@ -650,20 +935,18 @@ const Game: React.FC = () => {
             enemyBlock: currentState.enemyBlock
           }));
           
-          // Wait a moment to show the updated values
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
           // Finish animation
+          await new Promise(resolve => setTimeout(resolve, 100));
           setCurrentAnimation(null);
         }
 
-        // Add delay after all enemies have acted
+        // Add shorter delay after enemies finish
         await new Promise(resolve => setTimeout(resolve, 400));
         
         // Hide enemy turn banner
         setShowTurnBanner(false);
         
-        // Add delay before player turn
+        // Add shorter delay before player turn
         await new Promise(resolve => setTimeout(resolve, 400));
       }
       
@@ -1219,62 +1502,6 @@ const Game: React.FC = () => {
             z-index: 100;
           }
 
-          .mana-display {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            width: fit-content;
-            padding: 8px;
-            margin-bottom: 10px;
-            background: rgba(89, 86, 108, 0.15);
-            border: 1px solid rgba(89, 86, 108, 0.3);
-            border-radius: 8px;
-            backdrop-filter: blur(5px);
-          }
-
-          .mana-icon {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(circle at center,
-              rgba(88, 43, 156, 0.9) 0%,
-              rgba(45, 13, 99, 0.9) 60%,
-              rgba(31, 9, 67, 0.9) 100%
-            );
-            border-radius: 50%;
-            box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
-            border: 1px solid rgba(88, 43, 156, 0.8);
-            position: relative;
-          }
-
-          .mana-icon::after {
-            content: '✨';
-            position: absolute;
-            font-size: 16px;
-            color: #FFD700;
-            filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.6));
-          }
-
-          .mana-icon.depleted {
-            background: radial-gradient(circle at center,
-              #666 0%,
-              #444 60%,
-              #333 100%
-            );
-            box-shadow: none;
-            border-color: #555;
-          }
-
-          .mana-icon.depleted::after {
-            color: #999;
-            filter: none;
-          }
-
-          }
-
           .game-entity.animating {
             z-index: 100;
           }
@@ -1357,6 +1584,24 @@ const Game: React.FC = () => {
             opacity: 0.7;
             cursor: not-allowed;
           }
+
+          @keyframes manaGain {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+          }
+
+          @keyframes manaLoss {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.7; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+          }
+
+          @keyframes sparkle {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.5); opacity: 1; filter: brightness(1.5) drop-shadow(0 0 5px gold); }
+            100% { transform: scale(1); opacity: 1; }
+          }
         `}
       </style>
       <div className="game-wrapper">
@@ -1395,6 +1640,15 @@ const Game: React.FC = () => {
                   invert={getLevelConfig(gameState.currentFloor).heroInvert}
                   runState={gameState.runState}
                 />
+                {/* Add Floating Mana display above player */}
+                {gameState.runState === 2 && (
+                  <FloatingMana 
+                    currentMana={optimisticMana ?? gameState.currentMana}
+                    maxMana={gameState.maxMana}
+                    position={getLevelConfig(gameState.currentFloor).heroPosition}
+                    heroScale={getLevelConfig(gameState.currentFloor).heroScale}
+                  />
+                )}
                 {gameState.enemyTypes.map((type: number, index: number) => (
                   <GameEntity
                     key={index}
@@ -1558,7 +1812,7 @@ const Game: React.FC = () => {
 
           <div className="bottom-area">
             <div className="bottom-left">
-              {/* Only show mana and pile buttons when not in whale room */}
+              {/* Only show pile buttons when not in whale room */}
               {(!gameState || gameState.runState !== 1) && (
                 <div className="pile-and-mana">
                   <div className="pile-buttons">
@@ -1580,15 +1834,6 @@ const Game: React.FC = () => {
                     >
                       {isDrawVisible ? 'Hide Draw' : `View Draw (${draw.length})`}
                     </button>
-                  </div>
-                  
-                  <div className="mana-display">
-                    {[...Array(gameState?.maxMana ?? 0)].map((_, i) => (
-                      <div 
-                        key={i} 
-                        className={`mana-icon ${i >= (optimisticMana ?? gameState?.currentMana ?? 0) ? 'depleted' : ''}`}
-                      />
-                    ))}
                   </div>
                 </div>
               )}
@@ -1703,6 +1948,15 @@ const Game: React.FC = () => {
         onCancel={() => setShowAbandonConfirmation(false)}
         isLoading={isAbandoning}
       />
+
+      {/* Add ManaFlow animation when active */}
+      {manaFlowAnimation && (
+        <ManaFlow
+          startPosition={manaFlowAnimation.startPosition}
+          endPosition={manaFlowAnimation.endPosition}
+          onComplete={manaFlowAnimation.onComplete}
+        />
+      )}
     </>
   );
 };
