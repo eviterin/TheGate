@@ -1,21 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import InfoBar from './InfoBar';
 import Hand from './Hand';
-import Card from './Card';
 import GameEntity from './GameEntity';
 import LoadingOverlay from './LoadingOverlay';
-import { useStartRun, useAbandonRun, useGameState, useGameContract, useChooseRoom, usePlayCard, useEndTurn, useChooseCardReward, usePlayCards } from '../hooks/GameState';
+import { useStartRun, useAbandonRun, useGameState, useChooseRoom, useEndTurn, useChooseCardReward, usePlayCards } from '../hooks/GameState';
 import { useCards } from '../hooks/CardsContext';
 import './Game.css';
 import { getBackgroundImage } from '../game/encounters';
 import { getLevelConfig } from '../game/levelConfigs';
 import { Position } from '../game/encounters';
 import { CardAnimationType } from '../game/cards';
-import encountersData from '../../../shared/encounters.json';
 import TurnBanner from './TurnBanner';
 import Intent, { CardIntent } from './Intent';
 import './Intent.css';
-import { predictMultipleCardEffects, predictCardEffect } from '../game/damageUtils';
+import { predictCardEffect } from '../game/damageUtils';
 import { predictEnemyTurn } from '../game/enemyTurnUtils';
 import AbandonConfirmation from './AbandonConfirmation';
 import FloatingMana from './FloatingMana';
@@ -24,62 +22,6 @@ import GameOver from './GameOver';
 import RewardSelection from './RewardSelection';
 import CardPileViewer from './CardPileViewer';
 
-// Add InfoBar props interface
-interface InfoBarProps {
-  gameState: any;
-}
-
-// Define encounters data structure
-interface EncountersData {
-  constants: {
-    ENEMY_TYPE: {
-      NONE: number;
-      TYPE_A: number;
-      TYPE_B: number;
-    };
-    INTENT_TYPES: {
-      BLOCK_5: number;
-    };
-    ANIMATIONS: {
-      ATTACK: string;
-      BLOCK: string;
-    };
-  };
-  encounters: any[]; // We don't need the full encounters type for this usage
-}
-
-// Get intent types from encounters.json with type assertion
-const INTENT_TYPES = (encountersData as EncountersData).constants.INTENT_TYPES;
-
-const TRANSACTION_TIMEOUT = 10000; // 10 seconds timeout for transactions
-
-// Whale Room options
-const WHALE_ROOM_OPTIONS = [
-  { 
-    id: 1, 
-    title: '🎴 Card Master', 
-    description: 'Begin each turn with an additional card in your hand.',
-    effect: '3 → 4 cards per turn'
-  },
-  { 
-    id: 2, 
-    title: '✨ Divine Power', 
-    description: 'Channel additional Faith into your actions.',
-    effect: '3 → 4 ✨ per turn'
-  },
-  { 
-    id: 3, 
-    title: '🛡️ Divine Protection', 
-    description: 'Begin each combat with a protective barrier.',
-    effect: 'Start each turn with 5 🛡️'
-  },
-  { 
-    id: 4, 
-    title: '💪 Sacred Might', 
-    description: 'Your body is strengthened by divine power.',
-    effect: '21 → 36 ❤️'
-  }
-];
 
 interface AnimationState {
   sourceType: 'hero' | 'enemy';
@@ -89,13 +31,6 @@ interface AnimationState {
   animationType?: CardAnimationType;
 }
 
-// Add helper to calculate damage after block
-const calculateDamageAfterBlock = (damage: number, block: number): number => {
-  const remainingDamage = Math.max(0, damage - block);
-  return remainingDamage;
-};
-
-// Add this helper function near the top with other helpers
 const calculateTotalManaCost = (intents: CardIntent[], cardData: Array<{ numericId: number; manaCost: number }>): number => {
   return intents.reduce((total, intent) => {
     const card = cardData.find(c => c.numericId === intent.cardId);
@@ -115,7 +50,6 @@ const Game: React.FC = () => {
   const [isGateOpen, setIsGateOpen] = useState(false);
   const { getGameState } = useGameState();
   const { startRun } = useStartRun();
-  const { playCard } = usePlayCard();
   const { endTurn: endTurnAction } = useEndTurn();
   const { getActiveCards } = useCards();
   const [cardData, setCardData] = useState<any[]>([]);
@@ -128,7 +62,7 @@ const Game: React.FC = () => {
   const [optimisticHand, setOptimisticHand] = useState<number[]>([]);
   const [optimisticMana, setOptimisticMana] = useState<number | null>(null);
   const [optimisticUpdatesEnabled, setOptimisticUpdatesEnabled] = useState(true);
-  const [autoEndTurnEnabled, setAutoEndTurnEnabled] = useState(true);
+  const [autoEndTurnEnabled] = useState(true);
   const [hasAutoEndedTurn, setHasAutoEndedTurn] = useState(false);
   const { abandonRun } = useAbandonRun();
   const [isRetrying, setIsRetrying] = useState(false);
@@ -136,7 +70,7 @@ const Game: React.FC = () => {
   const [isChoosingRoom, setIsChoosingRoom] = useState(false);
   const [isChoosingReward, setIsChoosingReward] = useState(false);
   const [currentAnimation, setCurrentAnimation] = useState<AnimationState | null>(null);
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+  const [animationsEnabled] = useState(true);
   const [turnState, setTurnState] = useState<'player' | 'enemy' | 'transitioning'>('player');
   const [showTurnBanner, setShowTurnBanner] = useState(false);
   const [turnBannerMessage, setTurnBannerMessage] = useState('');
@@ -165,7 +99,6 @@ const Game: React.FC = () => {
     fetchCards();
   }, [getActiveCards]);
 
-  // Add helper to check if we can end turn
   const canEndTurn = () => {
     return !isCommittingIntents;
   };
@@ -239,7 +172,7 @@ const Game: React.FC = () => {
         console.error('Failed to fetch game state:', error);
         setIsLoadingGameState(false);
         
-        // On error, always reset to actual state
+        // On error, always fall back to actual state (chain state)
         if (gameState) {
           setOptimisticHand(gameState.hand || []);
           setOptimisticMana(gameState.currentMana);
@@ -247,7 +180,6 @@ const Game: React.FC = () => {
       }
     };
 
-    // Poll every 500ms
     fetchGameState();
     const interval = setInterval(fetchGameState, 500);
     
@@ -257,10 +189,8 @@ const Game: React.FC = () => {
     };
   }, [getGameState, gameState, optimisticUpdatesEnabled, frozenState, cardData.length, autoEndTurnEnabled, hasAutoEndedTurn]);
 
-  // Update handleCardSelect to queue the card instead of playing it immediately
   const handleCardSelect = (cardIndex: number) => {
     setHasAutoEndedTurn(false);
-    const cardId = optimisticHand[cardIndex];
     
     if (cardIndex === selectedCardIndex) {
       setSelectedCardIndex(null);
@@ -269,7 +199,6 @@ const Game: React.FC = () => {
     }
   };
 
-  // Update handleEntityClick to use cardData parameter
   const handleEntityClick = async (targetIndex: number) => {
     if (selectedCardIndex === null) return;
     
@@ -370,10 +299,6 @@ const Game: React.FC = () => {
           targetIndex: intent.targetIndex
         };
       });
-
-      // Calculate all card effects upfront for reference
-      // But we won't apply them all at once
-      const fullPrediction = predictMultipleCardEffects(plays, stateBeforeAnimations, cardData);
       
       // Submit transaction in parallel with animations
       const transactionPromise = playCards(plays);
@@ -392,13 +317,7 @@ const Game: React.FC = () => {
         const intent = cardIntents[i];
         const card = cardData.find(c => c.numericId === intent.cardId);
         if (!card) continue;
-
-        // Calculate effect of just this one card
-        const singleCardPlay = {
-          cardIndex: plays[i].cardIndex,
-          targetIndex: plays[i].targetIndex
-        };
-        
+       
         // Create a temporary state that represents the game state after all previous cards
         const tempState = {
           ...stateBeforeAnimations,
@@ -781,11 +700,6 @@ const Game: React.FC = () => {
       setIsAbandoning(false);
       setShowAbandonConfirmation(false);
     }
-  };
-
-  // Add handler for gate click
-  const handleGateClick = () => {
-    setIsGateOpen(true);
   };
 
   // Add this effect near the other useEffect hooks
