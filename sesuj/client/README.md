@@ -22,11 +22,11 @@ npm run dev
 The game uses a shared data approach between client and blockchain:
 
 ### Cards
-- Source of truth: `/shared/cards.json`
-- Client wrapper: `/src/game/cards.ts`
+- Source of truth: [cards.json](../shared/cards.json)
+- Client wrapper: [cards.ts](./src/game/cards.ts)
   - Adds client-specific fields (e.g. image paths)
 
 ### Encounters
-- Source of truth: `/shared/encounters.json` 
-- Client wrapper: `/src/game/encounters.ts`
+- Source of truth: [encounters.json](../shared/encounters.json)
+- Client wrapper: [encounters.ts](./src/game/encounters.ts)
   - Adds client-specific data (positions, names)
