@@ -22,6 +22,7 @@ import FloatingMana from './FloatingMana';
 import WhaleRoom from './WhaleRoom';
 import GameOver from './GameOver';
 import RewardSelection from './RewardSelection';
+import CardPileViewer from './CardPileViewer';
 
 // Add InfoBar props interface
 interface InfoBarProps {
@@ -1037,49 +1038,31 @@ const Game: React.FC = () => {
         message="Divine intervention in progress..." 
       />
 
-      {/* Add deck viewer overlays */}
-      {isDeckVisible && (
-        <div className="deck-viewer">
-          <h3>Deck ({deck.length} cards)</h3>
-          <div className="deck-cards">
-            {deck.map((cardId, index) => {
-              const card = cardData.find(c => c.numericId === cardId);
-              return card ? (
-                <Card key={`deck-${cardId}-${index}`} {...card} />
-              ) : null;
-            })}
-          </div>
-        </div>
-      )}
-
-      {isDiscardVisible && (
-        <div className="deck-viewer">
-          <h3>Discard Pile ({discard.length} cards)</h3>
-          <div className="deck-cards">
-            {discard.map((cardId, index) => {
-              const card = cardData.find(c => c.numericId === cardId);
-              return card ? (
-                <Card key={`discard-${cardId}-${index}`} {...card} />
-              ) : null;
-            })}
-          </div>
-        </div>
-      )}
-
-      {isDrawVisible && (
-        <div className="deck-viewer">
-          <h3>Draw Pile ({draw.length} cards)</h3>
-          <p style={{ color: '#999', fontSize: '14px', marginBottom: '12px', textAlign: 'center' }}>Note: Cards shown here may not be in their actual draw order</p>
-          <div className="deck-cards">
-            {draw.map((cardId, index) => {
-              const card = cardData.find(c => c.numericId === cardId);
-              return card ? (
-                <Card key={`draw-${cardId}-${index}`} {...card} />
-              ) : null;
-            })}
-          </div>
-        </div>
-      )}
+      {/* Use the CardPileViewer component for all pile views */}
+      <CardPileViewer
+        isVisible={isDeckVisible}
+        title={`Deck (${deck.length} cards)`}
+        cards={deck}
+        cardData={cardData}
+        onClose={toggleDeck}
+      />
+      
+      <CardPileViewer
+        isVisible={isDiscardVisible}
+        title={`Discard Pile (${discard.length} cards)`}
+        cards={discard}
+        cardData={cardData}
+        onClose={toggleDiscard}
+      />
+      
+      <CardPileViewer
+        isVisible={isDrawVisible}
+        title={`Draw Pile (${draw.length} cards)`}
+        cards={draw}
+        cardData={cardData}
+        subText="Note: Cards shown here may not be in their actual draw order"
+        onClose={toggleDraw}
+      />
 
       {/* Add AbandonConfirmation component */}
       <AbandonConfirmation
