@@ -101,7 +101,7 @@ contract GameState {
         data.lastChosenCard = 0;
         delete data.deck;
         
-        data.deck = [CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_PRAY, CardLibrary.CARD_ID_PRAY];
+        data.deck = [CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_PRAY, CardLibrary.CARD_ID_PRAY];
     }
     
     function abandonRun() public {
