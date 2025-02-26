@@ -1,0 +1,103 @@
+.game-over-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.game-over-content {
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.game-over-title {
+  color: #ff4444;
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+.game-over-title.victory {
+  color: #ffd700;
+}
+
+.game-over-message {
+  color: #cccccc;
+  font-size: 18px;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.game-over-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.retry-button {
+  background: #4a4;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.retry-button:hover:not(:disabled) {
+  background: #5b5;
+  transform: translateY(-2px);
+}
+
+.retry-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.abandon-button {
+  background: #a44;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.abandon-button:hover:not(:disabled) {
+  background: #b55;
+  transform: translateY(-2px);
+}
+
+.abandon-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.back-to-menu-button {
+  background: linear-gradient(135deg, #ffd700 0%, #b8860b 100%);
+  color: #000;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.back-to-menu-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+} 

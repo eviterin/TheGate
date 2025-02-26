@@ -1,0 +1,48 @@
+.whale-room-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.whale-room-overlay.gate-open {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.whale-room-gate {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1.5rem 2rem;
+  width: 200px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+.whale-room-gate:hover {
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.whale-room-gate-text {
+  color: #ffd700;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  white-space: nowrap;
+} 

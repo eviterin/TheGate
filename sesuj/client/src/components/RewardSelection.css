@@ -1,0 +1,97 @@
+.reward-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 1000;
+}
+
+.reward-content {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  margin-bottom: -90px;
+}
+
+.reward-overlay h2 {
+  color: #ffd700;
+  text-align: center;
+  margin-bottom: 16px;
+  font-size: 24px;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+  letter-spacing: 1px;
+  font-family: 'CardFont', sans-serif;
+}
+
+.reward-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 500px;
+  margin: 0 auto 16px auto;
+}
+
+.reward-card-container {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 4px;
+  transform: scale(0.9);
+}
+
+.reward-card-container:hover:not(.disabled) {
+  transform: scale(0.95) translateY(-5px);
+}
+
+.reward-card-container.selected:not(.disabled) {
+  border-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
+  transform: scale(0.95) translateY(-5px);
+}
+
+.reward-card-container.disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.reward-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.continue-button {
+  background: rgba(40, 167, 69, 0.8);
+  border-color: rgba(40, 167, 69, 0.3);
+  color: white;
+  border: 1px solid;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.continue-button:hover:not(.disabled) {
+  background: rgba(40, 167, 69, 1);
+  transform: translateY(-2px);
+}
+
+.continue-button.disabled {
+  background: rgba(108, 117, 125, 0.8);
+  border-color: rgba(108, 117, 125, 0.3);
+  cursor: not-allowed;
+  opacity: 0.7;
+} 
