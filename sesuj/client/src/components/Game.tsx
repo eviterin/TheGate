@@ -86,7 +86,6 @@ const Game: React.FC = () => {
   const [isAbandoning, setIsAbandoning] = useState(false);
   const [isApproaching, setIsApproaching] = useState(false);
 
-  // Fetch card data
   useEffect(() => {
     const fetchCards = async () => {
       try {
@@ -103,7 +102,6 @@ const Game: React.FC = () => {
     return !isCommittingIntents;
   };
 
-  // Continuously update game state
   useEffect(() => {
     let mounted = true;
     
@@ -222,7 +220,7 @@ const Game: React.FC = () => {
 
     const currentMana = gameState.currentMana;
     if (totalManaNeeded > currentMana) {
-      // Maybe show a warning to the user
+
       return;
     }
 
@@ -275,20 +273,19 @@ const Game: React.FC = () => {
     setOptimisticMana(gameState?.currentMana || 0);
   };
 
+  // This is the main function that commits the intents to the chain & plays animations
   const handleCommitIntents = async () => {
     if (cardIntents.length === 0 || isCommittingIntents) return;
 
     try {
+      // Disable optimistic updates during commit phase
       setIsCommittingIntents(true);
-      setOptimisticUpdatesEnabled(false);  // Disable optimistic updates during commit
-
-      // Capture state before any changes for animations
+      setOptimisticUpdatesEnabled(false);  
       const stateBeforeAnimations = { ...gameState };
       setFrozenState(stateBeforeAnimations);
 
-      // Calculate correct indices based on the hand state when each card will be played
+      // Prevent card indexes from being offset by previous cards
       const plays = cardIntents.map((intent) => {
-        // Find how many cards before this one had lower indices
         const cardsPlayedBefore = cardIntents
           .slice(0, cardIntents.indexOf(intent))
           .filter(prev => prev.cardIndex < intent.cardIndex)
@@ -300,7 +297,7 @@ const Game: React.FC = () => {
         };
       });
       
-      // Submit transaction in parallel with animations
+      // Submit transaction before playing animations (to avoid unneccesary waiting)
       const transactionPromise = playCards(plays);
 
       // Track cumulative state that we'll update incrementally
@@ -335,7 +332,7 @@ const Game: React.FC = () => {
           tempState
         );
 
-        // If not the first card, add small delay between cards
+        // If not the first card, add small delay between cards for look n feel
         if (i > 0) {
           await new Promise(resolve => setTimeout(resolve, 200));
         }
@@ -361,10 +358,10 @@ const Game: React.FC = () => {
           animationType: card.animationType
         };
 
-        // Show animation
+        // Play animation
         setCurrentAnimation(animationState);
         
-        // Wait for animation to complete (most of the way)
+        // Wait for animation to complete 
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Now update the UI state based on this card's effect
@@ -665,7 +662,6 @@ const Game: React.FC = () => {
     } catch (error) {
       console.error('Failed to choose whale room option:', error);
     }
-    // Don't set isChoosingRoom to false here - let the game state update handle that
   };
 
   const handleRetry = async () => {

@@ -33,7 +33,7 @@ const styles = {
     justifyContent: 'center',
     height: '100%',
     width: '100%',
-    transform: 'translateY(20vh)' // Move down by 20% of viewport height
+    transform: 'translateY(20vh)'
   }
 };
 
@@ -44,10 +44,8 @@ function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
   const handleEnable = async () => {
     try {
       await enableQuickTransactions();
-      // Wait a bit for the state to update
       await new Promise(resolve => setTimeout(resolve, 1000));
       setIsSuccess(true);
-      // Wait a bit to show success message before closing
       setTimeout(() => {
         onClose();
       }, 1500);
@@ -73,7 +71,7 @@ function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
     }}>
       {isSuccess ? (
         <div style={{ color: '#48bb78', fontSize: '18px' }}>
-          ✅ Quick Transactions Enabled! Loading game...
+          ✅ Quick Transactions Enabled!
         </div>
       ) : (
         <>
@@ -110,14 +108,12 @@ function AppContent() {
   const { isEnabled, isLoading } = useQuickTransactions()
   const [showQuickTxPrompt, setShowQuickTxPrompt] = useState(false)
 
-  // First handle Quick Transactions
   useEffect(() => {
     if (!isLoading && !isEnabled) {
       setShowQuickTxPrompt(true)
     }
   }, [isLoading, isEnabled])
 
-  // Show loading state while checking Quick Transactions
   if (isLoading) {
     return (
       <div style={styles.appContainer}>
@@ -126,7 +122,6 @@ function AppContent() {
     )
   }
 
-  // Show Quick Transactions prompt if needed
   if (showQuickTxPrompt) {
     return (
       <div style={styles.appContainer}>
@@ -137,7 +132,6 @@ function AppContent() {
     )
   }
 
-  // Show the game once Quick Transactions are enabled
   return (
     <div style={styles.appContainer}>
       <Game />
