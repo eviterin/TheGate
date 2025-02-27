@@ -14,6 +14,7 @@ Modify the `.env` file with your private key (if you're lucky there's one alread
 ```bash
 node scripts/deploy-all.js
 ```
+And that's it. 
 
 ## Smart Contracts
 
