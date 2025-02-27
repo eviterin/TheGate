@@ -16,6 +16,8 @@ npm install
 npm run dev
 ```
 
+And that's it! If you've followed the instructions in the [chainy README](/chainy/README.md), you should be able to go to http://localhost:5173/ and enjoy the game!
+
 ## Architecture
 
 The client follows a hybrid architecture that separates blockchain data from client-specific presentation:
