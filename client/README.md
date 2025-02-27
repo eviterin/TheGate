@@ -1,10 +1,8 @@
 # The Gate Client
 
+This is the frontend application for The Gate, providing a user interface for the onchain deck-building game. While all game logic exists on the blockchain, the client provides visual representation, animations, and user interactions.
+
 ## Getting Started
-
-### Top up your wallet
-
-Use the faucet: https://happy-testnet-sepolia.hub.caldera.xyz/
 
 ### Install dependencies
 
@@ -18,15 +16,22 @@ npm install
 npm run dev
 ```
 
-## Game Data
-The game uses a shared data approach between client and blockchain:
+## Architecture
 
-### Cards
-- Source of truth: [cards.json](../shared/cards.json)
-- Client wrapper: [cards.ts](./src/game/cards.ts)
-  - Adds client-specific fields (e.g. image paths)
+The client follows a hybrid architecture that separates blockchain data from client-specific presentation:
 
-### Encounters
-- Source of truth: [encounters.json](../shared/encounters.json)
-- Client wrapper: [encounters.ts](./src/game/encounters.ts)
-  - Adds client-specific data (positions, names)
+### Client-Side Responsibilities
+- Rendering game state from blockchain
+- Handling user interactions
+- Providing visual and audio feedback
+- Managing animations and transitions
+- Displaying UI elements in appropriate positions
+
+### Data Integration
+
+The client uses shared data files from the [shared directory](../shared) as the source of truth, with client wrappers that add UI-specific information:
+
+- **Cards**: [cards.ts](./src/game/cards.ts) extends the shared card data with visual elements
+- **Encounters**: [encounters.ts](./src/game/encounters.ts) adds positioning and visual information
+
+For detailed information about the data architecture and separation between on-chain and client-side data, see the [shared README](../shared/README.md).
