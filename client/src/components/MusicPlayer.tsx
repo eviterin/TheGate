@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import boomboxIcon from '../assets/misc/boombox.svg';
-import background1 from '../assets/music/background1.mp3';
-import background2 from '../assets/music/background2.mp3';
+import themeMusic from '../assets/music/theme.mp3';
 import './MusicPlayer.css';
 
 interface MusicPlayerProps {
-    track: 'background1.mp3' | 'background2.mp3';
+    track?: string;
+    currentFloor?: number;
 }
 
 const MusicPlayer: React.FC<MusicPlayerProps> = ({ track }) => {
@@ -14,30 +14,25 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ track }) => {
 
     useEffect(() => {
         // Create audio element with error handling
-        audioRef.current = new Audio(track === 'background1.mp3' ? background1 : background2);
-        audioRef.current.loop = true;
-        audioRef.current.volume = 0.5; // Set a moderate volume
+        if (!audioRef.current) {
+            audioRef.current = new Audio(themeMusic);
+            audioRef.current.loop = true;
+            audioRef.current.volume = 0.5; // Set a moderate volume
 
-        // Wait 2 seconds after finishing the song before looping
-        audioRef.current.addEventListener('ended', () => {
-            setTimeout(() => {
-                audioRef.current?.play();
-            }, 2000);
-        });
+            // Add error handling
+            audioRef.current.addEventListener('error', (e) => {
+                console.error('Audio error:', e);
+            });
 
-        // Add error handling
-        audioRef.current.addEventListener('error', (e) => {
-            console.error('Audio error:', e);
-        });
+            // Add load handling
+            audioRef.current.addEventListener('canplaythrough', () => {
+                console.log('Audio loaded and ready to play');
+            });
 
-        // Add load handling
-        audioRef.current.addEventListener('canplaythrough', () => {
-            console.log('Audio loaded and ready to play');
-        });
-
-        // Activate the audio element (and update the frontend state)
-        audioRef.current.play();
-        setIsPlaying(true);
+            // Activate the audio element (and update the frontend state)
+            audioRef.current.play().catch(e => console.error('Failed to autoplay:', e));
+            setIsPlaying(true);
+        }
 
         return () => {
             if (audioRef.current) {
@@ -46,7 +41,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ track }) => {
                 audioRef.current = null;
             }
         };
-    }, [track]);
+    }, []);
 
     const toggleMusic = async () => {
         if (audioRef.current) {
@@ -85,4 +80,4 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ track }) => {
     );
 };
 
-export default MusicPlayer; 
+export default MusicPlayer;

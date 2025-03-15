@@ -8,7 +8,7 @@ import MusicPlayer from './components/MusicPlayer'
 import LoadingIndicator from './components/LoadingIndicator'
 import Game from './components/Game'
 import { useQuickTransactions } from './hooks/QuickTransactions'
-import { useGameState, useStartRun } from './hooks/GameState'
+import { useGameState } from './hooks/GameState'
 
 const styles = {
   appContainer: {
@@ -128,6 +128,7 @@ function AppContent() {
         <QuickTransactionsPrompt onClose={() => {
           setShowQuickTxPrompt(false)
         }} />
+        <MusicPlayer />
       </div>
     )
   }
@@ -135,6 +136,7 @@ function AppContent() {
   return (
     <div style={styles.appContainer}>
       <Game />
+      <MusicPlayer />
     </div>
   );
 }
@@ -168,7 +170,6 @@ function App() {
       <ContractsProvider>
         <AppContent />
       </ContractsProvider>
-      <MusicPlayer track="background2.mp3" />
     </>
   );
 }

@@ -356,7 +356,7 @@ const Game: React.FC = () => {
         }
 
         // Trigger sound effect along with animation
-        setCurrentSound(card.soundEffect);
+        setCurrentSound(card.name.toLowerCase());
         setSoundType('card');
         setIsSoundPlaying(true);
 
@@ -478,23 +478,33 @@ const Game: React.FC = () => {
 
   // Update handleEndTurn to check for intents
   const handleEndTurn = async () => {
-    if (!canEndTurn()) return;
+    if (!gameState) return;
+    
+    // Check if we're still in combat (runState === 2)
+    // If not, don't try to end the turn as the combat is already over
+    if (gameState.runState !== 2) {
+      console.log('Combat already completed, not ending turn');
+      return;
+    }
+    
+    // Check if all enemies are defeated
+    const allEnemiesDefeated = gameState.enemyCurrentHealth.every((health: number) => health <= 0);
+    if (allEnemiesDefeated) {
+      console.log('All enemies defeated, not ending turn');
+      return;
+    }
 
     try {
-      // Freeze the state BEFORE ending turn
-      const stateBeforeEnemyTurn = await getGameState();
-      if (!stateBeforeEnemyTurn) return;
-      
-      // Freeze the state for the enemy turn
-      setFrozenState(stateBeforeEnemyTurn);
-      
-      // Show enemy turn banner
       setTurnState('transitioning');
+      setShowTurnBanner(true);
       setTurnBannerMessage("Enemy Turn");
       setTurnBannerType('enemy');
-      setShowTurnBanner(true);
       
-      // Apply client-side predictions for enemy turn
+      // Freeze the current state for animations
+      const stateBeforeEnemyTurn = { ...gameState };
+      setFrozenState(stateBeforeEnemyTurn);
+      
+      // Predict what will happen on enemy turn for animations
       const enemyTurnPrediction = predictEnemyTurn(stateBeforeEnemyTurn);
       
       // Start blockchain transaction immediately

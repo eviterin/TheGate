@@ -1,17 +1,18 @@
-// Import all sound files
+// Import card sound files
 import smiteSound from '../assets/soundeffects/smite.wav';
+import praySound from '../assets/soundeffects/pray.wav';
+
+// Import enemy sound files
 import enemyAttackSound from '../assets/soundeffects/enemy_attack.wav';
 import enemyBlockSound from '../assets/soundeffects/enemy_block.wav';
 import enemyBuffSound from '../assets/soundeffects/enemy_buff.wav';
 import enemyHealSound from '../assets/soundeffects/enemy_heal.wav';
 
-// Map of sound file names to their imported paths
-const soundFiles: { [key: string]: string } = {
-    'smite.wav': smiteSound,
-    'enemy_attack.wav': enemyAttackSound,
-    'enemy_block.wav': enemyBlockSound,
-    'enemy_buff.wav': enemyBuffSound,
-    'enemy_heal.wav': enemyHealSound
+// Map card names (lowercase) to their sound files
+const CARD_SOUNDS: Record<string, string> = {
+    'smite': smiteSound,
+    'pray': praySound,
+    // Add more mappings as needed
 };
 
 export class SoundEffectManager {
@@ -26,10 +27,23 @@ export class SoundEffectManager {
         return SoundEffectManager.instance;
     }
 
-    public getCardSoundEffect(cardId: string): { soundPath: string; volume: number } {
-        // Use the imported sound file directly
+    public getCardSoundEffect(cardName: string): { soundPath: string; volume: number } {
+        console.log('🎮 Getting sound for card name:', cardName);
+        
+        // Look up the sound in our mapping
+        const soundPath = CARD_SOUNDS[cardName] || smiteSound;
+        
+        // Log which sound we're using
+        if (CARD_SOUNDS[cardName]) {
+            console.log(`✅ Found sound for ${cardName}`);
+        } else {
+            console.log(`⚠️ No sound found for ${cardName}, using fallback`);
+        }
+        
+        console.log('🎵 Using sound path:', soundPath);
+        
         return {
-            soundPath: smiteSound,
+            soundPath,
             volume: 0.5
         };
     }
@@ -70,4 +84,4 @@ export class SoundEffectManager {
 }
 
 // Export a singleton instance
-export const soundEffectManager = SoundEffectManager.getInstance(); 
+export const soundEffectManager = SoundEffectManager.getInstance();
