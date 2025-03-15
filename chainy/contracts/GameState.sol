@@ -121,6 +121,7 @@ contract GameState {
         data.extraCardDrawEnabled = false;
         data.hasProtectionBlessing = false;
         data.lastChosenCard = 0;
+        data.currentFloor = 0;
     }
     
     function chooseRoom(uint8 option) public {
