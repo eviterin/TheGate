@@ -146,7 +146,8 @@ const Game: React.FC = () => {
             cardData.length > 0 && 
             !hasAutoEndedTurn && 
             canEndTurn() && 
-            (!hasPlayableCards || state?.currentMana === 0 || !state?.hand?.length)) {
+            (!hasPlayableCards || state?.currentMana === 0 || !state?.hand?.length) &&
+            !state.enemyCurrentHealth.every((health: number) => health <= 0)) {
           setHasAutoEndedTurn(true);
           handleEndTurn();
         }
@@ -487,10 +488,9 @@ const Game: React.FC = () => {
   const handleEndTurn = async () => {
     if (!gameState) return;
     
-    // Check if we're still in combat (runState === 2)
-    // If not, don't try to end the turn as the combat is already over
+    // Don't try to end turn if we're not in combat or if we're in reward state
     if (gameState.runState !== 2) {
-      console.log('Combat already completed, not ending turn');
+      console.log('Not in combat state, not ending turn');
       return;
     }
     

@@ -4,6 +4,7 @@ import enemyBlockSound from '../assets/soundeffects/enemy_block.wav';
 import enemyBuffSound from '../assets/soundeffects/enemy_buff.wav';
 import enemyHealSound from '../assets/soundeffects/enemy_heal.wav';
 import enemyDeathSound from '../assets/soundeffects/enemy_death.wav';
+import enemyBiteSound from '../assets/soundeffects/enemy_bite.wav';
 import heroDeathSound from '../assets/soundeffects/hero_death.wav';
 import victorySound from '../assets/soundeffects/victory.wav';
 
@@ -22,7 +23,8 @@ const INTENT_SOUNDS: Record<number, string> = {
     1000: enemyBlockSound,  // Block
     1002: enemyHealSound,   // Heal
     1003: enemyBuffSound,   // Buff
-    1005: enemyHealSound    // Heal All
+    1005: enemyHealSound,   // Heal All
+    1006: enemyBiteSound    // Vampiric Bite
 };
 
 // Default attack sound for intents not in the mapping

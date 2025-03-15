@@ -258,11 +258,11 @@ const GameEntity: React.FC<GameEntityProps> = ({
     
     const basePosition = levelConfig.enemyPositions[position] || { x: 50, y: 50 };
     
-    // If enemy is dead, make them fall down by their height (scale * 40)
+    // If enemy is dead, make them fall outside of screen
     if (!isHero && health <= 0) {
       return {
         x: basePosition.x,
-        y: basePosition.y + (scale * 40)
+        y: basePosition.y + 100
       };
     }
     

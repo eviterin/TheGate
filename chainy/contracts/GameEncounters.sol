@@ -253,10 +253,11 @@ contract GameEncounters {
         } else if (floor == 5) {
             if (data.currentHealth[0] > 0) {
                 data.intents[0] = INTENT_BLOCK_AND_ATTACK;
-            } else if (data.currentHealth[1] > 0) {
+            }
+            if (data.currentHealth[1] > 0) {
                 data.intents[1] = INTENT_VAMPIRIC_BITE;
             }
-        } else {
+        } else if (floor > 5) {
             for (uint i = 0; i < data.types.length; i++) {
                 if (data.currentHealth[i] > 0) {
                     uint8 enemyType = data.types[i];
