@@ -286,7 +286,12 @@ const GameEntity: React.FC<GameEntityProps> = ({
     return (
       <div style={{
         position: 'absolute',
-        bottom: `${(isHero ? -25 : -45) * (scale || 1)}px`,
+        // If enemy is below y=60, show intent above, otherwise below
+        ...((!isHero && entityPosition.y > 60) ? {
+          top: `${-65 * (scale || 1)}px`,
+        } : {
+          bottom: `${(isHero ? -0 : -45) * (scale || 1)}px`,
+        }),
         left: '50%',
         transform: 'translateX(-50%)',
         backgroundColor: 'rgba(0, 0, 0, 0.7)',

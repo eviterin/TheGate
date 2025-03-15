@@ -22,7 +22,7 @@
             "numericId": 3,
             "id": "ascend",
             "name": "Unfold Truth",
-            "description": "Deal 7 damage. Draw a card.",
+            "description": "Deal 7 damage. Draw an additional card next turn.",
             "manaCost": 1,
             "targeted": true,
             "animationType": "zigzag"
@@ -49,7 +49,7 @@
             "numericId": 6,
             "id": "divine_revelation",
             "name": "Unveil",
-            "description": "Gain 100 block. Draw 3 cards.",
+            "description": "Gain 100 block. Draw an additional 3 cards next turn.",
             "manaCost": 3,
             "targeted": false,
             "animationType": "flip"
@@ -67,7 +67,7 @@
             "numericId": 8,
             "id": "pray",
             "name": "Seek Guidance",
-            "description": "Draw 2 cards.",
+            "description": "Draw an additional 2 cards next turn.",
             "manaCost": 1,
             "targeted": false,
             "animationType": "flip"
