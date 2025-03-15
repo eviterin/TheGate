@@ -954,8 +954,8 @@ const Game: React.FC = () => {
                   </div>
                 </div>
               )}
-              {/* Only show abandon button when not in whale room and not at the gate - use exact same condition as pile buttons */}
-              {(!gameState || (gameState.runState !== 1 && gameState.runState !== 0)) && (
+              {/* Only show abandon button when not at the gate */}
+              {(!gameState || gameState.runState !== 0) && (
                 <button 
                   className="menu-button abandon-button"
                   onClick={() => setShowAbandonConfirmation(true)}
@@ -976,8 +976,10 @@ const Game: React.FC = () => {
                 selectedCardIndex={selectedCardIndex}
                 cardData={cardData}
                 currentMana={optimisticMana ?? (gameState?.currentMana || 0)}
-                isVisible={isHandVisible && (!gameState || gameState.runState !== 0)}
+                isVisible={(!gameState || (gameState.runState !== 1 && gameState.runState !== 0))}
                 cardIntents={cardIntents}
+                isCommitting={isCommittingIntents}
+                isEnemyTurn={turnState === 'enemy' || turnState === 'transitioning'}
               />
             </div>
 

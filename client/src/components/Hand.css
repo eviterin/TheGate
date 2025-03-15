@@ -125,6 +125,19 @@
   filter: grayscale(0.5);
 }
 
+/* Style for cards when intents are being committed */
+.hand-card.committing {
+  opacity: 0.5;
+  filter: grayscale(0.8) brightness(0.6);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.hand-card.committing:hover .card {
+  transform: none;
+  filter: grayscale(0.8) brightness(0.6);
+}
+
 .hand-card .intent-number {
   position: absolute;
   top: -10px;
