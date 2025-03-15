@@ -87,7 +87,9 @@ const Game: React.FC = () => {
   const [isAbandoning, setIsAbandoning] = useState(false);
   const [isApproaching, setIsApproaching] = useState(false);
   const [currentSound, setCurrentSound] = useState<string | undefined>();
+  const [currentIntent, setCurrentIntent] = useState<number | undefined>();
   const [isSoundPlaying, setIsSoundPlaying] = useState(false);
+  const [soundType, setSoundType] = useState<'card' | 'intent'>('card');
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -353,12 +355,9 @@ const Game: React.FC = () => {
           targetPosition = levelConfig.enemyPositions[intent.targetIndex];
         }
 
-        // Debug log the card and sound effect
-        console.log('Playing card:', card);
-        console.log('Sound effect to play:', card.soundEffect);
-
         // Trigger sound effect along with animation
         setCurrentSound(card.soundEffect);
+        setSoundType('card');
         setIsSoundPlaying(true);
 
         // Create animation state for this card's effect
@@ -373,14 +372,8 @@ const Game: React.FC = () => {
         // Play animation
         setCurrentAnimation(animationState);
         
-        // Wait for animation and sound to complete (increased from 500ms to 1000ms)
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Reset animation
-        setCurrentAnimation(null);
-        
-        // Add a small delay before stopping the sound
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Wait for animation to complete 
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Reset sound trigger
         setIsSoundPlaying(false);
@@ -405,6 +398,7 @@ const Game: React.FC = () => {
         
         // Complete animation
         await new Promise(resolve => setTimeout(resolve, 100));
+        setCurrentAnimation(null);
       }
 
       // Wait for transaction to complete
@@ -533,6 +527,21 @@ const Game: React.FC = () => {
           // Add shorter delay before each enemy acts
           await new Promise(resolve => setTimeout(resolve, 400));
           
+          // Log enemy action and intent
+          console.log('🎮 Enemy action:', {
+            enemyIndex: animation.enemyIndex,
+            intent: animation.intent,
+            type: animation.intent < 1000 ? 'attack' :
+                  animation.intent === 1000 ? 'block' :
+                  animation.intent === 1002 || animation.intent === 1005 ? 'heal' :
+                  animation.intent === 1003 ? 'buff' : 'unknown'
+          });
+
+          // Trigger sound effect for enemy intent
+          setCurrentIntent(animation.intent);
+          setSoundType('intent');
+          setIsSoundPlaying(true);
+
           // Create animation state for this enemy
           const animationState: AnimationState = {
             sourceType: 'enemy',
@@ -549,7 +558,10 @@ const Game: React.FC = () => {
           setCurrentAnimation(animationState);
           
           // Wait for most of the animation to complete
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Reset sound trigger
+          setIsSoundPlaying(false);
           
           // Update state for this enemy's action
           currentState.enemyHealth[animation.enemyIndex] = enemyTurnPrediction.newEnemyHealth[animation.enemyIndex];
@@ -769,7 +781,9 @@ const Game: React.FC = () => {
     <>
       <SoundManager 
         soundEffect={currentSound}
+        intent={currentIntent}
         isPlaying={isSoundPlaying}
+        type={soundType}
       />
       <div className="game-wrapper">
         <div className="game-container">
