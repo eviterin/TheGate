@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import InfoBar from './InfoBar';
 import Hand from './Hand';
 import GameEntity from './GameEntity';
@@ -21,6 +21,7 @@ import WhaleRoom from './WhaleRoom';
 import GameOver from './GameOver';
 import RewardSelection from './RewardSelection';
 import CardPileViewer from './CardPileViewer';
+import SoundManager from './SoundManager';
 
 
 interface AnimationState {
@@ -85,6 +86,8 @@ const Game: React.FC = () => {
   const [showAbandonConfirmation, setShowAbandonConfirmation] = useState(false);
   const [isAbandoning, setIsAbandoning] = useState(false);
   const [isApproaching, setIsApproaching] = useState(false);
+  const [currentSound, setCurrentSound] = useState<string | undefined>();
+  const [isSoundPlaying, setIsSoundPlaying] = useState(false);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -350,6 +353,15 @@ const Game: React.FC = () => {
           targetPosition = levelConfig.enemyPositions[intent.targetIndex];
         }
 
+        // Debug log the card and sound effect
+        console.log('Playing card:', card);
+        console.log('Sound effect to play:', card.soundEffect);
+
+        // Trigger sound effect along with animation
+        setCurrentSound(card.soundEffect);
+        setIsSoundPlaying(true);
+
+        // Create animation state for this card's effect
         const animationState: AnimationState = {
           sourceType: 'hero',
           sourceIndex: 0,
@@ -361,8 +373,17 @@ const Game: React.FC = () => {
         // Play animation
         setCurrentAnimation(animationState);
         
-        // Wait for animation to complete 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for animation and sound to complete (increased from 500ms to 1000ms)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Reset animation
+        setCurrentAnimation(null);
+        
+        // Add a small delay before stopping the sound
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Reset sound trigger
+        setIsSoundPlaying(false);
         
         // Now update the UI state based on this card's effect
         // Update the cumulative state with this card's effects
@@ -384,7 +405,6 @@ const Game: React.FC = () => {
         
         // Complete animation
         await new Promise(resolve => setTimeout(resolve, 100));
-        setCurrentAnimation(null);
       }
 
       // Wait for transaction to complete
@@ -747,6 +767,10 @@ const Game: React.FC = () => {
 
   return (
     <>
+      <SoundManager 
+        soundEffect={currentSound}
+        isPlaying={isSoundPlaying}
+      />
       <div className="game-wrapper">
         <div className="game-container">
           <div className="side-decorations left"></div>

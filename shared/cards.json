@@ -7,7 +7,8 @@
             "description": "Deal 6 damage.",
             "manaCost": 1,
             "targeted": true,
-            "animationType": "slash"
+            "animationType": "slash",
+            "soundEffect": "smite.wav"
         },
         {
             "numericId": 2,
@@ -16,7 +17,8 @@
             "description": "Gain 6 block.",
             "manaCost": 1,
             "targeted": false,
-            "animationType": "float"
+            "animationType": "float",
+            "soundEffect": "smite.wav"
         },
         {
             "numericId": 3,
@@ -25,7 +27,8 @@
             "description": "Deal 7 damage. Draw a card.",
             "manaCost": 1,
             "targeted": true,
-            "animationType": "zigzag"
+            "animationType": "zigzag",
+            "soundEffect": "smite.wav"
         },
         {
             "numericId": 4,
@@ -34,7 +37,8 @@
             "description": "Deal 8 damage to ALL enemies.",
             "manaCost": 2,
             "targeted": true,
-            "animationType": "zigzag"
+            "animationType": "zigzag",
+            "soundEffect": "smite.wav"
         },
         {
             "numericId": 5,
@@ -43,7 +47,8 @@
             "description": "Deal 5 damage. Gain 5 block.",
             "manaCost": 1,
             "targeted": true,
-            "animationType": "flip"
+            "animationType": "flip",
+            "soundEffect": "smite.wav"
         },
         {
             "numericId": 6,
@@ -52,7 +57,8 @@
             "description": "Gain 100 block. Draw 3 cards.",
             "manaCost": 3,
             "targeted": false,
-            "animationType": "flip"
+            "animationType": "flip",
+            "soundEffect": "smite.wav"
         },
         {
             "numericId": 7,
@@ -61,7 +67,8 @@
             "description": "Deal 8 damage. If you have 4 or more cards in hand, deal 8 more.",
             "manaCost": 2,
             "targeted": true,
-            "animationType": "flip"
+            "animationType": "flip",
+            "soundEffect": "smite.wav"
         },
         {
             "numericId": 8,
@@ -70,7 +77,8 @@
             "description": "Draw 2 cards.",
             "manaCost": 1,
             "targeted": false,
-            "animationType": "flip"
+            "animationType": "flip",
+            "soundEffect": "smite.wav"
         },
         {
             "numericId": 9,
@@ -79,7 +87,8 @@
             "description": "Gain 10 block. Heal 3 HP.",
             "manaCost": 2,
             "targeted": false,
-            "animationType": "flip"
+            "animationType": "flip",
+            "soundEffect": "smite.wav"
         },
         {
             "numericId": 10,
@@ -88,7 +97,8 @@
             "description": "Deal 5 damage. If enemy is at full HP, deal double.",
             "manaCost": 1,
             "targeted": true,
-            "animationType": "flip"
+            "animationType": "flip",
+            "soundEffect": "smite.wav"
         },
         {
             "numericId": 11,
@@ -97,7 +107,8 @@
             "description": "Deal 7 damage. Ignores block.",
             "manaCost": 1,
             "targeted": true,
-            "animationType": "flip"
+            "animationType": "flip",
+            "soundEffect": "smite.wav"
         }
     ]
 } 

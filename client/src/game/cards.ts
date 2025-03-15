@@ -9,6 +9,7 @@ interface CardDataJson {
         manaCost: number;
         targeted: boolean;
         animationType: CardAnimationType;
+        soundEffect: string;
     }[];
 }
 
@@ -23,6 +24,7 @@ export interface CardData {
     targeted: boolean;
     imageUrl: string;
     animationType: CardAnimationType;
+    soundEffect: string;
 }
 
 const typedCardData = cardData as CardDataJson;
