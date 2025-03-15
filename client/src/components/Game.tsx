@@ -23,13 +23,28 @@ import CardPileViewer from './CardPileViewer';
 import SoundManager from './SoundManager';
 import { soundEffectManager } from '../game/SoundEffectManager';
 
-
 interface AnimationState {
   sourceType: 'hero' | 'enemy';
   sourceIndex: number;
   targetPosition: Position;
   timestamp: number;
   animationType?: CardAnimationType;
+}
+
+interface GameStateUpdate {
+  currentHealth: number;
+  currentBlock: number;
+  enemyCurrentHealth: number[];
+  enemyBlock: number[];
+  currentMana: number;
+  hand?: number[];
+  deck?: number[];
+  discard?: number[];
+  draw?: number[];
+  enemyTypes?: number[];
+  enemyIntents?: number[];
+  currentFloor?: number;
+  runState?: number;
 }
 
 const calculateTotalManaCost = (intents: CardIntent[], cardData: Array<{ numericId: number; manaCost: number }>): number => {
@@ -230,20 +245,19 @@ const Game: React.FC = () => {
 
     const currentMana = gameState.currentMana;
     if (totalManaNeeded > currentMana) {
-
       return;
     }
 
-    // Add to intents and update optimistic mana
-    const newIntent: CardIntent = {
+    // Sort intents by cardIndex to maintain consistent order
+    const newIntents = [...cardIntents, {
       id: Date.now().toString(),
       cardIndex: selectedCardIndex,
       targetIndex,
       cardId,
       cardName: card.name
-    };
+    }].sort((a, b) => a.cardIndex - b.cardIndex);
 
-    setCardIntents(prev => [...prev, newIntent]);
+    setCardIntents(newIntents);
     setOptimisticMana(currentMana - totalManaNeeded);
     setSelectedCardIndex(null);
   };
@@ -402,24 +416,28 @@ const Game: React.FC = () => {
         currentState.mana -= cardEffect.manaSpent;
 
         // Update UI
-        setGameState((prev: GameState) => ({
-          ...prev,
-          currentHealth: currentState.heroHealth,
-          currentBlock: currentState.heroBlock,
-          enemyCurrentHealth: currentState.enemyHealth,
-          enemyBlock: currentState.enemyBlock,
-          currentMana: currentState.mana
-        }));
+        setGameState((prev: GameStateUpdate | null) => {
+          if (!prev) return prev;
+          const update: Partial<GameStateUpdate> = {
+            currentHealth: currentState.heroHealth,
+            currentBlock: currentState.heroBlock,
+            enemyCurrentHealth: currentState.enemyHealth,
+            enemyBlock: currentState.enemyBlock,
+            currentMana: currentState.mana
+          };
+          return { ...prev, ...update };
+        });
         
         await new Promise(resolve => setTimeout(resolve, 100));
         setCurrentAnimation(null);
 
-        if (cardEffect.enemyDied) {
+        // Only play death sound if enemy wasn't already dead before this card
+        if (cardEffect.enemyDied && currentState.enemyHealth[intent.targetIndex] <= 0 && stateBeforeAnimations.enemyCurrentHealth[intent.targetIndex] > 0) {
           soundEffectManager.playEventSound('enemyDeath');
         }
       }
 
-      // Wait for transaction AND ensure latest state
+      // Wait for transaction to complete and get final state
       await transactionPromise;
       const latestState = await getLatestState();
 
@@ -432,9 +450,11 @@ const Game: React.FC = () => {
       setHasAutoEndedTurn(true);
       setOptimisticUpdatesEnabled(true);
 
-      // Automatically end turn after committing cards
-      handleEndTurn();
-
+      // Only end turn if not all enemies are defeated
+      const allEnemiesDefeated = latestState.enemyCurrentHealth.every((health: number) => health <= 0);
+      if (!allEnemiesDefeated) {
+        handleEndTurn();
+      }
     } catch (error) {
       console.error('Failed to commit card intents:', error);
       setFrozenState(null);
@@ -513,7 +533,6 @@ const Game: React.FC = () => {
       // Wait for transaction to complete and get final state
       await endTurnPromise;
       const latestState = await getLatestState();
-      if (!latestState) return;
 
       // Store initial state for animations
       const initialState = { ...gameState };
@@ -544,10 +563,13 @@ const Game: React.FC = () => {
           const damageToHero = latestState.enemyIntents[i];
           const newHealth = Math.max(0, initialState.currentHealth - damageToHero);
           
-          setGameState((prev: GameState) => ({
-            ...prev,
-            currentHealth: newHealth
-          }));
+          setGameState((prev: GameStateUpdate | null) => {
+            if (!prev) return prev;
+            const update: Partial<GameStateUpdate> = {
+              currentHealth: newHealth
+            };
+            return { ...prev, ...update };
+          });
           
           // Reset animation and sound
           setCurrentAnimation(null);
