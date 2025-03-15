@@ -79,7 +79,7 @@ function appendToDeployedContracts(contractInfo) {
 
 async function main() {
     // Connect to HappyChain Sepolia
-    const provider = new ethers.JsonRpcProvider("https://happy-testnet-sepolia.rpc.caldera.xyz/http");
+    const provider = new ethers.JsonRpcProvider("https://rpc.testnet.happy.tech/http");
     
     // Load your wallet using private key from .env
     const privateKey = process.env.PRIVATE_KEY;
