@@ -147,12 +147,20 @@ const Game: React.FC = () => {
         setGameState(state);
         setIsLoadingGameState(false);
         
+        // Always update hand and mana when not in optimistic mode
+        if (!optimisticUpdatesEnabled) {
+          setOptimisticHand(state.hand || []);
+          setOptimisticMana(state.currentMana || 0);
+        }
+
+        // Reset auto-end turn flag when floor/run state changes
         if (!gameState || !state || 
             state.currentFloor !== gameState.currentFloor || 
             state.runState !== gameState.runState) {
           setHasAutoEndedTurn(false);
         }
         
+        // Check if we can auto-end turn
         const hasPlayableCards = cardData.length > 0 && state?.hand?.some(cardId => {
           const card = cardData.find(c => c.numericId === cardId);
           return card && card.manaCost <= (state.currentMana || 0);
@@ -170,6 +178,7 @@ const Game: React.FC = () => {
           handleEndTurn();
         }
 
+        // Reset auto-end turn flag if we can play something
         if (isInCombat && state?.currentMana && state.currentMana > 0) {
           const canPlaySomething = state.hand?.some(cardId => {
             const card = cardData.find(c => c.numericId === cardId);
@@ -187,24 +196,14 @@ const Game: React.FC = () => {
         if (state?.runState === 3) {
           setCardIntents([]);
         }
-        
-        if (!optimisticUpdatesEnabled) {
-          setOptimisticHand(state?.hand || []);
-          setOptimisticMana(state?.currentMana || 0);
-        }
       } catch (error) {
         console.error('Failed to fetch game state:', error);
         setIsLoadingGameState(false);
-        
-        if (gameState) {
-          setOptimisticHand(gameState.hand || []);
-          setOptimisticMana(gameState.currentMana);
-        }
       }
     };
 
     fetchGameState();
-    interval = setInterval(fetchGameState, 500);
+    interval = window.setInterval(fetchGameState, 500);
     
     return () => {
       mounted = false;
@@ -521,14 +520,21 @@ const Game: React.FC = () => {
     try {
       // Start transition to enemy turn
       setTurnState('transitioning');
-      setShowTurnBanner(true);
+      setShowTurnBanner(false);
+      await new Promise(resolve => setTimeout(resolve, 400));
       setTurnBannerMessage("Enemy Turn");
       setTurnBannerType('enemy');
+      setShowTurnBanner(true);
+      
+      // Hide enemy turn banner after 2 seconds
+      setTimeout(() => {
+        setShowTurnBanner(false);
+      }, 2000);
       
       // Start transaction and get final state
       const endTurnPromise = endTurnAction();
       
-      // Show enemy turn banner
+      // Wait a moment after banner hides before starting enemy actions
       await new Promise(resolve => setTimeout(resolve, 800));
       setTurnState('enemy');
       setFrozenState(gameState); // Freeze state during enemy turn
@@ -597,14 +603,20 @@ const Game: React.FC = () => {
       setTurnBannerType('player');
       setShowTurnBanner(true);
       
+      // Hide banner after 2 seconds
       setTimeout(() => {
         setShowTurnBanner(false);
-        setTurnState('player');
-        setFrozenState(null); // Unfreeze state after enemy turn
-        setOptimisticHand(latestState.hand || []);
-        setOptimisticMana(latestState.currentMana || 0);
-      }, 1000);
+      }, 2000);
       
+      // Complete turn transition
+      setTurnState('player');
+      setFrozenState(null);
+      setHasAutoEndedTurn(false);
+      
+      // Update optimistic values with latest state
+      setOptimisticHand(latestState.hand || []);
+      setOptimisticMana(latestState.currentMana || 0);
+      setOptimisticUpdatesEnabled(true);
     } catch (error) {
       console.error('Failed to end turn:', error);
       

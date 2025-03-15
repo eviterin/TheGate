@@ -19,7 +19,7 @@ export const WHALE_ROOM_OPTIONS = [
     id: 3, 
     title: '🛡️ Divine Protection', 
     description: 'Begin each combat with a protective barrier.',
-    effect: 'Start each turn with 5 🛡️'
+    effect: 'Start each combat with 5 🛡️'
   },
   { 
     id: 4, 
