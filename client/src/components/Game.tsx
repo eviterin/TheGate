@@ -408,7 +408,14 @@ const Game: React.FC = () => {
           }
         );
 
-        // Update cumulative state
+        // Only play death sound if enemy wasn't already dead before this card AND this card actually killed it
+        if (cardEffect.enemyDied && 
+            cardEffect.enemyHealth[intent.targetIndex] <= 0 && 
+            currentState.enemyHealth[intent.targetIndex] > 0) {
+          soundEffectManager.playEventSound('enemyDeath');
+        }
+
+        // Update cumulative state AFTER checking for death
         currentState.enemyHealth = cardEffect.enemyHealth;
         currentState.enemyBlock = cardEffect.enemyBlock;
         currentState.heroHealth = cardEffect.heroHealth;
@@ -431,10 +438,6 @@ const Game: React.FC = () => {
         await new Promise(resolve => setTimeout(resolve, 100));
         setCurrentAnimation(null);
 
-        // Only play death sound if enemy wasn't already dead before this card
-        if (cardEffect.enemyDied && currentState.enemyHealth[intent.targetIndex] <= 0 && stateBeforeAnimations.enemyCurrentHealth[intent.targetIndex] > 0) {
-          soundEffectManager.playEventSound('enemyDeath');
-        }
       }
 
       // Wait for transaction to complete and get final state
