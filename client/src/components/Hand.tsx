@@ -12,8 +12,6 @@ interface HandProps {
   currentMana: number; // Add current mana prop
   isVisible?: boolean;
   cardIntents?: CardIntent[]; // Add this prop
-  isCommitting?: boolean; // Add prop to indicate if intents are being committed
-  isEnemyTurn?: boolean; // Add prop to indicate if it's the enemy's turn
 }
 
 const Hand: React.FC<HandProps> = ({ 
@@ -24,9 +22,7 @@ const Hand: React.FC<HandProps> = ({
   cardData,
   currentMana,
   isVisible = true,
-  cardIntents = [],
-  isCommitting = false,
-  isEnemyTurn = false
+  cardIntents = []
 }) => {
   // Convert numeric IDs to card data
   const handCards = useMemo(() => 
@@ -37,9 +33,6 @@ const Hand: React.FC<HandProps> = ({
   [cards, cardData]);
 
   const handleCardClick = (index: number) => {
-    // Don't allow selecting cards when committing intents or during enemy turn
-    if (isCommitting || isEnemyTurn) return;
-    
     // Don't allow selecting cards that are already in intents
     if (cardIntents.some(intent => intent.cardIndex === index)) return;
     onCardSelect?.(index);
@@ -57,7 +50,7 @@ const Hand: React.FC<HandProps> = ({
             return (
               <div 
                 key={`${card.id}-${index}`}
-                className={`hand-card ${selectedCardIndex === index ? 'selected' : ''} ${!canPlay ? 'insufficient-mana' : ''} ${isUsed ? 'used-in-intent' : ''} ${isCommitting || isEnemyTurn ? 'committing' : ''}`}
+                className={`hand-card ${selectedCardIndex === index ? 'selected' : ''} ${!canPlay ? 'insufficient-mana' : ''} ${isUsed ? 'used-in-intent' : ''}`}
                 onClick={() => handleCardClick(index)}
               >
                 {isUsed && (

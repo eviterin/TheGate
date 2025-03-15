@@ -22,6 +22,7 @@ import GameOver from './GameOver';
 import RewardSelection from './RewardSelection';
 import CardPileViewer from './CardPileViewer';
 import SoundManager from './SoundManager';
+import { soundEffectManager } from '../game/SoundEffectManager';
 
 
 interface AnimationState {
@@ -976,10 +977,8 @@ const Game: React.FC = () => {
                 selectedCardIndex={selectedCardIndex}
                 cardData={cardData}
                 currentMana={optimisticMana ?? (gameState?.currentMana || 0)}
-                isVisible={(!gameState || (gameState.runState !== 1 && gameState.runState !== 0))}
+                isVisible={isHandVisible && (!gameState || gameState.runState !== 0)}
                 cardIntents={cardIntents}
-                isCommitting={isCommittingIntents}
-                isEnemyTurn={turnState === 'enemy' || turnState === 'transitioning'}
               />
             </div>
 

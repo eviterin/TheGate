@@ -1,5 +1,7 @@
 // Client-side damage prediction utilities that mirror the smart contract logic
 
+import { soundEffectManager } from './SoundEffectManager';
+
 /**
  * Calculate damage to enemy after applying block
  * @param damage Amount of damage being dealt
@@ -302,6 +304,16 @@ export const predictCardEffect = (
       break;
   }
   
+  // Add sound effect when enemy dies
+  if (enemyDied) {
+    soundEffectManager.playEventSound('enemyDeath');
+  }
+
+  // Check for hero death
+  if (heroHealth <= 0) {
+    soundEffectManager.playEventSound('heroDeath');
+  }
+
   return {
     enemyHealth,
     enemyBlock,

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Card from './Card';
 import './RewardSelection.css';
+import { soundEffectManager } from '../game/SoundEffectManager';
 
 interface RewardSelectionProps {
   availableRewards: number[];
@@ -19,6 +20,11 @@ const RewardSelection: React.FC<RewardSelectionProps> = ({
   onConfirmReward,
   isChoosingReward
 }) => {
+  useEffect(() => {
+    // Play victory sound when rewards are shown
+    soundEffectManager.playEventSound('victory');
+  }, []); // Empty deps array means this runs once when component mounts
+
   return (
     <div className="reward-overlay">
       <div className="reward-content">
