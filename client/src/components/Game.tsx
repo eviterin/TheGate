@@ -758,6 +758,24 @@ const Game: React.FC = () => {
     }
   }, [gameState?.runState]);
 
+  // Add effect to manage hand visibility based on game state
+  useEffect(() => {
+    if (!gameState) return;
+    
+    // Hide hand at the gate (room 0)
+    if (gameState.runState === 0 && gameState.currentFloor === 0) {
+      setIsHandVisible(false);
+    } 
+    // Show hand in combat
+    else if (gameState.runState === 2) {
+      setIsHandVisible(true);
+    }
+    // Show hand in card reward screen
+    else if (gameState.runState === 3) {
+      setIsHandVisible(true);
+    }
+  }, [gameState?.runState, gameState?.currentFloor]);
+
   // Replace the checkAndApproachGate effect with this simpler version
   useEffect(() => {
     let mounted = true;
@@ -911,8 +929,8 @@ const Game: React.FC = () => {
 
           <div className="bottom-area">
             <div className="bottom-left">
-              {/* Only show pile buttons when not in whale room */}
-              {(!gameState || gameState.runState !== 1) && (
+              {/* Only show pile buttons when not in whale room and not at the gate */}
+              {(!gameState || (gameState.runState !== 1 && gameState.runState !== 0)) && (
                 <div className="pile-and-mana">
                   <div className="pile-buttons">
                     <button 
@@ -936,16 +954,19 @@ const Game: React.FC = () => {
                   </div>
                 </div>
               )}
-              <button 
-                className="menu-button abandon-button"
-                onClick={() => setShowAbandonConfirmation(true)}
-                style={{
-                  background: 'rgba(220, 53, 69, 0.8)',
-                  borderColor: 'rgba(220, 53, 69, 0.3)'
-                }}
-              >
-                Abandon Run
-              </button>
+              {/* Only show abandon button when not in whale room and not at the gate - use exact same condition as pile buttons */}
+              {(!gameState || (gameState.runState !== 1 && gameState.runState !== 0)) && (
+                <button 
+                  className="menu-button abandon-button"
+                  onClick={() => setShowAbandonConfirmation(true)}
+                  style={{
+                    background: 'rgba(220, 53, 69, 0.8)',
+                    borderColor: 'rgba(220, 53, 69, 0.3)'
+                  }}
+                >
+                  Abandon Run
+                </button>
+              )}
             </div>
 
             <div className="bottom-center">
@@ -955,7 +976,7 @@ const Game: React.FC = () => {
                 selectedCardIndex={selectedCardIndex}
                 cardData={cardData}
                 currentMana={optimisticMana ?? (gameState?.currentMana || 0)}
-                isVisible={isHandVisible}
+                isVisible={isHandVisible && (!gameState || gameState.runState !== 0)}
                 cardIntents={cardIntents}
               />
             </div>
