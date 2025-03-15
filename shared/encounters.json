@@ -11,7 +11,8 @@
       "HEAL": 1002,
       "ATTACK_BUFF": 1003,
       "BLOCK_AND_HEAL": 1004,
-      "HEAL_ALL": 1005
+      "HEAL_ALL": 1005,
+      "VAMPIRIC_BITE": 1006
     },
     "ANIMATIONS": {
       "ATTACK": "jump",

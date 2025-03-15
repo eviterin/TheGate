@@ -222,7 +222,7 @@ contract GameState {
             DeckManager.drawCard(data.hand, data.draw, data.discard);
         } else if (playedCardID == CardLibrary.CARD_ID_UNVEIL && data.currentMana >= 3) {
             data.currentMana -= 3;
-            data.currentBlock += 100;
+            data.currentBlock += 10;
             DeckManager.drawCard(data.hand, data.draw, data.discard);
             DeckManager.drawCard(data.hand, data.draw, data.discard);
             DeckManager.drawCard(data.hand, data.draw, data.discard);

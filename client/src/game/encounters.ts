@@ -42,7 +42,6 @@ export interface ClientData {
     enemyPositions: Position[];
     enemyScales?: number[];
     enemyInverted?: boolean[];
-    deadEnemyPositions?: Position[];
 }
 
 export interface ChainData {
@@ -97,8 +96,7 @@ const positions: Record<number, ClientData> = {
         heroInvert: false,
         enemyPositions: [{x: 65, y: 73}, {x: 85, y: 65}],
         enemyScales: [1.5, 1.7],
-        enemyInverted: [false, false],
-        deadEnemyPositions: [{x: 65, y: 75 + 40 * 1.5}, {x: 85, y: 65 + 40 * 1.7}]
+        enemyInverted: [false, false]
     },
     2: {
         heroPosition: {x: 90, y: 70},
@@ -106,8 +104,7 @@ const positions: Record<number, ClientData> = {
         heroInvert: true,
         enemyPositions: [{x: 35, y: 57}, {x: 15, y: 48}],
         enemyScales: [1.8, 1.8],
-        enemyInverted: [false, false],
-        deadEnemyPositions: [{x: 35, y: 57 + 40 * 1.8}, {x: 15, y: 48 + 40 * 1.8}]
+        enemyInverted: [false, false]
     },
     3: {
         heroPosition: {x: 62, y: 75},
@@ -115,8 +112,7 @@ const positions: Record<number, ClientData> = {
         heroInvert: true,
         enemyPositions: [{x: 28, y: 63}],
         enemyScales: [2.0],
-        enemyInverted: [true],
-        deadEnemyPositions: [{x: 28, y: 63 + 40 * 2.0}]
+        enemyInverted: [true]
     },
     4: {
         heroPosition: {x: 42, y: 83},
@@ -124,17 +120,15 @@ const positions: Record<number, ClientData> = {
         heroInvert: false,
         enemyPositions: [{x: 80, y: 84}, {x: 57, y: 82}],
         enemyScales: [1.6, 1.2],
-        enemyInverted: [false, true],
-        deadEnemyPositions: [{x: 82, y: 82 + 40}, {x: 10, y: 35 + 40}]
+        enemyInverted: [false, true]
     },
     5: {
-        heroPosition: BASE_POSITIONS.HERO.RIGHT,
-        heroScale: 1,
+        heroPosition: {x: 80, y: 83},
+        heroScale: 1.3,
         heroInvert: true,
-        enemyPositions: [BASE_POSITIONS.ENEMY.FAR_LEFT, BASE_POSITIONS.ENEMY.LEFT],
-        enemyScales: [1, 1],
-        enemyInverted: [false, false],
-        deadEnemyPositions: [{x: BASE_POSITIONS.ENEMY.FAR_LEFT.x, y: BASE_POSITIONS.ENEMY.FAR_LEFT.y + 40}, {x: BASE_POSITIONS.ENEMY.LEFT.x, y: BASE_POSITIONS.ENEMY.LEFT.y + 40}]
+        enemyPositions: [{x: 30, y: 83}, {x: 50, y: 75}],
+        enemyScales: [2, 1.4],
+        enemyInverted: [false, false]
     },
     6: {
         heroPosition: BASE_POSITIONS.HERO.CENTER,
@@ -142,8 +136,7 @@ const positions: Record<number, ClientData> = {
         heroInvert: false,
         enemyPositions: [BASE_POSITIONS.ENEMY.LEFT, BASE_POSITIONS.ENEMY.RIGHT],
         enemyScales: [1, 1],
-        enemyInverted: [false, true],
-        deadEnemyPositions: [{x: BASE_POSITIONS.ENEMY.LEFT.x, y: BASE_POSITIONS.ENEMY.LEFT.y + 40}, {x: BASE_POSITIONS.ENEMY.RIGHT.x, y: BASE_POSITIONS.ENEMY.RIGHT.y + 40}]
+        enemyInverted: [false, true]
     },
     7: {
         heroPosition: BASE_POSITIONS.HERO.LEFT,
@@ -151,8 +144,7 @@ const positions: Record<number, ClientData> = {
         heroInvert: false,
         enemyPositions: [BASE_POSITIONS.ENEMY.CENTER, BASE_POSITIONS.ENEMY.FAR_RIGHT],
         enemyScales: [1, 1],
-        enemyInverted: [true, true],
-        deadEnemyPositions: [{x: BASE_POSITIONS.ENEMY.CENTER.x, y: BASE_POSITIONS.ENEMY.CENTER.y + 40}, {x: BASE_POSITIONS.ENEMY.FAR_RIGHT.x, y: BASE_POSITIONS.ENEMY.FAR_RIGHT.y + 40}]
+        enemyInverted: [true, true]
     },
     8: {
         heroPosition: {x: 80, y: 92},
@@ -160,8 +152,7 @@ const positions: Record<number, ClientData> = {
         heroInvert: true,
         enemyPositions: [{x: 50, y: 79}, {x: 20, y: 90}],
         enemyScales: [1, 1],
-        enemyInverted: [false, false],
-        deadEnemyPositions: [{x: 50, y: 79 + 40}, {x: 20, y: 90 + 40}]
+        enemyInverted: [false, false]
     },
     9: {
         heroPosition: {x: 50, y: 92},
@@ -169,8 +160,7 @@ const positions: Record<number, ClientData> = {
         heroInvert: false,
         enemyPositions: [{x: 50, y: 75}],
         enemyScales: [1.3],
-        enemyInverted: [true],
-        deadEnemyPositions: [{x: 50, y: 75 + 40 * 1.3}]
+        enemyInverted: [true]
     },
     10: {
         heroPosition: {x: 30, y: 80},
@@ -178,8 +168,7 @@ const positions: Record<number, ClientData> = {
         heroInvert: false,
         enemyPositions: [{x: 70, y: 75}],
         enemyScales: [2.0],
-        enemyInverted: [true],
-        deadEnemyPositions: [{x: 70, y: 75 + 40 * 2.0}]
+        enemyInverted: [true]
     }
 } as const;
 

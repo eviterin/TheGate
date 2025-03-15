@@ -1,4 +1,5 @@
 import { encounters, Position, Encounter } from './encounters';
+import { getEncounter } from './encounters';
 
 export interface LevelConfig {
   level: number;
@@ -9,7 +10,6 @@ export interface LevelConfig {
   enemyPositions: Position[];
   enemyScales?: number[];
   enemyInverted?: boolean[];
-  deadEnemyPositions?: Position[];
 }
 
 // Convert encounter data to level configs
@@ -21,13 +21,22 @@ export const levelConfigs: LevelConfig[] = encounters.map((encounter: Encounter)
   heroInvert: encounter.clientData.heroInvert,
   enemyPositions: encounter.clientData.enemyPositions,
   enemyScales: encounter.clientData.enemyScales,
-  enemyInverted: encounter.clientData.enemyInverted,
-  deadEnemyPositions: encounter.clientData.deadEnemyPositions
+  enemyInverted: encounter.clientData.enemyInverted
 }));
 
 // Utility function to get level configuration
 export const getLevelConfig = (level: number): LevelConfig => {
-  return levelConfigs[level] || levelConfigs[0];
+  const encounter = getEncounter(level);
+  return {
+    level: encounter.level,
+    name: encounter.name,
+    heroPosition: encounter.clientData.heroPosition,
+    heroScale: encounter.clientData.heroScale,
+    heroInvert: encounter.clientData.heroInvert,
+    enemyPositions: encounter.clientData.enemyPositions,
+    enemyScales: encounter.clientData.enemyScales,
+    enemyInverted: encounter.clientData.enemyInverted
+  };
 };
 
 // Utility function to convert percentage position to pixel position

@@ -25,6 +25,7 @@ interface EncountersData {
       ATTACK_BUFF: number;
       BLOCK_AND_HEAL: number;
       HEAL_ALL: number;
+      VAMPIRIC_BITE: number;
     };
     ANIMATIONS: {
       ATTACK: string;
@@ -43,7 +44,7 @@ const ANIMATIONS = (encountersData as EncountersData).constants.ANIMATIONS;
 
 // Helper to determine intent type
 interface IntentInfo {
-  type: 'attack' | 'block' | 'block_and_attack' | 'heal' | 'attack_buff' | 'block_and_heal' | 'heal_all';
+  type: 'attack' | 'block' | 'block_and_attack' | 'heal' | 'attack_buff' | 'block_and_heal' | 'heal_all' | 'vampiric_bite';
   value: number;
   blockValue?: number;
   buffValue?: number;
@@ -91,6 +92,14 @@ const getIntentInfo = (intent: number): IntentInfo => {
       blockValue: 5,
       healValue: 5,
       animation: ANIMATIONS.BLOCK
+    };
+  }
+  if (intent === INTENT_TYPES.VAMPIRIC_BITE) {
+    return {
+      type: 'vampiric_bite',
+      value: 7,
+      healValue: 7,
+      animation: ANIMATIONS.ATTACK
     };
   }
   // Any other number is an attack with that damage value
@@ -246,11 +255,18 @@ const GameEntity: React.FC<GameEntityProps> = ({
     if (isHero) {
       return levelConfig.heroPosition;
     }
-    // Use dead position if enemy is dead and dead position exists
-    if (!isHero && health <= 0 && levelConfig.deadEnemyPositions?.[position]) {
-      return levelConfig.deadEnemyPositions[position];
+    
+    const basePosition = levelConfig.enemyPositions[position] || { x: 50, y: 50 };
+    
+    // If enemy is dead, make them fall down by their height (scale * 40)
+    if (!isHero && health <= 0) {
+      return {
+        x: basePosition.x,
+        y: basePosition.y + (scale * 40)
+      };
     }
-    return levelConfig.enemyPositions[position] || { x: 50, y: 50 }; // Fallback to center if position not found
+    
+    return basePosition;
   };
 
   // Function to render intent information
@@ -267,6 +283,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         case 'heal_all': return '#ff70ff';
         case 'attack_buff': return '#ff9070';
         case 'block_and_heal': return '#70ffff';
+        case 'vampiric_bite': return '#ff3080';
         default: return '#ff7070';
       }
     };
@@ -279,6 +296,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         case 'heal_all': return '#ff40ff';
         case 'attack_buff': return '#ff6040';
         case 'block_and_heal': return '#40ffff';
+        case 'vampiric_bite': return '#ff1060';
         default: return '#ff4040';
       }
     };
@@ -362,6 +380,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
                 `Intends to: Increase attack damage by ${intentInfo.value}` :
               intentInfo.type === 'block_and_heal' ? 
                 `Intends to: Block ${intentInfo.blockValue} damage and heal self for ${intentInfo.healValue} HP` :
+              intentInfo.type === 'vampiric_bite' ?
+                `Intends to: Deal ${intentInfo.value} damage and heal self for ${intentInfo.healValue} HP` :
                 `Intends to: Deal ${intentInfo.value} damage`
             }
           >
@@ -377,6 +397,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
               <>💪+{intentInfo.value}</>
             ) : intentInfo.type === 'block_and_heal' ? (
               <>🛡️{intentInfo.blockValue}+💚{intentInfo.healValue}</>
+            ) : intentInfo.type === 'vampiric_bite' ? (
+              <>🧛‍♂️{intentInfo.value}</>
             ) : (
               <>⚔️{intentInfo.value}</>
             )}

@@ -110,6 +110,7 @@ const Game: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
+    let interval: number;
     
     const fetchGameState = async () => {
       try {
@@ -185,7 +186,7 @@ const Game: React.FC = () => {
     };
 
     fetchGameState();
-    const interval = setInterval(fetchGameState, 500);
+    interval = setInterval(fetchGameState, 500);
     
     return () => {
       mounted = false;
@@ -400,6 +401,11 @@ const Game: React.FC = () => {
         // Complete animation
         await new Promise(resolve => setTimeout(resolve, 100));
         setCurrentAnimation(null);
+
+        // Play death sound if enemy died from this card
+        if (cardEffect.enemyDied) {
+          soundEffectManager.playEventSound('enemyDeath');
+        }
       }
 
       // Wait for transaction to complete
@@ -552,6 +558,11 @@ const Game: React.FC = () => {
           setCurrentIntent(animation.intent);
           setSoundType('intent');
           setIsSoundPlaying(true);
+
+          // Play vampire bite sound directly if it's that intent
+          if (animation.intent === 1006) { // INTENT_VAMPIRIC_BITE
+            soundEffectManager.playEventSound('vampireBite');
+          }
 
           // Create animation state for this enemy
           const animationState: AnimationState = {

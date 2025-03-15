@@ -21,6 +21,7 @@ contract GameEncounters {
     uint16 constant INTENT_ATTACK_BUFF = 1003;
     uint16 constant INTENT_BLOCK_AND_HEAL = 1004;
     uint16 constant INTENT_HEAL_ALL = 1005;
+    uint16 constant INTENT_VAMPIRIC_BITE = 1006;
 
     address public gameStateContract;
     mapping(address => EnemyData) private enemyData;
@@ -66,10 +67,34 @@ contract GameEncounters {
             data.currentHealth = [18, 22];
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
-        } else if (floor == 9) {
+        } else if (floor == 5) {
+            data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
+            data.maxHealth = [38, 38];
+            data.currentHealth = [38, 38];
+            data.blockAmount = new uint16[](2);
+            data.buffs = new uint8[](2);
+        } else if (floor == 6) {
             data.types = [ENEMY_TYPE_B];
-            data.maxHealth = [38];
-            data.currentHealth = [38];
+            data.maxHealth = [45];
+            data.currentHealth = [45];
+            data.blockAmount = new uint16[](1);
+            data.buffs = new uint8[](1);
+        } else if (floor == 7) {
+            data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
+            data.maxHealth = [20, 24];
+            data.currentHealth = [20, 24];
+            data.blockAmount = new uint16[](2);
+            data.buffs = new uint8[](2);
+        } else if (floor == 8) {
+            data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
+            data.maxHealth = [20, 24];
+            data.currentHealth = [20, 24];
+            data.blockAmount = new uint16[](2);
+            data.buffs = new uint8[](2);
+        } else if (floor == 9) {
+            data.types = [ENEMY_TYPE_A];
+            data.maxHealth = [50];
+            data.currentHealth = [50];
             data.blockAmount = new uint16[](1);
             data.buffs = new uint8[](1);
         } else if (floor == 10) {
@@ -78,7 +103,7 @@ contract GameEncounters {
             data.currentHealth = [40];
             data.blockAmount = new uint16[](1);
             data.buffs = new uint8[](1);
-        } else {
+        } else { //should never happen
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
             data.maxHealth = [10, 12];
             data.currentHealth = [10, 12];
@@ -225,8 +250,13 @@ contract GameEncounters {
                 }
                 seed = uint256(keccak256(abi.encodePacked(seed)));
             }
-        }
-        else {
+        } else if (floor == 5) {
+            if (data.currentHealth[0] > 0) {
+                data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+            } else if (data.currentHealth[1] > 0) {
+                data.intents[1] = INTENT_VAMPIRIC_BITE;
+            }
+        } else {
             for (uint i = 0; i < data.types.length; i++) {
                 if (data.currentHealth[i] > 0) {
                     uint8 enemyType = data.types[i];
@@ -238,7 +268,7 @@ contract GameEncounters {
                         if (action == 0) {
                             data.intents[i] = INTENT_BLOCK_5;
                         } else if (action == 1) {
-                            data.intents[i] = INTENT_BLOCK_AND_ATTACK;
+                            data.intents[i] = INTENT_VAMPIRIC_BITE;
                         } else {
                             data.intents[i] = uint16(4 + (seed % 5));
                         }
@@ -289,6 +319,10 @@ contract GameEncounters {
                 }
             }
             return 0;
+        } else if (intent == INTENT_VAMPIRIC_BITE) {
+            // Vampiric bite deals 7 damage and heals for the same amount
+            _healEnemy(player, enemyIndex, 7);
+            return 7;
         } else {
             require(enemyIndex < data.buffs.length, "Invalid enemy index for buff");
             return uint8(intent) + data.buffs[enemyIndex];

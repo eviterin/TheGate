@@ -49,7 +49,7 @@
             "numericId": 6,
             "id": "divine_revelation",
             "name": "Unveil",
-            "description": "Gain 100 block. Draw an additional 3 cards next turn.",
+            "description": "Gain 10 block. Draw an additional 3 cards next turn.",
             "manaCost": 3,
             "targeted": false,
             "animationType": "flip"

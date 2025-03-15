@@ -124,6 +124,7 @@ export const processEnemyIntent = (
   const INTENT_ATTACK_BUFF = 1003;
   const INTENT_BLOCK_AND_HEAL = 1004;
   const INTENT_HEAL_ALL = 1005;
+  const INTENT_VAMPIRIC_BITE = 1006;
   
   let newEnemyBlock = enemyBlock;
   let newEnemyHealth = enemyHealth;
@@ -156,6 +157,17 @@ export const processEnemyIntent = (
   } else if (intentType === INTENT_HEAL_ALL) {
     // Heal all enemies - this is handled separately in the game component
     newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 5);
+  } else if (intentType === INTENT_VAMPIRIC_BITE) {
+    // Vampiric bite - deal 7 damage and heal for 7
+    damageToHero = 7;
+    
+    // Calculate damage to hero
+    const result = calculateDamageToHero(damageToHero, newHeroBlock, newHeroHealth);
+    newHeroHealth = result.newHealth;
+    newHeroBlock = result.newBlock;
+    
+    // Heal enemy
+    newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 7);
   } else if (intentType > 0 && intentType < 1000) {
     // Regular attack intent
     damageToHero = intentType + enemyBuff;
@@ -249,16 +261,18 @@ export const predictCardEffect = (
       enemyDied = balanceResult.isDead;
       break;
       
-    case 6: // Unveil - Gain 100 block. Draw 3 cards.
+    case 6: // Unveil - Gain 10 block. Draw 3 cards.
       manaSpent = 3;
-      heroBlock += 100;
+      heroBlock += 10;
       // Card draw handled separately
       break;
       
     case 7: // Read Scripture - Deal 8 damage. If you have 4+ cards in hand, deal 8 more.
       manaSpent = 2;
       let damage = 8;
-      if (gameState.hand.length >= 4) {
+      // Use current hand size for the check
+      const currentHandSize = gameState.hand?.length ?? 0;
+      if (currentHandSize >= 4) {
         damage = 16;
       }
       const scriptureResult = calculateDamageToEnemy(damage, enemyBlock[targetIndex], enemyHealth[targetIndex]);
@@ -304,11 +318,6 @@ export const predictCardEffect = (
       break;
   }
   
-  // Add sound effect when enemy dies
-  if (enemyDied) {
-    soundEffectManager.playEventSound('enemyDeath');
-  }
-
   // Check for hero death
   if (heroHealth <= 0) {
     soundEffectManager.playEventSound('heroDeath');
@@ -353,6 +362,7 @@ export const predictMultipleCardEffects = (
   
   // Keep track of what cards have been played to adjust indices
   const playedIndices: number[] = [];
+  let remainingHandSize = gameState.hand.length;
   
   for (const play of plays) {
     // Adjust card index based on what's been played already
@@ -376,7 +386,8 @@ export const predictMultipleCardEffects = (
         enemyBlock: enemyBlock,
         currentHealth: heroHealth,
         currentBlock: heroBlock,
-        currentMana: remainingMana
+        currentMana: remainingMana,
+        hand: { length: remainingHandSize } // Pass current hand size
       }
     );
     
@@ -388,8 +399,9 @@ export const predictMultipleCardEffects = (
     remainingMana -= prediction.manaSpent;
     if (prediction.enemyDied) enemyDied = true;
     
-    // Record that we've played this card
+    // Record that we've played this card and update hand size
     playedIndices.push(play.cardIndex);
+    remainingHandSize--;
   }
   
   return {
