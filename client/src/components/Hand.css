@@ -36,24 +36,29 @@
   position: relative;
   flex-shrink: 0;
   transform: scale(0.95);
-  margin: 0 -25px;
+  margin: 0 -40px;
   z-index: 1;
 }
 
 /* Progressive scaling based on number of cards */
 .hand:has(.hand-card:nth-child(n+5)) .hand-card {
   transform: scale(0.85);
-  margin: 0 -35px;
+  margin: 0 -50px;
 }
 
 .hand:has(.hand-card:nth-child(n+7)) .hand-card {
   transform: scale(0.75);
-  margin: 0 -40px;
+  margin: 0 -55px;
 }
 
 .hand:has(.hand-card:nth-child(n+9)) .hand-card {
-  transform: scale(0.7);
-  margin: 0 -42px;
+  transform: scale(0.65);
+  margin: 0 -60px;
+}
+
+.hand:has(.hand-card:nth-child(n+11)) .hand-card {
+  transform: scale(0.55);
+  margin: 0 -65px;
 }
 
 .hand-card .card {
