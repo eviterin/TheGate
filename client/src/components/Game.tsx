@@ -52,7 +52,6 @@ const Game: React.FC = () => {
   const [draw, setDraw] = useState<number[]>([]);
   const [discard, setDiscard] = useState<number[]>([]);
   const [gameState, setGameState] = useState<any>(null);
-  const [frozenState, setFrozenState] = useState<any>(null);
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null);
   const [isHandVisible, setIsHandVisible] = useState(true);
   const [isGateOpen, setIsGateOpen] = useState(false);
@@ -76,7 +75,6 @@ const Game: React.FC = () => {
   const [isChoosingRoom, setIsChoosingRoom] = useState(false);
   const [isChoosingReward, setIsChoosingReward] = useState(false);
   const [currentAnimation, setCurrentAnimation] = useState<AnimationState | null>(null);
-  const [animationsEnabled] = useState(true);
   const [turnState, setTurnState] = useState<'player' | 'enemy' | 'transitioning'>('player');
   const [showTurnBanner, setShowTurnBanner] = useState(false);
   const [turnBannerMessage, setTurnBannerMessage] = useState('');
@@ -86,13 +84,16 @@ const Game: React.FC = () => {
   const [previousEnemyHealth, setPreviousEnemyHealth] = useState<number[]>([]);
   const [previousEnemyBlock, setPreviousEnemyBlock] = useState<number[]>([]);
   const { playCards: playCardsAction } = usePlayCards();
-  const [pendingCardPlays, setPendingCardPlays] = useState<Array<{cardIndex: number, targetIndex: number}>>([]);
+  const [pendingCardIDs, setPendingCardIDs] = useState<number[]>([]);
+  const [initialHandState, setInitialHandState] = useState<number[]>([]);
   const [showAbandonConfirmation, setShowAbandonConfirmation] = useState(false);
   const [isAbandoning, setIsAbandoning] = useState(false);
   const [isApproaching, setIsApproaching] = useState(false);
   const [currentSound, setCurrentSound] = useState<string | undefined>();
   const [isSoundPlaying, setIsSoundPlaying] = useState(false);
   const [soundType, setSoundType] = useState<'card' | 'intent'>('card');
+  const [needsBlockchainSync, setNeedsBlockchainSync] = useState(false);
+  const [inTurn, setInTurn] = useState(false);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -114,18 +115,11 @@ const Game: React.FC = () => {
       try {
         if (!mounted) return;
 
-        // Only fetch state at the start of player turn or when not in combat
-        const isInCombat = gameState?.runState === 2;
-        if (isInCombat && turnState === 'player' && !frozenState) {
-          // During combat + player turn, only fetch once to sync
-          if (optimisticUpdatesEnabled) return;
-          setOptimisticUpdatesEnabled(true);
-        }
-
+        // Always fetch state, but don't always update the UI with it
         const state = await getGameState();
         if (!mounted || !state) return;
         
-        // When not frozen, update everything
+        // Save previous state for animations
         if (gameState) {
           setPreviousHealth(gameState.currentHealth);
           setPreviousBlock(gameState.currentBlock);
@@ -133,21 +127,48 @@ const Game: React.FC = () => {
           setPreviousEnemyBlock(gameState.enemyBlock);
         }
         
-        setGameState(state);
+        // During a turn, preserve our predicted values
+        if (inTurn && gameState) {
+          // Store the new state but preserve our prediction values
+          setGameState((prev: any) => {
+            if (!prev) return state;
+            return {
+              ...state,
+              currentHealth: prev.currentHealth,
+              currentBlock: prev.currentBlock,
+              enemyCurrentHealth: prev.enemyCurrentHealth,
+              enemyBlock: prev.enemyBlock,
+              // Don't update current mana and hand during a turn
+              currentMana: prev.currentMana,
+              hand: prev.hand
+            };
+          });
+        } else {
+          // Full sync when not in a turn
+          setGameState(state);
+        }
+        
         setIsLoadingGameState(false);
         
-        // Only update hand and mana at start of turn or when not in combat
-        const newIsInCombat = state.runState === 2;
-        if (!newIsInCombat || turnState === 'player') {
+        // Only update optimistic UI when not in a turn
+        if (!inTurn || needsBlockchainSync) {
+          console.log("Syncing UI state with blockchain");
           setOptimisticHand(state.hand || []);
           setOptimisticMana(state.currentMana || 0);
           
-          // Enable optimistic updates when combat starts
+          // Reset flags
+          if (needsBlockchainSync) {
+            setNeedsBlockchainSync(false);
+          }
+          
+          // Enable optimistic updates in combat
+          const newIsInCombat = state.runState === 2;
           if (newIsInCombat) {
             setOptimisticUpdatesEnabled(true);
           }
         }
 
+        // Other state updates
         setDeck(state?.deck || []);
         setDiscard(state?.discard || []);
         setDraw(state?.draw || []);
@@ -168,7 +189,101 @@ const Game: React.FC = () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, [getGameState, gameState, optimisticUpdatesEnabled, frozenState, turnState]);
+  }, [getGameState, gameState, inTurn, needsBlockchainSync]);
+
+  useEffect(() => {
+    if (turnState === 'player') {
+      setNeedsBlockchainSync(true);
+      setInTurn(false);
+    }
+  }, [turnState]);
+
+  useEffect(() => {
+    if (turnState === 'player') {
+      // At player turn start after enemy turn, force a blockchain sync
+      const syncWithBlockchain = async () => {
+        console.log("Player turn starting - syncing with blockchain");
+        const state = await getGameState();
+        if (!state) return;
+
+        // Full sync of all state
+        setGameState(state);
+        setOptimisticHand(state.hand || []);
+        setOptimisticMana(state.currentMana || 0);
+        setInitialHandState([...state.hand]);
+        setPendingCardIDs([]);
+        setOptimisticUpdatesEnabled(true);
+      };
+      
+      syncWithBlockchain();
+    }
+  }, [turnState, getGameState]);
+
+  useEffect(() => {
+    if (turnState === 'player') {
+      setPendingCardIDs([]);
+    }
+  }, [turnState]);
+
+  useEffect(() => {
+    if (gameState?.runState === 2) {
+      setIsChoosingRoom(false);
+      setIsGateOpen(false);
+    }
+  }, [gameState?.runState]);
+
+  useEffect(() => {
+    if (gameState?.runState === 2) { // Combat state
+      setOptimisticHand(gameState.hand || []);
+      setOptimisticMana(gameState.currentMana || 0);
+      setIsHandVisible(true);
+    }
+  }, [gameState?.runState]);
+
+  useEffect(() => {
+    if (!gameState) return;
+    
+    // Hide hand at the gate (room 0)
+    if (gameState.runState === 0 && gameState.currentFloor === 0) {
+      setIsHandVisible(false);
+    } 
+    // Show hand in combat
+    else if (gameState.runState === 2) {
+      setIsHandVisible(true);
+    }
+    // Show hand in card reward screen
+    else if (gameState.runState === 3) {
+      setIsHandVisible(true);
+    }
+  }, [gameState?.runState, gameState?.currentFloor]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const checkAndApproachGate = async () => {
+      if (!gameState || isApproaching) return;
+
+      // Only try to start if we're in the initial state
+      if (gameState.runState === 0) {
+        try {
+          setIsApproaching(true);
+          await startRun();
+        } catch (error) {
+          console.error('Failed to approach the gate:', error);
+          setIsApproaching(false);
+        }
+      } else if (gameState.runState === 1) {
+        // Clear approaching state once we're in the whale room
+        setIsApproaching(false);
+      }
+    };
+
+    checkAndApproachGate();
+
+    return () => {
+      mounted = false;
+    };
+  }, [gameState?.runState, isApproaching]);
 
   const handleCardSelect = (cardIndex: number) => {
     
@@ -182,6 +297,9 @@ const Game: React.FC = () => {
   const handleEntityClick = async (targetIndex: number) => {
     if (selectedCardIndex === null) return;
     
+    // Mark that we're in a turn - preserve optimistic state
+    setInTurn(true);
+    
     const cardId = optimisticHand[selectedCardIndex];
     const card = cardData.find(c => c.numericId === cardId);
     
@@ -190,11 +308,8 @@ const Game: React.FC = () => {
     // Check if we have enough mana
     if (card.manaCost > (optimisticMana || 0)) return;
 
-    // Add card to pending plays queue
-    setPendingCardPlays(prev => [...prev, { 
-      cardIndex: selectedCardIndex,
-      targetIndex: targetIndex
-    }]);
+    // Simply track card ID - no need to track position since we're using IDs
+    setPendingCardIDs(prev => [...prev, cardId]);
 
     // Predict and apply card effect immediately
     const levelConfig = getLevelConfig(gameState.currentFloor);
@@ -263,17 +378,46 @@ const Game: React.FC = () => {
   };
 
   const handleEndTurn = async () => {
+    // Still in a turn for enemy actions
+    setInTurn(true);
     setTurnState('transitioning');
-    setOptimisticUpdatesEnabled(false); // Disable optimistic updates when turn ends
-    
-    // Play all queued cards in one transaction
-    if (pendingCardPlays.length > 0) {
-      await playCardsAction(pendingCardPlays);
-      setPendingCardPlays([]); // Clear queue after sending
+    setOptimisticUpdatesEnabled(false);
+
+    try {
+      // Process all queued cards in a single transaction
+      if (pendingCardIDs.length > 0 && initialHandState.length > 0) {
+        // For each card ID we played, find its original index in the initial hand state
+        const cardPlays = pendingCardIDs
+          .map(cardId => {
+            const indexInInitialHand = initialHandState.indexOf(cardId);
+            return {
+              cardIndex: indexInInitialHand,
+              targetIndex: 0
+            };
+          })
+          .filter(play => play.cardIndex !== -1); // Skip any cards not found in initial hand
+        
+        // Send the full batch with original indices
+        if (cardPlays.length > 0) {
+          console.log('Playing multiple cards...', { plays: cardPlays });
+          await playCardsAction(cardPlays);
+        }
+      }
+      
+      // Only end turn if we didn't play any cards (otherwise the cards are already played)
+      if (pendingCardIDs.length === 0) {
+        // Start end turn in background without waiting
+        console.log('Ending turn...');
+        endTurnAction();
+      }
+    } catch (error) {
+      console.error('Error during end turn:', error);
+      // If there's an error playing cards, still try to end turn
+      endTurnAction();
     }
     
-    // Start end turn in background - only call it once
-    const endTurnPromise = endTurnAction();
+    // Clear queue after processing
+    setPendingCardIDs([]);
     
     await new Promise(resolve => setTimeout(resolve, 800));
     setTurnState('enemy');
@@ -282,7 +426,7 @@ const Game: React.FC = () => {
     const currentState = gameState;
     if (!currentState) return;
 
-    await processEnemyTurn(endTurnPromise, currentState, {
+    await processEnemyTurn(currentState, {
       enemyHealth: currentState.enemyCurrentHealth,
       enemyBlock: currentState.enemyBlock,
       heroHealth: currentState.currentHealth,
@@ -291,9 +435,8 @@ const Game: React.FC = () => {
     });
   };
 
-  // Add a new function to handle enemy turn processing with optimistic updates
+  // Simplified enemy turn processing without waiting for chain
   const processEnemyTurn = async (
-    playerTurnPromise: Promise<any>, 
     initialState: any,
     postPlayerTurnState: { 
       enemyHealth: number[], 
@@ -392,26 +535,6 @@ const Game: React.FC = () => {
         }
       }
       
-      // Wait for end turn transaction to complete
-      await playerTurnPromise;
-      
-      // NOW we sync with the blockchain to get the final state
-      // Make multiple attempts to get a stable state
-      let latestState = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        latestState = await getLatestState(3, 300);
-        if (latestState && latestState.currentMana > 0) {
-          break;
-        }
-        // Wait a bit longer before trying again
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      
-      // If we still don't have a good state, get one more time
-      if (!latestState || latestState.currentMana === 0) {
-        latestState = await getGameState();
-      }
-      
       // Show player turn transition
       setShowTurnBanner(false);
       await new Promise(resolve => setTimeout(resolve, 400));
@@ -423,68 +546,32 @@ const Game: React.FC = () => {
       setTimeout(() => {
         setShowTurnBanner(false);
       }, 2000);
+
+      // Wait for animations to finish before syncing state
+      await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Update with the final blockchain state
-      setGameState(latestState);
-      setPreviousHealth(latestState.currentHealth);
-      setPreviousBlock(latestState.currentBlock);
-      setPreviousEnemyHealth(latestState.enemyCurrentHealth);
-      setPreviousEnemyBlock(latestState.enemyBlock);
+      // Now sync with blockchain at start of player turn
+      const latestState = await getGameState();
+      if (latestState) {
+        setGameState(latestState);
+        setPreviousHealth(latestState.currentHealth);
+        setPreviousBlock(latestState.currentBlock);
+        setPreviousEnemyHealth(latestState.enemyCurrentHealth);
+        setPreviousEnemyBlock(latestState.enemyBlock);
+        setOptimisticHand(latestState.hand || []);
+        setOptimisticMana(latestState.currentMana || 0);
+      }
       
       // Complete turn transition
       setTurnState('player');
-      setFrozenState(null);
-      
-      // Update optimistic values with latest state
-      setOptimisticHand(latestState.hand || []);
-      setOptimisticMana(latestState.currentMana || 0);
-      setOptimisticUpdatesEnabled(true);
+      setOptimisticUpdatesEnabled(false);
     } catch (error) {
       console.error('Failed to process enemy turn:', error);
-      
-      setFrozenState(null);
-      setCurrentAnimation(null);
-      setShowTurnBanner(false);
       setTurnState('player');
-      
-      // In case of error, make sure we get a fresh state
-      // and try multiple times to ensure we get one with proper mana
-      let newState = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        newState = await getGameState();
-        if (newState && newState.currentMana > 0) {
-          break;
-        }
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      
-      if (newState) {
-        setGameState(newState);
-        setOptimisticHand(newState.hand || []);
-        setOptimisticMana(newState.currentMana || 0);
-      }
-      setOptimisticUpdatesEnabled(true);
+    } finally {
+      // Turn is now complete, prepare for player turn
+      setInTurn(false);
     }
-  };
-
-  // Add getLatestState function
-  const getLatestState = async (retries = 3, interval = 200): Promise<any> => {
-    let lastState = null;
-    
-    for (let i = 0; i < retries; i++) {
-      const newState = await getGameState();
-      if (!newState) continue;
-      
-      if (lastState && 
-          JSON.stringify(newState.enemyCurrentHealth) === JSON.stringify(lastState.enemyCurrentHealth) &&
-          JSON.stringify(newState.currentHealth) === JSON.stringify(lastState.currentHealth)) {
-        return newState;
-      }
-      lastState = newState;
-      await new Promise(resolve => setTimeout(resolve, interval));
-    }
-    
-    return lastState;
   };
 
   const handleBackToMenu = () => {
@@ -598,71 +685,6 @@ const Game: React.FC = () => {
       setShowAbandonConfirmation(false);
     }
   };
-
-  // Add this effect near the other useEffect hooks
-  useEffect(() => {
-    // When game state changes from whale room (1) to combat (2), reset the whale room state
-    if (gameState?.runState === 2) {
-      setIsChoosingRoom(false);
-      setIsGateOpen(false);
-    }
-  }, [gameState?.runState]);
-
-  // Add effect to handle initial combat setup
-  useEffect(() => {
-    if (gameState?.runState === 2) { // Combat state
-      setOptimisticHand(gameState.hand || []);
-      setOptimisticMana(gameState.currentMana || 0);
-      setIsHandVisible(true);
-    }
-  }, [gameState?.runState]);
-
-  // Add effect to manage hand visibility based on game state
-  useEffect(() => {
-    if (!gameState) return;
-    
-    // Hide hand at the gate (room 0)
-    if (gameState.runState === 0 && gameState.currentFloor === 0) {
-      setIsHandVisible(false);
-    } 
-    // Show hand in combat
-    else if (gameState.runState === 2) {
-      setIsHandVisible(true);
-    }
-    // Show hand in card reward screen
-    else if (gameState.runState === 3) {
-      setIsHandVisible(true);
-    }
-  }, [gameState?.runState, gameState?.currentFloor]);
-
-  // Replace the checkAndApproachGate effect with this simpler version
-  useEffect(() => {
-    let mounted = true;
-
-    const checkAndApproachGate = async () => {
-      if (!gameState || isApproaching) return;
-
-      // Only try to start if we're in the initial state
-      if (gameState.runState === 0) {
-        try {
-          setIsApproaching(true);
-          await startRun();
-        } catch (error) {
-          console.error('Failed to approach the gate:', error);
-          setIsApproaching(false);
-        }
-      } else if (gameState.runState === 1) {
-        // Clear approaching state once we're in the whale room
-        setIsApproaching(false);
-      }
-    };
-
-    checkAndApproachGate();
-
-    return () => {
-      mounted = false;
-    };
-  }, [gameState?.runState, isApproaching]);
 
   return (
     <>
