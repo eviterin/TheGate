@@ -44,6 +44,7 @@ interface GameStateUpdate {
   enemyIntents?: number[];
   currentFloor?: number;
   runState?: number;
+  turnCounter?: number;
 }
 
 const Game: React.FC = () => {
@@ -206,13 +207,29 @@ const Game: React.FC = () => {
         const state = await getGameState();
         if (!state) return;
 
-        // Full sync of all state
-        setGameState(state);
-        setOptimisticHand(state.hand || []);
-        setOptimisticMana(state.currentMana || 0);
-        setInitialHandState([...state.hand]);
-        setPendingCardIDs([]);
-        setOptimisticUpdatesEnabled(true);
+        // Sync in the following cases:
+        // 1. We have a non-empty hand (new turn with cards)
+        // 2. We have mana (new turn)
+        // 3. We're at a reward screen where hand should be empty
+        const shouldSync = 
+          (state.hand && state.hand.length > 0) ||  // Has cards
+          (state.currentMana > 0) ||               // Has mana for the turn
+          (state.runState !== 2);                  // Not in combat (reward screens, etc)
+
+        if (shouldSync) {
+          console.log("Blockchain state is ready - syncing");
+          // Full sync of all state
+          setGameState(state);
+          setOptimisticHand(state.hand || []);
+          setOptimisticMana(state.currentMana || 0);
+          setInitialHandState([...state.hand || []]);
+          setPendingCardIDs([]);
+          setOptimisticUpdatesEnabled(true);
+          setNeedsBlockchainSync(false);
+        } else {
+          console.log("Blockchain state not ready yet - will retry");
+          // Will try again on next interval
+        }
       };
       
       syncWithBlockchain();
@@ -550,17 +567,9 @@ const Game: React.FC = () => {
       // Wait for animations to finish before syncing state
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Now sync with blockchain at start of player turn
-      const latestState = await getGameState();
-      if (latestState) {
-        setGameState(latestState);
-        setPreviousHealth(latestState.currentHealth);
-        setPreviousBlock(latestState.currentBlock);
-        setPreviousEnemyHealth(latestState.enemyCurrentHealth);
-        setPreviousEnemyBlock(latestState.enemyBlock);
-        setOptimisticHand(latestState.hand || []);
-        setOptimisticMana(latestState.currentMana || 0);
-      }
+      // Now set the flag to sync with blockchain on next player turn
+      // Rather than trying to sync here, the player turn useEffect will handle it
+      setNeedsBlockchainSync(true);
       
       // Complete turn transition
       setTurnState('player');
