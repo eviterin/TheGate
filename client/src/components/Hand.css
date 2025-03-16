@@ -150,6 +150,12 @@
   filter: grayscale(0.5);
 }
 
+.hand-card.ui-frozen {
+  opacity: 0.7;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .hand-card .intent-number {
   position: absolute;
   top: -10px;

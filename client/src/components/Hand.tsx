@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import Card from './Card';
 import './Hand.css';
 
-interface HandProps {
+export interface HandProps {
   cards: number[]; // Array of numeric card IDs
   onCardSelect?: (cardIndex: number) => void;
   className?: string;
@@ -10,6 +10,7 @@ interface HandProps {
   cardData: any[]; // Card data from blockchain
   currentMana: number; // Add current mana prop
   isVisible?: boolean;
+  isUIFrozen?: boolean; // Add UI frozen state
 }
 
 const Hand: React.FC<HandProps> = ({ 
@@ -19,7 +20,8 @@ const Hand: React.FC<HandProps> = ({
   selectedCardIndex,
   cardData,
   currentMana,
-  isVisible = true
+  isVisible = true,
+  isUIFrozen = false
 }) => {
   // Convert numeric IDs to card data
   const handCards = useMemo(() => 
@@ -30,7 +32,10 @@ const Hand: React.FC<HandProps> = ({
   [cards, cardData]);
 
   const handleCardClick = (index: number) => {
-    onCardSelect?.(index);
+    // Don't allow card selection when UI is frozen
+    if (!isUIFrozen) {
+      onCardSelect?.(index);
+    }
   };
 
   return (
@@ -38,12 +43,12 @@ const Hand: React.FC<HandProps> = ({
       {isVisible && (
         <div className="hand">
           {handCards.map((card, index) => {
-            const canPlay = card.manaCost <= currentMana;
+            const canPlay = card.manaCost <= currentMana && !isUIFrozen;
             
             return (
               <div 
                 key={`${card.id}-${index}`}
-                className={`hand-card ${selectedCardIndex === index ? 'selected' : ''} ${!canPlay ? 'insufficient-mana' : ''}`}
+                className={`hand-card ${selectedCardIndex === index ? 'selected' : ''} ${!canPlay ? 'insufficient-mana' : ''} ${isUIFrozen ? 'ui-frozen' : ''}`}
                 onClick={() => handleCardClick(index)}
               >
                 <Card

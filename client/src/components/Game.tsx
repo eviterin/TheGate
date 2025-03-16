@@ -95,6 +95,8 @@ const Game: React.FC = () => {
   const [soundType, setSoundType] = useState<'card' | 'intent'>('card');
   const [needsBlockchainSync, setNeedsBlockchainSync] = useState(false);
   const [inTurn, setInTurn] = useState(false);
+  const [pendingCardTransaction, setPendingCardTransaction] = useState(false);
+  const [pendingEnemyTurnTransaction, setPendingEnemyTurnTransaction] = useState(false);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -116,6 +118,11 @@ const Game: React.FC = () => {
       try {
         if (!mounted) return;
 
+        // Skip fetching during player turn unless explicitly requested
+        if (turnState === 'player' && !needsBlockchainSync) {
+          return;
+        }
+
         // Always fetch state, but don't always update the UI with it
         const state = await getGameState();
         if (!mounted || !state) return;
@@ -124,8 +131,8 @@ const Game: React.FC = () => {
         if (gameState) {
           setPreviousHealth(gameState.currentHealth);
           setPreviousBlock(gameState.currentBlock);
-          setPreviousEnemyHealth(gameState.enemyCurrentHealth);
-          setPreviousEnemyBlock(gameState.enemyBlock);
+          setPreviousEnemyHealth(gameState.enemyCurrentHealth || []);
+          setPreviousEnemyBlock(gameState.enemyBlock || []);
         }
         
         // During a turn, preserve our predicted values
@@ -135,38 +142,26 @@ const Game: React.FC = () => {
             if (!prev) return state;
             return {
               ...state,
+              // Preserve our optimistic updates
               currentHealth: prev.currentHealth,
               currentBlock: prev.currentBlock,
               enemyCurrentHealth: prev.enemyCurrentHealth,
               enemyBlock: prev.enemyBlock,
-              // Don't update current mana and hand during a turn
-              currentMana: prev.currentMana,
-              hand: prev.hand
+              hand: optimisticHand.length > 0 ? optimisticHand : state.hand,
+              currentMana: optimisticMana !== null ? optimisticMana : state.currentMana
             };
           });
         } else {
-          // Full sync when not in a turn
+          // Just store the state as is
           setGameState(state);
         }
         
         setIsLoadingGameState(false);
         
-        // Only update optimistic UI when not in a turn
-        if (!inTurn || needsBlockchainSync) {
-          console.log("Syncing UI state with blockchain");
-          setOptimisticHand(state.hand || []);
-          setOptimisticMana(state.currentMana || 0);
-          
-          // Reset flags
-          if (needsBlockchainSync) {
-            setNeedsBlockchainSync(false);
-          }
-          
-          // Enable optimistic updates in combat
-          const newIsInCombat = state.runState === 2;
-          if (newIsInCombat) {
-            setOptimisticUpdatesEnabled(true);
-          }
+        // Only update optimistic UI when not in a turn AND not in player turn
+        // This is critical - during player turn we never sync with blockchain
+        if ((!inTurn && turnState !== 'player') || needsBlockchainSync) {
+          syncWithBlockchain(state);
         }
 
         // Other state updates
@@ -204,21 +199,23 @@ const Game: React.FC = () => {
       // At player turn start after enemy turn, force a blockchain sync
       const syncWithBlockchain = async () => {
         console.log("Player turn starting - syncing with blockchain");
-        const state = await getGameState();
-        if (!state) return;
-
-        // Sync in the following cases:
-        // 1. We have a non-empty hand (new turn with cards)
-        // 2. We have mana (new turn)
-        // 3. We're at a reward screen where hand should be empty
-        const shouldSync = 
-          (state.hand && state.hand.length > 0) ||  // Has cards
-          (state.currentMana > 0) ||               // Has mana for the turn
-          (state.runState !== 2);                  // Not in combat (reward screens, etc)
-
-        if (shouldSync) {
-          console.log("Blockchain state is ready - syncing");
-          // Full sync of all state
+        
+        // Keep UI frozen until both transactions are confirmed
+        if (pendingCardTransaction || pendingEnemyTurnTransaction) {
+          console.log("Waiting for pending transactions to complete before unfreezing UI");
+          return; // Don't sync yet, we'll try again on next interval
+        }
+        
+        try {
+          const state = await getGameState();
+          if (!state) {
+            console.log("No game state available yet");
+            return;
+          }
+          
+          console.log("Syncing with blockchain state:", state);
+          
+          // Update all state from blockchain
           setGameState(state);
           setOptimisticHand(state.hand || []);
           setOptimisticMana(state.currentMana || 0);
@@ -226,15 +223,17 @@ const Game: React.FC = () => {
           setPendingCardIDs([]);
           setOptimisticUpdatesEnabled(true);
           setNeedsBlockchainSync(false);
-        } else {
-          console.log("Blockchain state not ready yet - will retry");
-          // Will try again on next interval
+          
+          // Now that we've synced with blockchain, unfreeze the UI
+          setInTurn(false);
+        } catch (error) {
+          console.log("Blockchain state not ready yet - will retry", error);
         }
       };
       
       syncWithBlockchain();
     }
-  }, [turnState, getGameState]);
+  }, [turnState, getGameState, pendingCardTransaction, pendingEnemyTurnTransaction]);
 
   useEffect(() => {
     if (turnState === 'player') {
@@ -314,19 +313,54 @@ const Game: React.FC = () => {
   const handleEntityClick = async (targetIndex: number) => {
     if (selectedCardIndex === null) return;
     
-    // Mark that we're in a turn - preserve optimistic state
-    setInTurn(true);
+    // Don't set inTurn during player's card plays
+    // Only set it during turn transitions
     
     const cardId = optimisticHand[selectedCardIndex];
     const card = cardData.find(c => c.numericId === cardId);
     
-    if (!card || !gameState) return;
-
+    if (!card || !gameState) {
+      console.error('Card not found or no game state:', cardId);
+      return;
+    }
+    
     // Check if we have enough mana
     if (card.manaCost > (optimisticMana || 0)) return;
 
     // Simply track card ID - no need to track position since we're using IDs
     setPendingCardIDs(prev => [...prev, cardId]);
+
+    // Create current game state for prediction
+    const currentGameState = {
+      enemyCurrentHealth: gameState.enemyCurrentHealth || [],
+      enemyBlock: gameState.enemyBlock || [],
+      enemyMaxHealth: gameState.enemyMaxHealth || [],
+      currentHealth: gameState.currentHealth,
+      currentBlock: gameState.currentBlock,
+      maxHealth: gameState.maxHealth,
+      hand: optimisticHand,
+      currentMana: optimisticMana
+    };
+
+    // Predict card effect
+    const prediction = predictCardEffect(
+      card.numericId,
+      targetIndex,
+      currentGameState
+    );
+
+    // Update optimistic state with prediction
+    setGameState((prev: any) => {
+      if (!prev) return prev;
+      
+      return {
+        ...prev,
+        currentHealth: prediction.heroHealth,
+        currentBlock: prediction.heroBlock,
+        enemyCurrentHealth: prediction.enemyHealth,
+        enemyBlock: prediction.enemyBlock
+      };
+    });
 
     // Predict and apply card effect immediately
     const levelConfig = getLevelConfig(gameState.currentFloor);
@@ -354,39 +388,17 @@ const Game: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 500));
     setIsSoundPlaying(false);
     
-    // Predict effect
-    const cardEffect = predictCardEffect(
-      cardId, 
-      targetIndex,
-      {
-        ...gameState,
-        enemyCurrentHealth: [...gameState.enemyCurrentHealth],
-        enemyBlock: [...gameState.enemyBlock]
-      }
-    );
-
+    // Update optimistic mana
+    setOptimisticMana((prev) => (prev || 0) - prediction.manaSpent);
+    
     // Play death sound if enemy died
-    if (cardEffect.enemyDied && 
-        cardEffect.enemyHealth[targetIndex] <= 0 && 
+    if (prediction.enemyDied && 
+        prediction.enemyHealth[targetIndex] <= 0 && 
         gameState.enemyCurrentHealth[targetIndex] > 0) {
       soundEffectManager.playEventSound('enemyDeath');
     }
-
-    // Update UI state
-    setGameState((prev: GameStateUpdate | null) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        currentHealth: cardEffect.heroHealth,
-        currentBlock: cardEffect.heroBlock,
-        enemyCurrentHealth: cardEffect.enemyHealth,
-        enemyBlock: cardEffect.enemyBlock,
-        currentMana: (prev.currentMana || 0) - card.manaCost
-      };
-    });
-
-    // Update optimistic state
-    setOptimisticMana((prev) => (prev || 0) - card.manaCost);
+    
+    // Update optimistic hand
     setOptimisticHand(prev => prev.filter((_, i) => i !== selectedCardIndex));
     
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -416,21 +428,56 @@ const Game: React.FC = () => {
         
         // Send the full batch with original indices
         if (cardPlays.length > 0) {
-          console.log('Playing multiple cards...', { plays: cardPlays });
-          await playCardsAction(cardPlays);
+          console.log('Playing cards with original indices:', cardPlays);
+          
+          // Mark that we have a pending card transaction
+          setPendingCardTransaction(true);
+          
+          // Send transaction but don't await it
+          playCardsAction(cardPlays)
+            .then(() => {
+              console.log('Cards played successfully on blockchain');
+              setPendingCardTransaction(false);
+            })
+            .catch(error => {
+              console.error('Error playing cards:', error);
+              setPendingCardTransaction(false);
+            });
         }
       }
       
-      // Only end turn if we didn't play any cards (otherwise the cards are already played)
+      // End turn in background
       if (pendingCardIDs.length === 0) {
         // Start end turn in background without waiting
         console.log('Ending turn...');
-        endTurnAction();
+        
+        // Mark that we have a pending enemy turn transaction
+        setPendingEnemyTurnTransaction(true);
+        
+        // Send transaction but don't await it
+        endTurnAction()
+          .then(() => {
+            console.log('Turn ended successfully on blockchain');
+            setPendingEnemyTurnTransaction(false);
+          })
+          .catch(error => {
+            console.error('Error ending turn:', error);
+            setPendingEnemyTurnTransaction(false);
+          });
       }
     } catch (error) {
       console.error('Error during end turn:', error);
       // If there's an error playing cards, still try to end turn
-      endTurnAction();
+      setPendingEnemyTurnTransaction(true);
+      endTurnAction()
+        .then(() => {
+          console.log('Turn ended successfully on blockchain');
+          setPendingEnemyTurnTransaction(false);
+        })
+        .catch(error => {
+          console.error('Error ending turn:', error);
+          setPendingEnemyTurnTransaction(false);
+        });
     }
     
     // Clear queue after processing
@@ -476,7 +523,7 @@ const Game: React.FC = () => {
       setTimeout(() => {
         setShowTurnBanner(false);
       }, 2000);
-      
+
       // Wait a moment after banner hides before starting enemy actions
       await new Promise(resolve => setTimeout(resolve, 800));
       setTurnState('enemy');
@@ -577,6 +624,8 @@ const Game: React.FC = () => {
     } catch (error) {
       console.error('Failed to process enemy turn:', error);
       setTurnState('player');
+      // Ensure we set the pending enemy turn transaction to false in case of error
+      setPendingEnemyTurnTransaction(false);
     } finally {
       // Turn is now complete, prepare for player turn
       setInTurn(false);
@@ -692,6 +741,22 @@ const Game: React.FC = () => {
       console.error('Failed to abandon run:', error);
       setIsAbandoning(false);
       setShowAbandonConfirmation(false);
+    }
+  };
+
+  const syncWithBlockchain = (state: any) => {
+    console.log("Syncing UI state with blockchain");
+    setOptimisticHand(state.hand || []);
+    setOptimisticMana(state.currentMana || 0);
+    
+    if (needsBlockchainSync) {
+      setNeedsBlockchainSync(false);
+    }
+    
+    // Enable optimistic updates in combat
+    const newIsInCombat = state.runState === 2;
+    if (newIsInCombat) {
+      setOptimisticUpdatesEnabled(true);
     }
   };
 
@@ -865,7 +930,7 @@ const Game: React.FC = () => {
                 selectedCardIndex={selectedCardIndex}
                 cardData={cardData}
                 currentMana={optimisticMana ?? (gameState?.currentMana || 0)}
-                isVisible={isHandVisible && (!gameState || gameState.runState !== 0)}
+                isUIFrozen={turnState !== 'player'}
               />
             </div>
 

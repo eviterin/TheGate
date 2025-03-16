@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { soundEffectManager } from '../game/SoundEffectManager';
 
-interface TurnBannerProps {
+export interface TurnBannerProps {
   message: string;
   isVisible: boolean;
   type: 'enemy' | 'player';
