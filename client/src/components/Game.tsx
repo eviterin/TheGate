@@ -87,6 +87,7 @@ const Game: React.FC = () => {
   const { playCards: playCardsAction } = usePlayCards();
   const [pendingCardIDs, setPendingCardIDs] = useState<number[]>([]);
   const [pendingCardIndices, setPendingCardIndices] = useState<number[]>([]);
+  const [pendingCardTargets, setPendingCardTargets] = useState<number[]>([]);
   const [initialHandState, setInitialHandState] = useState<number[]>([]);
   const [showAbandonConfirmation, setShowAbandonConfirmation] = useState(false);
   const [isAbandoning, setIsAbandoning] = useState(false);
@@ -347,15 +348,17 @@ const Game: React.FC = () => {
 
     console.log(`[CARDPLAY] Playing card ${card.name} (ID: ${cardId}) from hand index ${selectedCardIndex} targeting enemy ${targetIndex}`);
     
-    // Track both the card ID and its original index in the hand
+    // Track both the card ID, its original index in the hand, and the target
     // Using callback form to ensure we get the latest state
     const newPendingCardIDs = [...pendingCardIDs, cardId];
     const newPendingCardIndices = [...pendingCardIndices, selectedCardIndex];
+    const newPendingCardTargets = [...pendingCardTargets, targetIndex];
     
     setPendingCardIDs(newPendingCardIDs);
     setPendingCardIndices(newPendingCardIndices);
+    setPendingCardTargets(newPendingCardTargets);
     
-    console.log('[CARDPLAY] Updated pending cards:', newPendingCardIDs, newPendingCardIndices);
+    console.log('[CARDPLAY] Updated pending cards:', newPendingCardIDs, newPendingCardIndices, 'targets:', newPendingCardTargets);
     
     // Explicitly set inTurn to true during card play to prevent blockchain sync
     setInTurn(true);
@@ -395,22 +398,11 @@ const Game: React.FC = () => {
     // Predict and apply card effect immediately
     const levelConfig = getLevelConfig(gameState.currentFloor);
     
-    // Use processEnemyIntent first to calculate the result
-    const enemyIntentResult = processEnemyIntent(
-      card.numericId,
-      0, // intentValue (not used in most cases)
-      gameState.enemyBlock[targetIndex],
-      gameState.enemyCurrentHealth[targetIndex],
-      gameState.enemyMaxHealth ? gameState.enemyMaxHealth[targetIndex] : 100, // fallback
-      gameState.currentHealth,
-      gameState.currentBlock,
-      0 // enemyBuff
-    );
-
-    // Update our current state with the predicted results
+    // Use the prediction directly instead of processEnemyIntent for self-targeting cards
+    // This fixes issues with cards like "Pray" that add block to the player
     const currentState = {
-      heroHealth: enemyIntentResult.newHeroHealth,
-      heroBlock: enemyIntentResult.newHeroBlock,
+      heroHealth: prediction.heroHealth,
+      heroBlock: prediction.heroBlock,
       enemyHealth: prediction.enemyHealth,
       enemyBlock: prediction.enemyBlock
     };
@@ -471,11 +463,11 @@ const Game: React.FC = () => {
     setSelectedCardIndex(null);
     
     // Log pending cards after each card play
-    console.log('[CARDPLAY] Updated pending cards after play:', pendingCardIDs, pendingCardIndices);
+    console.log('[CARDPLAY] Updated pending cards after play:', pendingCardIDs, pendingCardIndices, 'targets:', pendingCardTargets);
   };
 
   const handleEndTurn = async () => {
-    console.log('[ENDTURN] handleEndTurn called with pendingCardIDs:', pendingCardIDs, 'pendingCardIndices:', pendingCardIndices);
+    console.log('[ENDTURN] handleEndTurn called with pendingCardIDs:', pendingCardIDs, 'pendingCardIndices:', pendingCardIndices, 'targets:', pendingCardTargets);
     
     // Still in a turn for enemy actions
     setInTurn(true);
@@ -488,10 +480,10 @@ const Game: React.FC = () => {
         console.log('[ENDTURN] Processing pending cards:', pendingCardIDs.length);
         
         // Use the tracked indices directly
-        const cardPlays = pendingCardIndices.map(handIndex => {
+        const cardPlays = pendingCardIndices.map((handIndex, i) => {
           return {
             cardIndex: handIndex,
-            targetIndex: 0
+            targetIndex: pendingCardTargets[i]  // Use the tracked target index
           };
         });
         
@@ -506,6 +498,10 @@ const Game: React.FC = () => {
           .then(() => {
             console.log('[PLAYCARDS] Transaction completed successfully');
             setPendingCardTransaction(false);
+            // Clear pending cards after successful transaction
+            setPendingCardIDs([]);
+            setPendingCardIndices([]);
+            setPendingCardTargets([]);
           })
           .catch(error => {
             console.error('[PLAYCARDS] Error in transaction:', error);
@@ -564,8 +560,8 @@ const Game: React.FC = () => {
     }
     
     // Clear queue after processing
-    setPendingCardIDs([]);
-    setPendingCardIndices([]);
+    // setPendingCardIDs([]);
+    // setPendingCardIndices([]);
     
     await new Promise(resolve => setTimeout(resolve, 800));
     setTurnState('enemy');
