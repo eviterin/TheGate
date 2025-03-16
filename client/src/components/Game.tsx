@@ -86,6 +86,7 @@ const Game: React.FC = () => {
   const [previousEnemyBlock, setPreviousEnemyBlock] = useState<number[]>([]);
   const { playCards: playCardsAction } = usePlayCards();
   const [pendingCardIDs, setPendingCardIDs] = useState<number[]>([]);
+  const [pendingCardIndices, setPendingCardIndices] = useState<number[]>([]);
   const [initialHandState, setInitialHandState] = useState<number[]>([]);
   const [showAbandonConfirmation, setShowAbandonConfirmation] = useState(false);
   const [isAbandoning, setIsAbandoning] = useState(false);
@@ -119,13 +120,18 @@ const Game: React.FC = () => {
         if (!mounted) return;
 
         // Skip fetching during player turn unless explicitly requested
-        if (turnState === 'player' && !needsBlockchainSync) {
+        // BUT always fetch if we don't have a game state yet or if we're not in combat
+        if (turnState === 'player' && !needsBlockchainSync && gameState && gameState.runState === 2) {
+          console.log("[FETCH] Skipping blockchain fetch during player turn");
           return;
         }
 
         // Always fetch state, but don't always update the UI with it
+        console.log("[FETCH] Fetching blockchain state, needsSync:", needsBlockchainSync, "turnState:", turnState);
         const state = await getGameState();
         if (!mounted || !state) return;
+        
+        console.log("[FETCH] Got blockchain state, hand:", state.hand?.length || 0, "cards");
         
         // Save previous state for animations
         if (gameState) {
@@ -188,21 +194,35 @@ const Game: React.FC = () => {
   }, [getGameState, gameState, inTurn, needsBlockchainSync]);
 
   useEffect(() => {
+    console.log('[TURN] Turn state changed to:', turnState);
     if (turnState === 'player') {
-      setNeedsBlockchainSync(true);
-      setInTurn(false);
+      // Only set needsBlockchainSync at the start of player turn
+      // NOT during the player's entire turn
+      if (!inTurn) {
+        setNeedsBlockchainSync(true);
+        console.log("[TURN] Entered player turn, set needsBlockchainSync to true");
+      }
+      
+      // Reset selected card
+      setSelectedCardIndex(null);
+      
+      // Log current pending cards
+      console.log('[TURN] Current pending cards at start of player turn:', pendingCardIDs);
+      
+      // Don't clear pending cards here - they should be cleared after processing
     }
-  }, [turnState]);
+  }, [turnState, pendingCardIDs, inTurn]);
 
   useEffect(() => {
     if (turnState === 'player') {
       // At player turn start after enemy turn, force a blockchain sync
       const syncWithBlockchain = async () => {
-        console.log("Player turn starting - syncing with blockchain");
+        console.log("[SYNC] Player turn starting - syncing with blockchain");
         
         // Keep UI frozen until both transactions are confirmed
         if (pendingCardTransaction || pendingEnemyTurnTransaction) {
-          console.log("Waiting for pending transactions to complete before unfreezing UI");
+          console.log("[SYNC] Waiting for pending transactions to complete before unfreezing UI", 
+            { pendingCardTx: pendingCardTransaction, pendingEnemyTx: pendingEnemyTurnTransaction });
           return; // Don't sync yet, we'll try again on next interval
         }
         
@@ -220,12 +240,8 @@ const Game: React.FC = () => {
           setOptimisticHand(state.hand || []);
           setOptimisticMana(state.currentMana || 0);
           setInitialHandState([...state.hand || []]);
-          setPendingCardIDs([]);
           setOptimisticUpdatesEnabled(true);
           setNeedsBlockchainSync(false);
-          
-          // Now that we've synced with blockchain, unfreeze the UI
-          setInTurn(false);
         } catch (error) {
           console.log("Blockchain state not ready yet - will retry", error);
         }
@@ -234,12 +250,6 @@ const Game: React.FC = () => {
       syncWithBlockchain();
     }
   }, [turnState, getGameState, pendingCardTransaction, pendingEnemyTurnTransaction]);
-
-  useEffect(() => {
-    if (turnState === 'player') {
-      setPendingCardIDs([]);
-    }
-  }, [turnState]);
 
   useEffect(() => {
     if (gameState?.runState === 2) {
@@ -301,6 +311,14 @@ const Game: React.FC = () => {
     };
   }, [gameState?.runState, isApproaching]);
 
+  useEffect(() => {
+    // Set initial hand state when hand is first loaded
+    if (gameState?.hand && gameState.hand.length > 0) {
+      console.log('[HAND] Setting initial hand state:', gameState.hand);
+      setInitialHandState(gameState.hand);
+    }
+  }, [gameState?.hand]);
+
   const handleCardSelect = (cardIndex: number) => {
     
     if (cardIndex === selectedCardIndex) {
@@ -327,8 +345,20 @@ const Game: React.FC = () => {
     // Check if we have enough mana
     if (card.manaCost > (optimisticMana || 0)) return;
 
-    // Simply track card ID - no need to track position since we're using IDs
-    setPendingCardIDs(prev => [...prev, cardId]);
+    console.log(`[CARDPLAY] Playing card ${card.name} (ID: ${cardId}) from hand index ${selectedCardIndex} targeting enemy ${targetIndex}`);
+    
+    // Track both the card ID and its original index in the hand
+    // Using callback form to ensure we get the latest state
+    const newPendingCardIDs = [...pendingCardIDs, cardId];
+    const newPendingCardIndices = [...pendingCardIndices, selectedCardIndex];
+    
+    setPendingCardIDs(newPendingCardIDs);
+    setPendingCardIndices(newPendingCardIndices);
+    
+    console.log('[CARDPLAY] Updated pending cards:', newPendingCardIDs, newPendingCardIndices);
+    
+    // Explicitly set inTurn to true during card play to prevent blockchain sync
+    setInTurn(true);
 
     // Create current game state for prediction
     const currentGameState = {
@@ -365,31 +395,61 @@ const Game: React.FC = () => {
     // Predict and apply card effect immediately
     const levelConfig = getLevelConfig(gameState.currentFloor);
     
-    // Animation setup
-    const isTargetingHero = !card.targeted;
-    let targetPosition: Position = isTargetingHero ? levelConfig.heroPosition : levelConfig.enemyPositions[targetIndex];
+    // Use processEnemyIntent first to calculate the result
+    const enemyIntentResult = processEnemyIntent(
+      card.numericId,
+      0, // intentValue (not used in most cases)
+      gameState.enemyBlock[targetIndex],
+      gameState.enemyCurrentHealth[targetIndex],
+      gameState.enemyMaxHealth ? gameState.enemyMaxHealth[targetIndex] : 100, // fallback
+      gameState.currentHealth,
+      gameState.currentBlock,
+      0 // enemyBuff
+    );
 
-    // Sound effect
-    setCurrentSound(card.name.toLowerCase());
-    setSoundType('card');
-    setIsSoundPlaying(true);
+    // Update our current state with the predicted results
+    const currentState = {
+      heroHealth: enemyIntentResult.newHeroHealth,
+      heroBlock: enemyIntentResult.newHeroBlock,
+      enemyHealth: prediction.enemyHealth,
+      enemyBlock: prediction.enemyBlock
+    };
 
-    // Create animation state
+    // Then play animation and sound
     const animationState: AnimationState = {
       sourceType: 'hero',
       sourceIndex: 0,
-      targetPosition: targetPosition,
+      targetPosition: levelConfig.enemyPositions[targetIndex],
       timestamp: Date.now(),
       animationType: card.animationType
     };
 
     setCurrentAnimation(animationState);
+    setCurrentSound(card.name.toLowerCase());
+    setSoundType('card');
+    setIsSoundPlaying(true);
     
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for animation to be halfway through before showing damage
+    await new Promise(resolve => setTimeout(resolve, 250));
+
+    // Update UI state when animation is mid-way
+    setGameState((prev: GameStateUpdate | null) => {
+      if (!prev) return prev;
+      const update: Partial<GameStateUpdate> = {
+        currentHealth: currentState.heroHealth,
+        currentBlock: currentState.heroBlock,
+        enemyCurrentHealth: currentState.enemyHealth,
+        enemyBlock: currentState.enemyBlock
+      };
+      return { ...prev, ...update };
+    });
+    
+    // Wait for rest of animation
+    await new Promise(resolve => setTimeout(resolve, 250));
+    
+    // Reset animation and sound
+    setCurrentAnimation(null);
     setIsSoundPlaying(false);
-    
-    // Update optimistic mana
-    setOptimisticMana((prev) => (prev || 0) - prediction.manaSpent);
     
     // Play death sound if enemy died
     if (prediction.enemyDied && 
@@ -398,15 +458,25 @@ const Game: React.FC = () => {
       soundEffectManager.playEventSound('enemyDeath');
     }
     
+    // Small delay between enemy actions
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Update optimistic mana
+    setOptimisticMana((prev) => (prev || 0) - prediction.manaSpent);
+    
     // Update optimistic hand
     setOptimisticHand(prev => prev.filter((_, i) => i !== selectedCardIndex));
     
     await new Promise(resolve => setTimeout(resolve, 100));
-    setCurrentAnimation(null);
     setSelectedCardIndex(null);
+    
+    // Log pending cards after each card play
+    console.log('[CARDPLAY] Updated pending cards after play:', pendingCardIDs, pendingCardIndices);
   };
 
   const handleEndTurn = async () => {
+    console.log('[ENDTURN] handleEndTurn called with pendingCardIDs:', pendingCardIDs, 'pendingCardIndices:', pendingCardIndices);
+    
     // Still in a turn for enemy actions
     setInTurn(true);
     setTurnState('transitioning');
@@ -414,36 +484,35 @@ const Game: React.FC = () => {
 
     try {
       // Process all queued cards in a single transaction
-      if (pendingCardIDs.length > 0 && initialHandState.length > 0) {
-        // For each card ID we played, find its original index in the initial hand state
-        const cardPlays = pendingCardIDs
-          .map(cardId => {
-            const indexInInitialHand = initialHandState.indexOf(cardId);
-            return {
-              cardIndex: indexInInitialHand,
-              targetIndex: 0
-            };
-          })
-          .filter(play => play.cardIndex !== -1); // Skip any cards not found in initial hand
+      if (pendingCardIDs.length > 0) {
+        console.log('[ENDTURN] Processing pending cards:', pendingCardIDs.length);
         
-        // Send the full batch with original indices
-        if (cardPlays.length > 0) {
-          console.log('Playing cards with original indices:', cardPlays);
-          
-          // Mark that we have a pending card transaction
-          setPendingCardTransaction(true);
-          
-          // Send transaction but don't await it
-          playCardsAction(cardPlays)
-            .then(() => {
-              console.log('Cards played successfully on blockchain');
-              setPendingCardTransaction(false);
-            })
-            .catch(error => {
-              console.error('Error playing cards:', error);
-              setPendingCardTransaction(false);
-            });
-        }
+        // Use the tracked indices directly
+        const cardPlays = pendingCardIndices.map(handIndex => {
+          return {
+            cardIndex: handIndex,
+            targetIndex: 0
+          };
+        });
+        
+        console.log('[ENDTURN] Card plays to send in transaction:', cardPlays);
+        
+        // Mark that we have a pending card transaction
+        setPendingCardTransaction(true);
+        
+        // Send transaction but don't await it
+        console.log('[PLAYCARDS] Starting playCards transaction with plays:', cardPlays);
+        playCardsAction(cardPlays)
+          .then(() => {
+            console.log('[PLAYCARDS] Transaction completed successfully');
+            setPendingCardTransaction(false);
+          })
+          .catch(error => {
+            console.error('[PLAYCARDS] Error in transaction:', error);
+            setPendingCardTransaction(false);
+          });
+      } else {
+        console.log('[ENDTURN] No pending cards to process');
       }
       
       // End turn in background
@@ -455,33 +524,48 @@ const Game: React.FC = () => {
         setPendingEnemyTurnTransaction(true);
         
         // Send transaction but don't await it
+        console.log('[ENDTURN] Starting endTurn transaction');
         endTurnAction()
           .then(() => {
-            console.log('Turn ended successfully on blockchain');
+            console.log('[ENDTURN] Transaction completed successfully');
             setPendingEnemyTurnTransaction(false);
+            // Force a blockchain sync to get new cards AFTER the transaction completes
+            setNeedsBlockchainSync(true);
+            console.log('[ENDTURN] Set needsBlockchainSync to true');
           })
           .catch(error => {
-            console.error('Error ending turn:', error);
+            console.error('[ENDTURN] Error in transaction:', error);
             setPendingEnemyTurnTransaction(false);
+            // Force a blockchain sync even on error
+            setNeedsBlockchainSync(true);
+            console.log('[ENDTURN] Set needsBlockchainSync to true (after error)');
           });
       }
     } catch (error) {
       console.error('Error during end turn:', error);
       // If there's an error playing cards, still try to end turn
       setPendingEnemyTurnTransaction(true);
+      console.log('[ENDTURN] Starting endTurn transaction (from error handler)');
       endTurnAction()
         .then(() => {
-          console.log('Turn ended successfully on blockchain');
+          console.log('[ENDTURN] Transaction completed successfully');
           setPendingEnemyTurnTransaction(false);
+          // Force a blockchain sync to get new cards
+          setNeedsBlockchainSync(true);
+          console.log('[ENDTURN] Set needsBlockchainSync to true');
         })
         .catch(error => {
-          console.error('Error ending turn:', error);
+          console.error('[ENDTURN] Error in transaction:', error);
           setPendingEnemyTurnTransaction(false);
+          // Force a blockchain sync even on error
+          setNeedsBlockchainSync(true);
+          console.log('[ENDTURN] Set needsBlockchainSync to true (after error)');
         });
     }
     
     // Clear queue after processing
     setPendingCardIDs([]);
+    setPendingCardIndices([]);
     
     await new Promise(resolve => setTimeout(resolve, 800));
     setTurnState('enemy');
@@ -594,40 +678,59 @@ const Game: React.FC = () => {
           setCurrentAnimation(null);
           setIsSoundPlaying(false);
           
+          // Play death sound if enemy died
+          if (currentState.enemyHealth[i] <= 0 && initialState.enemyCurrentHealth[i] > 0) {
+            soundEffectManager.playEventSound('enemyDeath');
+          }
+          
           // Small delay between enemy actions
           await new Promise(resolve => setTimeout(resolve, 200));
         }
       }
       
-      // Show player turn transition
-      setShowTurnBanner(false);
-      await new Promise(resolve => setTimeout(resolve, 400));
+      // Wait for endTurn transaction to complete before transitioning back to player turn
+      console.log('[ENDTURN] Waiting for transaction to complete before player turn');
+      
+      // Wait for the endTurn transaction to complete
+      const waitForTransaction = async () => {
+        // Check every 500ms if the transaction is still pending
+        while (pendingEnemyTurnTransaction) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          console.log('[ENDTURN] Still waiting for transaction...');
+        }
+      };
+      
+      await waitForTransaction();
+      
+      // Force a blockchain sync to get the latest state with new cards
+      setNeedsBlockchainSync(true);
+      console.log('[ENDTURN] Transaction completed, forcing blockchain sync');
+      
+      // Wait a moment for the sync to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Transition to player turn
+      setTurnState('transitioning');
       setTurnBannerMessage("Your Turn");
       setTurnBannerType('player');
       setShowTurnBanner(true);
       
-      // Hide banner after 2 seconds
+      // Hide player turn banner after 2 seconds
       setTimeout(() => {
         setShowTurnBanner(false);
       }, 2000);
-
-      // Wait for animations to finish before syncing state
+      
+      // Wait a moment after banner hides before starting player turn
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Now set the flag to sync with blockchain on next player turn
-      // Rather than trying to sync here, the player turn useEffect will handle it
-      setNeedsBlockchainSync(true);
+      // Finally set to player turn
+      setTurnState('player');
+      setInTurn(false);
       
-      // Complete turn transition
-      setTurnState('player');
-      setOptimisticUpdatesEnabled(false);
     } catch (error) {
-      console.error('Failed to process enemy turn:', error);
+      console.error('Error processing enemy turn:', error);
+      // Recover from error by transitioning to player turn
       setTurnState('player');
-      // Ensure we set the pending enemy turn transaction to false in case of error
-      setPendingEnemyTurnTransaction(false);
-    } finally {
-      // Turn is now complete, prepare for player turn
       setInTurn(false);
     }
   };
@@ -935,15 +1038,17 @@ const Game: React.FC = () => {
             </div>
 
             <div className="bottom-right">
-              {/* Add end turn button */}
-              {turnState === 'player' && gameState?.runState === 2 && (
-                <button 
-                  className="menu-button end-turn-button"
-                  onClick={handleEndTurn}
-                  disabled={turnState !== 'player'}
-                >
-                  End Turn
-                </button>
+              {/* Add End Turn button */}
+              {gameState && gameState.runState === 2 && turnState === 'player' && (
+                <div className="end-turn-button-container">
+                  <button 
+                    className="end-turn-button"
+                    onClick={handleEndTurn}
+                    disabled={turnState !== 'player' || pendingCardTransaction || pendingEnemyTurnTransaction}
+                  >
+                    End Turn
+                  </button>
+                </div>
               )}
             </div>
           </div>
