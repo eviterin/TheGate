@@ -261,6 +261,8 @@ contract GameState {
             
             playCard(plays[i].cardIndex, plays[i].targetIndex);
         }
+        
+        endTurn();
     }
 
     function endTurn() public {
