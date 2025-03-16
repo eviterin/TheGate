@@ -167,7 +167,24 @@ export class SoundEffectManager {
             console.log(`⚠️ No sound found for event ${eventName}`);
             return;
         }
+        
+        // Increase volume for turn sounds
+        if (eventName === 'enemy_turn' || eventName === 'player_turn') {
+            const cache = this.audioCache.get(soundPath);
+            if (cache) {
+                cache.audio.volume = 0.8;
+            }
+        }
+        
         await this.playSound(soundPath);
+        
+        // Reset volume after playing turn sounds
+        if (eventName === 'enemy_turn' || eventName === 'player_turn') {
+            const cache = this.audioCache.get(soundPath);
+            if (cache) {
+                cache.audio.volume = 0.5;
+            }
+        }
     }
 
     public async playCardSound(cardName: string): Promise<void> {

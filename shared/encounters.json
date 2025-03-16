@@ -100,7 +100,7 @@
     },
     {
       "level": 4,
-      "name": "Black Cathedral",
+      "name": "Outside the Cathedral",
       "description": "A warrior and a healer work together. The healer strengthens their ally.",
       "chainData": {
         "enemyTypes": [1, 2],
@@ -124,7 +124,7 @@
     },
     {
       "level": 5,
-      "name": "Weeping Monastery",
+      "name": "Inside the Cathedral",
       "chainData": {
         "enemyTypes": [2, 2],
         "enemyMaxHealth": [15, 15],
