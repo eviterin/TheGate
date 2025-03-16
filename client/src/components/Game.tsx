@@ -85,7 +85,8 @@ const Game: React.FC = () => {
   const [previousBlock, setPreviousBlock] = useState<number>(0);
   const [previousEnemyHealth, setPreviousEnemyHealth] = useState<number[]>([]);
   const [previousEnemyBlock, setPreviousEnemyBlock] = useState<number[]>([]);
-  const { playCards } = usePlayCards();
+  const { playCards: playCardsAction } = usePlayCards();
+  const [pendingCardPlays, setPendingCardPlays] = useState<Array<{cardIndex: number, targetIndex: number}>>([]);
   const [showAbandonConfirmation, setShowAbandonConfirmation] = useState(false);
   const [isAbandoning, setIsAbandoning] = useState(false);
   const [isApproaching, setIsApproaching] = useState(false);
@@ -189,14 +190,11 @@ const Game: React.FC = () => {
     // Check if we have enough mana
     if (card.manaCost > (optimisticMana || 0)) return;
 
-    // Create the play for the blockchain
-    const play = {
+    // Add card to pending plays queue
+    setPendingCardPlays(prev => [...prev, { 
       cardIndex: selectedCardIndex,
-      targetIndex
-    };
-
-    // Submit transaction in background
-    playCards([play]);
+      targetIndex: targetIndex
+    }]);
 
     // Predict and apply card effect immediately
     const levelConfig = getLevelConfig(gameState.currentFloor);
@@ -266,19 +264,15 @@ const Game: React.FC = () => {
 
   const handleEndTurn = async () => {
     setTurnState('transitioning');
-    setShowTurnBanner(false);
     setOptimisticUpdatesEnabled(false); // Disable optimistic updates when turn ends
     
-    await new Promise(resolve => setTimeout(resolve, 400));
-    setTurnBannerMessage("Enemy Turn");
-    setTurnBannerType('enemy');
-    setShowTurnBanner(true);
+    // Play all queued cards in one transaction
+    if (pendingCardPlays.length > 0) {
+      await playCardsAction(pendingCardPlays);
+      setPendingCardPlays([]); // Clear queue after sending
+    }
     
-    setTimeout(() => {
-      setShowTurnBanner(false);
-    }, 2000);
-    
-    // Start end turn in background
+    // Start end turn in background - only call it once
     const endTurnPromise = endTurnAction();
     
     await new Promise(resolve => setTimeout(resolve, 800));
@@ -327,17 +321,9 @@ const Game: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 800));
       setTurnState('enemy');
       
-      // We're already using frozen state from the player's turn
-      
-      // Wait for player turn transaction to complete to get enemy intents
-      // But we won't use the blockchain state for health/block until the very end
-      await playerTurnPromise;
-      const midwayState = await getLatestState();
-      
-      // Use the enemy types and intents from the blockchain
-      // but keep using our optimistic health/block values
-      const enemyTypes = midwayState.enemyTypes;
-      const enemyIntents = midwayState.enemyIntents;
+      // We can start processing enemy actions immediately with our current state
+      const enemyTypes = initialState.enemyTypes;
+      const enemyIntents = initialState.enemyIntents;
       
       // Current state tracks our optimistic predictions throughout the turn
       let currentState = {...postPlayerTurnState};
@@ -347,7 +333,25 @@ const Game: React.FC = () => {
         if (currentState.enemyHealth[i] > 0 && enemyIntents[i]) {
           const levelConfig = getLevelConfig(initialState.currentFloor);
           
-          // Play animation and sound first
+          // Use processEnemyIntent first to calculate the result
+          const enemyIntentResult = processEnemyIntent(
+            enemyIntents[i],
+            0, // intentValue (not used in most cases)
+            currentState.enemyBlock[i],
+            currentState.enemyHealth[i],
+            initialState.enemyMaxHealth ? initialState.enemyMaxHealth[i] : 100, // fallback
+            currentState.heroHealth,
+            currentState.heroBlock,
+            0 // enemyBuff
+          );
+
+          // Update our current state with the predicted results
+          currentState.heroHealth = enemyIntentResult.newHeroHealth;
+          currentState.heroBlock = enemyIntentResult.newHeroBlock;
+          currentState.enemyHealth[i] = enemyIntentResult.newEnemyHealth;
+          currentState.enemyBlock[i] = enemyIntentResult.newEnemyBlock;
+          
+          // Then play animation and sound
           const animationState: AnimationState = {
             sourceType: 'enemy',
             sourceIndex: i,
@@ -361,28 +365,10 @@ const Game: React.FC = () => {
           setSoundType('intent');
           setIsSoundPlaying(true);
           
-          // Wait for animation
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Use processEnemyIntent from damageUtils to calculate the result
-          const enemyIntentResult = processEnemyIntent(
-            enemyIntents[i],
-            0, // intentValue (not used in most cases)
-            currentState.enemyBlock[i],
-            currentState.enemyHealth[i],
-            initialState.enemyMaxHealth ? initialState.enemyMaxHealth[i] : 100, // fallback
-            currentState.heroHealth,
-            currentState.heroBlock,
-            0 // enemyBuff
-          );
-          
-          // Update our current state with the predicted results
-          currentState.heroHealth = enemyIntentResult.newHeroHealth;
-          currentState.heroBlock = enemyIntentResult.newHeroBlock;
-          currentState.enemyHealth[i] = enemyIntentResult.newEnemyHealth;
-          currentState.enemyBlock[i] = enemyIntentResult.newEnemyBlock;
-          
-          // Update UI
+          // Wait for animation to be halfway through before showing damage
+          await new Promise(resolve => setTimeout(resolve, 250));
+
+          // Update UI state when animation is mid-way
           setGameState((prev: GameStateUpdate | null) => {
             if (!prev) return prev;
             const update: Partial<GameStateUpdate> = {
@@ -393,6 +379,9 @@ const Game: React.FC = () => {
             };
             return { ...prev, ...update };
           });
+          
+          // Wait for rest of animation
+          await new Promise(resolve => setTimeout(resolve, 250));
           
           // Reset animation and sound
           setCurrentAnimation(null);
