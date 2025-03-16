@@ -13,7 +13,7 @@ import { CardAnimationType } from '../game/cards';
 import TurnBanner from './TurnBanner';
 import Intent, { CardIntent } from './Intent';
 import './Intent.css';
-import { predictCardEffect } from '../game/damageUtils';
+import { predictCardEffect, processEnemyIntent } from '../game/damageUtils';
 import AbandonConfirmation from './AbandonConfirmation';
 import FloatingMana from './FloatingMana';
 import WhaleRoom from './WhaleRoom';
@@ -247,14 +247,13 @@ const Game: React.FC = () => {
       return;
     }
 
-    // Sort intents by cardIndex to maintain consistent order
     const newIntents = [...cardIntents, {
       id: Date.now().toString(),
       cardIndex: selectedCardIndex,
       targetIndex,
       cardId,
       cardName: card.name
-    }].sort((a, b) => a.cardIndex - b.cardIndex);
+    }];
 
     setCardIntents(newIntents);
     setOptimisticMana(currentMana - totalManaNeeded);
@@ -326,20 +325,32 @@ const Game: React.FC = () => {
       const stateBeforeAnimations = { ...gameState };
       setFrozenState(stateBeforeAnimations);
 
-      // Prevent card indexes from being offset by previous cards
-      const plays = cardIntents.map((intent) => {
-        const cardsPlayedBefore = cardIntents
-          .slice(0, cardIntents.indexOf(intent))
-          .filter(prev => prev.cardIndex < intent.cardIndex)
-          .length;
+      // Store original hand for reference
+      const originalHand = [...stateBeforeAnimations.hand];
+      
+      // Create plays array in the same order as intents
+      // We need to adjust indices as cards get removed from hand
+      const plays = [];
+      let handSnapshot = [...originalHand];
+      
+      for (const intent of cardIntents) {
+        // Find the current index of this card in our hand snapshot
+        const cardId = intent.cardId;
+        const currentCardIndex = handSnapshot.findIndex(id => id === cardId);
         
-        return {
-          cardIndex: intent.cardIndex - cardsPlayedBefore,
-          targetIndex: intent.targetIndex
-        };
-      });
+        if (currentCardIndex !== -1) {
+          // Add the play with current index
+          plays.push({
+            cardIndex: currentCardIndex,
+            targetIndex: intent.targetIndex
+          });
+          
+          // Remove the card from hand snapshot for next iterations
+          handSnapshot.splice(currentCardIndex, 1);
+        }
+      }
 
-      // Submit transaction FIRST
+      // Submit transaction FIRST (without awaiting)
       const transactionPromise = playCards(plays);
 
       // Track cumulative state for animations
@@ -436,26 +447,36 @@ const Game: React.FC = () => {
         
         await new Promise(resolve => setTimeout(resolve, 100));
         setCurrentAnimation(null);
-
       }
 
-      // Wait for transaction to complete and get final state
-      await transactionPromise;
-      const latestState = await getLatestState();
+      // Store the post-player-turn state
+      const postPlayerTurnState = { 
+        enemyHealth: [...currentState.enemyHealth],
+        enemyBlock: [...currentState.enemyBlock],
+        heroHealth: currentState.heroHealth,
+        heroBlock: currentState.heroBlock,
+        mana: currentState.mana
+      };
 
-      // Update with confirmed chain state
-      setGameState(latestState);
-      setOptimisticHand(latestState.hand || []);
-      setOptimisticMana(latestState.currentMana || 0);
-      setFrozenState(null);
       setCardIntents([]);
       setHasAutoEndedTurn(true);
-      setOptimisticUpdatesEnabled(true);
 
-      // Only end turn if not all enemies are defeated
-      const allEnemiesDefeated = latestState.enemyCurrentHealth.every((health: number) => health <= 0);
+      // Only transition to enemy turn if not all enemies are defeated
+      const allEnemiesDefeated = postPlayerTurnState.enemyHealth.every((health: number) => health <= 0);
       if (!allEnemiesDefeated) {
-        handleEndTurn();
+        // We now call handleEndTurn but without awaiting the blockchain sync
+        // Instead we'll continue with optimistic updates
+        await processEnemyTurn(transactionPromise, stateBeforeAnimations, postPlayerTurnState);
+      } else {
+        // If all enemies are defeated, we should sync with blockchain
+        // to make sure we get proper rewards, etc.
+        await transactionPromise;
+        const latestState = await getLatestState();
+        setGameState(latestState);
+        setOptimisticHand(latestState.hand || []);
+        setOptimisticMana(latestState.currentMana || 0);
+        setFrozenState(null);
+        setOptimisticUpdatesEnabled(true);
       }
     } catch (error) {
       console.error('Failed to commit card intents:', error);
@@ -469,6 +490,243 @@ const Game: React.FC = () => {
       setOptimisticUpdatesEnabled(true);
     } finally {
       setIsCommittingIntents(false);
+    }
+  };
+
+  // Add a new function to handle enemy turn processing with optimistic updates
+  const processEnemyTurn = async (
+    playerTurnPromise: Promise<any>, 
+    initialState: any,
+    postPlayerTurnState: { 
+      enemyHealth: number[], 
+      enemyBlock: number[], 
+      heroHealth: number, 
+      heroBlock: number,
+      mana: number 
+    }
+  ) => {
+    try {
+      // Start transition to enemy turn
+      setTurnState('transitioning');
+      setShowTurnBanner(false);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      setTurnBannerMessage("Enemy Turn");
+      setTurnBannerType('enemy');
+      setShowTurnBanner(true);
+      
+      // Hide enemy turn banner after 2 seconds
+      setTimeout(() => {
+        setShowTurnBanner(false);
+      }, 2000);
+      
+      // Start end turn transaction but don't wait for it
+      const endTurnPromise = endTurnAction();
+      
+      // Wait a moment after banner hides before starting enemy actions
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setTurnState('enemy');
+      
+      // We're already using frozen state from the player's turn
+      
+      // Wait for player turn transaction to complete to get enemy intents
+      // But we won't use the blockchain state for health/block until the very end
+      await playerTurnPromise;
+      const midwayState = await getLatestState();
+      
+      // Use the enemy types and intents from the blockchain
+      // but keep using our optimistic health/block values
+      const enemyTypes = midwayState.enemyTypes;
+      const enemyIntents = midwayState.enemyIntents;
+      
+      // Current state tracks our optimistic predictions throughout the turn
+      let currentState = {...postPlayerTurnState};
+      
+      // Process enemy intents one by one
+      for (let i = 0; i < enemyTypes.length; i++) {
+        if (currentState.enemyHealth[i] > 0 && enemyIntents[i]) {
+          const levelConfig = getLevelConfig(initialState.currentFloor);
+          
+          // Play animation and sound first
+          const animationState: AnimationState = {
+            sourceType: 'enemy',
+            sourceIndex: i,
+            targetPosition: levelConfig.heroPosition,
+            timestamp: Date.now(),
+            animationType: 'slash'
+          };
+
+          setCurrentAnimation(animationState);
+          setCurrentIntent(enemyIntents[i]);
+          setSoundType('intent');
+          setIsSoundPlaying(true);
+          
+          // Wait for animation
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Use processEnemyIntent from damageUtils to calculate the result
+          const enemyIntentResult = processEnemyIntent(
+            enemyIntents[i],
+            0, // intentValue (not used in most cases)
+            currentState.enemyBlock[i],
+            currentState.enemyHealth[i],
+            initialState.enemyMaxHealth ? initialState.enemyMaxHealth[i] : 100, // fallback
+            currentState.heroHealth,
+            currentState.heroBlock,
+            0 // enemyBuff
+          );
+          
+          // Update our current state with the predicted results
+          currentState.heroHealth = enemyIntentResult.newHeroHealth;
+          currentState.heroBlock = enemyIntentResult.newHeroBlock;
+          currentState.enemyHealth[i] = enemyIntentResult.newEnemyHealth;
+          currentState.enemyBlock[i] = enemyIntentResult.newEnemyBlock;
+          
+          // Update UI
+          setGameState((prev: GameStateUpdate | null) => {
+            if (!prev) return prev;
+            const update: Partial<GameStateUpdate> = {
+              currentHealth: currentState.heroHealth,
+              currentBlock: currentState.heroBlock,
+              enemyCurrentHealth: currentState.enemyHealth,
+              enemyBlock: currentState.enemyBlock
+            };
+            return { ...prev, ...update };
+          });
+          
+          // Reset animation and sound
+          setCurrentAnimation(null);
+          setIsSoundPlaying(false);
+          
+          // Small delay between enemy actions
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+      
+      // Wait for end turn transaction to complete
+      await endTurnPromise;
+      
+      // NOW we sync with the blockchain to get the final state
+      // Make multiple attempts to get a stable state
+      let latestState = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        latestState = await getLatestState(3, 300);
+        if (latestState && latestState.currentMana > 0) {
+          break;
+        }
+        // Wait a bit longer before trying again
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      // If we still don't have a good state, get one more time
+      if (!latestState || latestState.currentMana === 0) {
+        latestState = await getGameState();
+      }
+      
+      // Show player turn transition
+      setShowTurnBanner(false);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      setTurnBannerMessage("Your Turn");
+      setTurnBannerType('player');
+      setShowTurnBanner(true);
+      
+      // Hide banner after 2 seconds
+      setTimeout(() => {
+        setShowTurnBanner(false);
+      }, 2000);
+      
+      // Update with the final blockchain state
+      setGameState(latestState);
+      setPreviousHealth(latestState.currentHealth);
+      setPreviousBlock(latestState.currentBlock);
+      setPreviousEnemyHealth(latestState.enemyCurrentHealth);
+      setPreviousEnemyBlock(latestState.enemyBlock);
+      
+      // Complete turn transition
+      setTurnState('player');
+      setFrozenState(null);
+      setHasAutoEndedTurn(false);
+      
+      // Update optimistic values with latest state
+      setOptimisticHand(latestState.hand || []);
+      setOptimisticMana(latestState.currentMana || 0);
+      setOptimisticUpdatesEnabled(true);
+    } catch (error) {
+      console.error('Failed to process enemy turn:', error);
+      
+      setFrozenState(null);
+      setCurrentAnimation(null);
+      setShowTurnBanner(false);
+      setTurnState('player');
+      
+      // In case of error, make sure we get a fresh state
+      // and try multiple times to ensure we get one with proper mana
+      let newState = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        newState = await getGameState();
+        if (newState && newState.currentMana > 0) {
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      if (newState) {
+        setGameState(newState);
+        setOptimisticHand(newState.hand || []);
+        setOptimisticMana(newState.currentMana || 0);
+      }
+      setOptimisticUpdatesEnabled(true);
+    }
+  };
+
+  // Update handleEndTurn - this is now mainly used for manual end turn button
+  const handleEndTurn = async () => {
+    if (!gameState) return;
+    
+    if (gameState.runState !== 2) {
+      console.log('Not in combat state, not ending turn');
+      return;
+    }
+    
+    const allEnemiesDefeated = gameState.enemyCurrentHealth.every((health: number) => health <= 0);
+    if (allEnemiesDefeated) {
+      console.log('All enemies defeated, not ending turn');
+      return;
+    }
+
+    try {
+      // Freeze state and process the enemy turn optimistically
+      const stateBeforeEnemyTurn = { ...gameState };
+      setFrozenState(stateBeforeEnemyTurn);
+      setOptimisticUpdatesEnabled(false);
+
+      // Call processEnemyTurn with an already resolved promise (no player actions to wait for)
+      const emptyPromise = Promise.resolve({});
+      
+      // Set up initial state for enemy turn
+      const initialState = {
+        enemyHealth: [...stateBeforeEnemyTurn.enemyCurrentHealth],
+        enemyBlock: [...stateBeforeEnemyTurn.enemyBlock],
+        heroHealth: stateBeforeEnemyTurn.currentHealth,
+        heroBlock: stateBeforeEnemyTurn.currentBlock,
+        mana: stateBeforeEnemyTurn.currentMana
+      };
+      
+      await processEnemyTurn(emptyPromise, stateBeforeEnemyTurn, initialState);
+    } catch (error) {
+      console.error('Failed to end turn:', error);
+      
+      setFrozenState(null);
+      setCurrentAnimation(null);
+      setShowTurnBanner(false);
+      setTurnState('player');
+      
+      const newState = await getGameState();
+      if (newState) {
+        setGameState(newState);
+        setOptimisticHand(newState.hand || []);
+        setOptimisticMana(newState.currentMana || 0);
+      }
+      setOptimisticUpdatesEnabled(true);
     }
   };
 
@@ -500,138 +758,6 @@ const Game: React.FC = () => {
   const getBackground = () => {
     if (!gameState) return '';
     return getBackgroundImage(gameState.currentFloor);
-  };
-
-  // Update handleEndTurn to handle state updates more carefully
-  const handleEndTurn = async () => {
-    if (!gameState) return;
-    
-    if (gameState.runState !== 2) {
-      console.log('Not in combat state, not ending turn');
-      return;
-    }
-    
-    const allEnemiesDefeated = gameState.enemyCurrentHealth.every((health: number) => health <= 0);
-    if (allEnemiesDefeated) {
-      console.log('All enemies defeated, not ending turn');
-      return;
-    }
-
-    try {
-      // Start transition to enemy turn
-      setTurnState('transitioning');
-      setShowTurnBanner(false);
-      await new Promise(resolve => setTimeout(resolve, 400));
-      setTurnBannerMessage("Enemy Turn");
-      setTurnBannerType('enemy');
-      setShowTurnBanner(true);
-      
-      // Hide enemy turn banner after 2 seconds
-      setTimeout(() => {
-        setShowTurnBanner(false);
-      }, 2000);
-      
-      // Start transaction and get final state
-      const endTurnPromise = endTurnAction();
-      
-      // Wait a moment after banner hides before starting enemy actions
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setTurnState('enemy');
-      setFrozenState(gameState); // Freeze state during enemy turn
-
-      // Wait for transaction to complete and get final state
-      await endTurnPromise;
-      const latestState = await getLatestState();
-
-      // Store initial state for animations
-      const initialState = { ...gameState };
-
-      // Process enemy intents one by one
-      for (let i = 0; i < latestState.enemyTypes.length; i++) {
-        if (latestState.enemyCurrentHealth[i] > 0 && latestState.enemyIntents[i]) {
-          const levelConfig = getLevelConfig(latestState.currentFloor);
-          
-          // Play animation and sound first
-          const animationState: AnimationState = {
-            sourceType: 'enemy',
-            sourceIndex: i,
-            targetPosition: levelConfig.heroPosition,
-            timestamp: Date.now(),
-            animationType: 'slash'
-          };
-
-          setCurrentAnimation(animationState);
-          setCurrentIntent(latestState.enemyIntents[i]);
-          setSoundType('intent');
-          setIsSoundPlaying(true);
-          
-          // Wait for animation
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // After animation, update state
-          const damageToHero = latestState.enemyIntents[i];
-          const newHealth = Math.max(0, initialState.currentHealth - damageToHero);
-          
-          setGameState((prev: GameStateUpdate | null) => {
-            if (!prev) return prev;
-            const update: Partial<GameStateUpdate> = {
-              currentHealth: newHealth
-            };
-            return { ...prev, ...update };
-          });
-          
-          // Reset animation and sound
-          setCurrentAnimation(null);
-          setIsSoundPlaying(false);
-          
-          // Small delay between enemy actions
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-      }
-      
-      // All animations complete, update with final state
-      setGameState(latestState);
-      setPreviousHealth(latestState.currentHealth);
-      setPreviousBlock(latestState.currentBlock);
-      setPreviousEnemyHealth(latestState.enemyCurrentHealth);
-      setPreviousEnemyBlock(latestState.enemyBlock);
-      
-      // Show player turn transition
-      setShowTurnBanner(false);
-      await new Promise(resolve => setTimeout(resolve, 400));
-      setTurnBannerMessage("Your Turn");
-      setTurnBannerType('player');
-      setShowTurnBanner(true);
-      
-      // Hide banner after 2 seconds
-      setTimeout(() => {
-        setShowTurnBanner(false);
-      }, 2000);
-      
-      // Complete turn transition
-      setTurnState('player');
-      setFrozenState(null);
-      setHasAutoEndedTurn(false);
-      
-      // Update optimistic values with latest state
-      setOptimisticHand(latestState.hand || []);
-      setOptimisticMana(latestState.currentMana || 0);
-      setOptimisticUpdatesEnabled(true);
-    } catch (error) {
-      console.error('Failed to end turn:', error);
-      
-      setFrozenState(null);
-      setCurrentAnimation(null);
-      setShowTurnBanner(false);
-      setTurnState('player');
-      
-      const newState = await getGameState();
-      if (newState) {
-        setGameState(newState);
-        setOptimisticHand(newState.hand || []);
-        setOptimisticMana(newState.currentMana || 0);
-      }
-    }
   };
 
   const toggleDeck = () => {
