@@ -242,6 +242,11 @@ const Game: React.FC = () => {
           setInitialHandState([...state.hand || []]);
           setOptimisticUpdatesEnabled(true);
           setNeedsBlockchainSync(false);
+          
+          // Clear pending card arrays when syncing with blockchain
+          setPendingCardIDs([]);
+          setPendingCardIndices([]);
+          setPendingCardTargets([]);
         } catch (error) {
           console.log("Blockchain state not ready yet - will retry", error);
         }
@@ -872,7 +877,19 @@ const Game: React.FC = () => {
             />
             {/* Info Bar - Only show when not in whale room */}
             {gameState && gameState.runState !== 1 && (
-              <InfoBar />
+              <InfoBar clientState={{
+                turnState,
+                pendingCardIDs,
+                pendingCardIndices,
+                pendingCardTargets,
+                optimisticHand,
+                optimisticMana: optimisticMana === null ? undefined : optimisticMana,
+                optimisticEnemies: gameState?.enemyCurrentHealth.map((health: number, index: number) => ({
+                  health,
+                  block: gameState?.enemyBlock[index] || 0,
+                  type: gameState?.enemyTypes[index] || 0
+                }))
+              }} />
             )}
 
             {/* Game Entities */}
