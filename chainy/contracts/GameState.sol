@@ -257,12 +257,19 @@ contract GameState {
         require(plays.length > 0, "No cards to play");
 
         for (uint i = 0; i < plays.length; i++) {
-            if (data.runState != RUN_STATE_ENCOUNTER) break;
+            // If we're no longer in encounter (e.g. due to win), stop processing cards
+            if (data.runState != RUN_STATE_ENCOUNTER) {
+                // Don't call endTurn if we're not in encounter anymore
+                return;
+            }
             
             playCard(plays[i].cardIndex, plays[i].targetIndex);
         }
         
-        endTurn();
+        // Only end turn if we're still in encounter
+        if (data.runState == RUN_STATE_ENCOUNTER) {
+            endTurn();
+        }
     }
 
     function endTurn() public {
