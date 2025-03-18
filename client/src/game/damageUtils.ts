@@ -116,6 +116,7 @@ export const processEnemyIntent = (
   newHeroHealth: number;
   newHeroBlock: number;
   damageToHero: number;
+  heroDied: boolean;
 } => {
   // Get constants from shared data
   const INTENT_BLOCK_5 = 1000;
@@ -131,6 +132,7 @@ export const processEnemyIntent = (
   let newHeroHealth = heroHealth;
   let newHeroBlock = heroBlock;
   let damageToHero = 0;
+  let heroDied = false;
   
   if (intentType === INTENT_BLOCK_5) {
     // Enemy blocks
@@ -144,6 +146,7 @@ export const processEnemyIntent = (
     const result = calculateDamageToHero(damageToHero, newHeroBlock, newHeroHealth);
     newHeroHealth = result.newHealth;
     newHeroBlock = result.newBlock;
+    heroDied = newHeroHealth <= 0;
   } else if (intentType === INTENT_HEAL) {
     // Enemy heals
     newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 5);
@@ -165,6 +168,7 @@ export const processEnemyIntent = (
     const result = calculateDamageToHero(damageToHero, newHeroBlock, newHeroHealth);
     newHeroHealth = result.newHealth;
     newHeroBlock = result.newBlock;
+    heroDied = newHeroHealth <= 0;
     
     // Heal enemy
     newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 7);
@@ -176,6 +180,7 @@ export const processEnemyIntent = (
     const result = calculateDamageToHero(damageToHero, newHeroBlock, newHeroHealth);
     newHeroHealth = result.newHealth;
     newHeroBlock = result.newBlock;
+    heroDied = newHeroHealth <= 0;
   }
   
   return {
@@ -183,7 +188,8 @@ export const processEnemyIntent = (
     newEnemyHealth,
     newHeroHealth,
     newHeroBlock,
-    damageToHero
+    damageToHero,
+    heroDied
   };
 };
 
@@ -205,21 +211,23 @@ export const predictCardEffect = (
   heroBlock: number;
   manaSpent: number;
   enemyDied: boolean;
+  heroDied: boolean;
 } => {
   // Clone state arrays to avoid mutations
-  const enemyHealth = [...gameState.enemyCurrentHealth];
-  const enemyBlock = [...gameState.enemyBlock];
+  const enemyCurrentHealth = gameState.enemyCurrentHealth;
+  const enemyBlock = gameState.enemyBlock;
   let heroHealth = gameState.currentHealth;
   let heroBlock = gameState.currentBlock;
   let manaSpent = 0;
   let enemyDied = false;
+  let heroDied = false;
   
   // Apply card effects based on card ID
   switch (cardId) {
     case 1: // Smite - Deal 6 damage
       manaSpent = 1;
-      const smiteResult = calculateDamageToEnemy(6, enemyBlock[targetIndex], enemyHealth[targetIndex]);
-      enemyHealth[targetIndex] = smiteResult.newHealth;
+      const smiteResult = calculateDamageToEnemy(6, enemyBlock[targetIndex], enemyCurrentHealth[targetIndex]);
+      enemyCurrentHealth[targetIndex] = smiteResult.newHealth;
       enemyBlock[targetIndex] = smiteResult.newBlock;
       enemyDied = smiteResult.isDead;
       break;
@@ -231,8 +239,8 @@ export const predictCardEffect = (
       
     case 3: // Unfold Truth - Deal 7 damage. Draw a card.
       manaSpent = 1;
-      const unfoldResult = calculateDamageToEnemy(7, enemyBlock[targetIndex], enemyHealth[targetIndex]);
-      enemyHealth[targetIndex] = unfoldResult.newHealth;
+      const unfoldResult = calculateDamageToEnemy(7, enemyBlock[targetIndex], enemyCurrentHealth[targetIndex]);
+      enemyCurrentHealth[targetIndex] = unfoldResult.newHealth;
       enemyBlock[targetIndex] = unfoldResult.newBlock;
       enemyDied = unfoldResult.isDead;
       // Card draw handled separately
@@ -242,10 +250,10 @@ export const predictCardEffect = (
       manaSpent = 2;
       // Process for all enemies
       enemyDied = false;
-      for (let i = 0; i < enemyHealth.length; i++) {
-        if (enemyHealth[i] > 0) {
-          const preachResult = calculateDamageToEnemy(8, enemyBlock[i], enemyHealth[i]);
-          enemyHealth[i] = preachResult.newHealth;
+      for (let i = 0; i < enemyCurrentHealth.length; i++) {
+        if (enemyCurrentHealth[i] > 0) {
+          const preachResult = calculateDamageToEnemy(8, enemyBlock[i], enemyCurrentHealth[i]);
+          enemyCurrentHealth[i] = preachResult.newHealth;
           enemyBlock[i] = preachResult.newBlock;
           if (preachResult.isDead) enemyDied = true;
         }
@@ -255,8 +263,8 @@ export const predictCardEffect = (
     case 5: // Balance the Scales - Deal 5 damage. Gain 5 block.
       manaSpent = 1;
       heroBlock += 5;
-      const balanceResult = calculateDamageToEnemy(5, enemyBlock[targetIndex], enemyHealth[targetIndex]);
-      enemyHealth[targetIndex] = balanceResult.newHealth;
+      const balanceResult = calculateDamageToEnemy(5, enemyBlock[targetIndex], enemyCurrentHealth[targetIndex]);
+      enemyCurrentHealth[targetIndex] = balanceResult.newHealth;
       enemyBlock[targetIndex] = balanceResult.newBlock;
       enemyDied = balanceResult.isDead;
       break;
@@ -275,8 +283,8 @@ export const predictCardEffect = (
       if (currentHandSize >= 4) {
         damage = 16;
       }
-      const scriptureResult = calculateDamageToEnemy(damage, enemyBlock[targetIndex], enemyHealth[targetIndex]);
-      enemyHealth[targetIndex] = scriptureResult.newHealth;
+      const scriptureResult = calculateDamageToEnemy(damage, enemyBlock[targetIndex], enemyCurrentHealth[targetIndex]);
+      enemyCurrentHealth[targetIndex] = scriptureResult.newHealth;
       enemyBlock[targetIndex] = scriptureResult.newBlock;
       enemyDied = scriptureResult.isDead;
       break;
@@ -294,18 +302,18 @@ export const predictCardEffect = (
       
     case 10: // Divine Wrath - Deal 5 damage. Double if enemy at full HP.
       manaSpent = 1;
-      const isEnemyFull = enemyHealth[targetIndex] === gameState.enemyMaxHealth[targetIndex];
+      const isEnemyFull = enemyCurrentHealth[targetIndex] === gameState.enemyMaxHealth[targetIndex];
       const wrathDamage = isEnemyFull ? 10 : 5;
-      const wrathResult = calculateDamageToEnemy(wrathDamage, enemyBlock[targetIndex], enemyHealth[targetIndex]);
-      enemyHealth[targetIndex] = wrathResult.newHealth;
+      const wrathResult = calculateDamageToEnemy(wrathDamage, enemyBlock[targetIndex], enemyCurrentHealth[targetIndex]);
+      enemyCurrentHealth[targetIndex] = wrathResult.newHealth;
       enemyBlock[targetIndex] = wrathResult.newBlock;
       enemyDied = wrathResult.isDead;
       break;
       
     case 11: // Explodicate - Deal 7 damage. Ignores block.
       manaSpent = 1;
-      const explodicateResult = calculateDirectDamageToEnemy(7, enemyHealth[targetIndex]);
-      enemyHealth[targetIndex] = explodicateResult.newHealth;
+      const explodicateResult = calculateDirectDamageToEnemy(7, enemyCurrentHealth[targetIndex]);
+      enemyCurrentHealth[targetIndex] = explodicateResult.newHealth;
       enemyDied = explodicateResult.isDead;
       break;
       
@@ -321,15 +329,17 @@ export const predictCardEffect = (
   // Check for hero death
   if (heroHealth <= 0) {
     soundEffectManager.playEventSound('heroDeath');
+    heroDied = true;
   }
 
   return {
-    enemyHealth,
+    enemyHealth: enemyCurrentHealth,
     enemyBlock,
     heroHealth,
     heroBlock,
     manaSpent,
-    enemyDied
+    enemyDied,
+    heroDied
   };
 };
 

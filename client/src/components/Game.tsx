@@ -97,6 +97,7 @@ const Game: React.FC = () => {
   const [inTurn, setInTurn] = useState(false);
   const [pendingEnemyTurnTransaction, setPendingEnemyTurnTransaction] = useState(false);
   const [predictedVictoryTime, setPredictedVictoryTime] = useState<number | null>(null);
+  const [predictedDefeatTime, setPredictedDefeatTime] = useState<number | null>(null);
   const [showVictoryScreen, setShowVictoryScreen] = useState(false);
   const [victoryScreenVisible, setVictoryScreenVisible] = useState(false);
   const [showDefeatScreen, setShowDefeatScreen] = useState(false);
@@ -387,6 +388,17 @@ const Game: React.FC = () => {
       currentGameState
     );
 
+    // Check for predicted defeat
+    if (prediction.heroDied && !predictedDefeatTime) {
+      setPredictedDefeatTime(Date.now());
+      setShowDefeatScreen(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setDefeatScreenVisible(true);
+        });
+      });
+    }
+
     // Update optimistic state with prediction
     setGameState((prev: any) => {
       if (!prev) return prev;
@@ -636,6 +648,17 @@ const Game: React.FC = () => {
             currentState.enemyBuffs[i] || 0  // Pass through enemy buff for accurate damage prediction
           );
 
+          // Check for predicted defeat
+          if (enemyIntentResult.heroDied && !predictedDefeatTime) {
+            setPredictedDefeatTime(Date.now());
+            setShowDefeatScreen(true);
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                setDefeatScreenVisible(true);
+              });
+            });
+          }
+
           // Update our current state with the predicted results
           currentState.heroHealth = enemyIntentResult.newHeroHealth;
           currentState.heroBlock = enemyIntentResult.newHeroBlock;
@@ -805,9 +828,8 @@ const Game: React.FC = () => {
   const handleRetry = async () => {
     setIsRetrying(true);
     try {
-      await startRun();
-      setShowDefeatScreen(false);
-      setDefeatScreenVisible(false);
+      await abandonRun();
+      window.location.reload(); // Refresh the page to start fresh
     } catch (error) {
       console.error('Failed to retry:', error);
     }
@@ -862,6 +884,17 @@ const Game: React.FC = () => {
   }, [gameState, predictedVictoryTime]);
 
   useEffect(() => {
+    if (predictedDefeatTime && (Date.now() - predictedDefeatTime >= 3000)) {
+      // Check if defeat condition still holds in blockchain state
+      if (gameState?.currentHealth > 0) {
+        setPredictedDefeatTime(null);
+        setDefeatScreenVisible(false);
+        setShowDefeatScreen(false);
+      }
+    }
+  }, [gameState, predictedDefeatTime]);
+
+  useEffect(() => {
     if (gameState?.runState === 2) {
       checkAndHandleVictory(gameState);
     }
@@ -876,7 +909,7 @@ const Game: React.FC = () => {
   }, [gameState?.runState]);
 
   useEffect(() => {
-    if (gameState?.runState === 1 && gameState?.currentFloor > 0) {
+    if ((gameState?.runState === 1 || gameState?.runState === 4) && gameState?.currentFloor > 0) {
       setShowDefeatScreen(true);
       // Use RAF to ensure mount happens before adding visible class
       requestAnimationFrame(() => {
@@ -1020,13 +1053,15 @@ const Game: React.FC = () => {
             )}
 
             {/* Defeat screen */}
-            {showDefeatScreen && gameState?.runState === 1 && gameState?.currentFloor > 0 && (
+            {showDefeatScreen && (gameState?.runState === 1 || gameState?.runState === 4) && gameState?.currentFloor > 0 && (
               <div className={`defeat-screen ${defeatScreenVisible ? 'visible' : ''}`}>
-                <div className="overlay-button" onClick={handleRetry}>
-                  <div className="overlay-button-text">
-                    TRY AGAIN?
+                {!isRetrying && (
+                  <div className="overlay-button" onClick={handleRetry}>
+                    <div className="overlay-button-text">
+                      TRY AGAIN?
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
