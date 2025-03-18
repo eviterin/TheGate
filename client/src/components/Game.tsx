@@ -1008,23 +1008,15 @@ const Game: React.FC = () => {
 
             {/* Victory screen */}
             {showVictoryScreen && gameState?.runState === 2 && (
-              <>
-                <div className={`victory-screen ${victoryScreenVisible ? 'visible' : ''}`}>
-                  {!isPraying && (
-                    <div className="overlay-button" onClick={handlePray}>
-                      <div className="overlay-button-text">
-                        PRAY FOR THE LOST
-                      </div>
+              <div className={`victory-screen ${victoryScreenVisible ? 'visible' : ''}`}>
+                {!isPraying && (
+                  <div className="overlay-button" onClick={handlePray}>
+                    <div className="overlay-button-text">
+                      PRAY FOR THE LOST
                     </div>
-                  )}
-                </div>
-                {isPraying && (
-                  <LoadingOverlay 
-                    isVisible={true}
-                    message="A divine presence stirs within..." 
-                  />
+                  </div>
                 )}
-              </>
+              </div>
             )}
 
             {/* Defeat screen */}
@@ -1112,7 +1104,7 @@ const Game: React.FC = () => {
         {/* Add loading overlays */}
         <LoadingOverlay 
           isVisible={isLoadingGameState} 
-          message="Loading game state..." 
+          message="Loading game..." 
         />
         <LoadingOverlay 
           isVisible={isChoosingRoom} 
@@ -1125,6 +1117,10 @@ const Game: React.FC = () => {
         <LoadingOverlay 
           isVisible={isRetrying} 
           message="Divine intervention in progress..." 
+        />
+        <LoadingOverlay 
+          isVisible={isPraying} 
+          message="A divine presence stirs within..." 
         />
 
         {/* Use the CardPileViewer component for all pile views */}
