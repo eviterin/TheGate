@@ -97,6 +97,9 @@ const Game: React.FC = () => {
   const [needsBlockchainSync, setNeedsBlockchainSync] = useState(false);
   const [inTurn, setInTurn] = useState(false);
   const [pendingEnemyTurnTransaction, setPendingEnemyTurnTransaction] = useState(false);
+  const [predictedVictoryTime, setPredictedVictoryTime] = useState<number | null>(null);
+  const [showVictoryScreen, setShowVictoryScreen] = useState(false);
+  const [victoryScreenVisible, setVictoryScreenVisible] = useState(false);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -119,19 +122,14 @@ const Game: React.FC = () => {
         if (!mounted) return;
 
         // Skip fetching during player turn unless explicitly requested
-        // BUT always fetch if we don't have a game state yet or if we're not in combat
         if (turnState === 'player' && !needsBlockchainSync && gameState && gameState.runState === 2) {
-          console.log("[FETCH] Skipping blockchain fetch during player turn");
           return;
         }
 
         // Always fetch state, but don't always update the UI with it
-        console.log("[FETCH] Fetching blockchain state, needsSync:", needsBlockchainSync, "turnState:", turnState);
         const state = await getGameState();
         if (!mounted || !state) return;
-        
-        console.log("[FETCH] Got blockchain state, hand:", state.hand?.length || 0, "cards");
-        
+
         // Save previous state for animations
         if (gameState) {
           setPreviousHealth(gameState.currentHealth);
@@ -139,10 +137,12 @@ const Game: React.FC = () => {
           setPreviousEnemyHealth(gameState.enemyCurrentHealth || []);
           setPreviousEnemyBlock(gameState.enemyBlock || []);
         }
+
+        // Check if we're in grace period
+        const inGracePeriod = predictedVictoryTime && (Date.now() - predictedVictoryTime < 3000);
         
-        // During a turn, preserve our predicted values
-        if (inTurn && gameState) {
-          // Store the new state but preserve our prediction values
+        // During a turn or grace period, preserve our predicted values
+        if ((inTurn || inGracePeriod) && gameState) {
           setGameState((prev: any) => {
             if (!prev) return state;
             return {
@@ -160,23 +160,24 @@ const Game: React.FC = () => {
           // Just store the state as is
           setGameState(state);
         }
-        
-        setIsLoadingGameState(false);
-        
-        // Only update optimistic UI when not in a turn AND not in player turn
-        // This is critical - during player turn we never sync with blockchain
-        if ((!inTurn && turnState !== 'player') || needsBlockchainSync) {
+
+        // Only update optimistic UI when not in a turn AND not in grace period
+        if (!inTurn && !inGracePeriod && turnState !== 'player') {
           syncWithBlockchain(state);
         }
 
-        // Other state updates
+        // Update other state
         setDeck(state?.deck || []);
         setDiscard(state?.discard || []);
         setDraw(state?.draw || []);
         
         if (state?.runState === 3) {
           setOptimisticHand([]);
+          setVictoryScreenVisible(false);
+          setPredictedVictoryTime(null);
         }
+
+        setIsLoadingGameState(false);
       } catch (error) {
         console.error('Failed to fetch game state:', error);
         setIsLoadingGameState(false);
@@ -190,7 +191,7 @@ const Game: React.FC = () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, [getGameState, gameState, inTurn, needsBlockchainSync]);
+  }, [getGameState, gameState, inTurn, needsBlockchainSync, predictedVictoryTime]);
 
   useEffect(() => {
     console.log('[TURN] Turn state changed to:', turnState);
@@ -436,7 +437,8 @@ const Game: React.FC = () => {
         enemyCurrentHealth: currentState.enemyHealth,
         enemyBlock: currentState.enemyBlock
       };
-      return { ...prev, ...update };
+      const newState = { ...prev, ...update };
+      return newState;
     });
     
     // Wait for rest of animation
@@ -461,7 +463,14 @@ const Game: React.FC = () => {
   };
 
   const handleEndTurn = async () => {
-    console.log('[ENDTURN] handleEndTurn called with pendingCardIDs:', pendingCardIDs, 'pendingCardIndices:', pendingCardIndices, 'targets:', pendingCardTargets);
+    if (showVictoryScreen) {
+      // Start grace period when button is clicked
+      setPredictedVictoryTime(Date.now());
+      
+      console.log('[ENDTURN] Victory end turn, starting grace period');
+    }
+
+    console.log('[ENDTURN] handleEndTurn called with pendingCardIDs:', pendingCardIDs);
     
     // Still in a turn for enemy actions
     setInTurn(true);
@@ -584,16 +593,14 @@ const Game: React.FC = () => {
       setTurnState('transitioning');
       setShowTurnBanner(false);
       
-      // Only show enemy turn banner if we haven't won
-      if (!isClientSideVictory()) {
-        setTurnBannerMessage("Enemy Turn");
-        setTurnBannerType('enemy');
-        setShowTurnBanner(true);
-        
-        // Show enemy turn banner for 2 seconds
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setShowTurnBanner(false);
-      }
+      // Show enemy turn banner immediately
+      setTurnBannerMessage("Enemy Turn");
+      setTurnBannerType('enemy');
+      setShowTurnBanner(true);
+      
+      // Show enemy turn banner for 2 seconds
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setShowTurnBanner(false);
       
       // Wait 1 second after banner hides before starting enemy actions
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -833,14 +840,47 @@ const Game: React.FC = () => {
     }
   };
 
-  // Check if we think we've won based on client-side state
-  const isClientSideVictory = () => {
-    if (!gameState) return false;
-    return gameState.enemyCurrentHealth.every((health: number) => health <= 0);
+  const checkAndHandleVictory = (state: any) => {
+    const isVictory = state.enemyCurrentHealth?.every((health: number) => health <= 0) ?? false;
+    if (isVictory && !showVictoryScreen) {
+      console.log('[VICTORY] Detected victory, showing victory screen');
+      setShowVictoryScreen(true);
+      // Use RAF to ensure mount happens before adding visible class
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setVictoryScreenVisible(true);
+        });
+      });
+    }
   };
 
+  useEffect(() => {
+    if (predictedVictoryTime && (Date.now() - predictedVictoryTime >= 3000)) {
+      // Check if victory condition still holds in blockchain state
+      const isVictory = gameState?.enemyCurrentHealth?.every((health: number) => health <= 0) ?? false;
+      if (!isVictory) {
+        setPredictedVictoryTime(null);
+        setVictoryScreenVisible(false);
+      }
+    }
+  }, [gameState, predictedVictoryTime]);
+
+  useEffect(() => {
+    if (gameState?.runState === 2) {
+      checkAndHandleVictory(gameState);
+    }
+  }, [gameState?.enemyCurrentHealth]);
+
+  useEffect(() => {
+    if (gameState?.runState === 3) {
+      setShowVictoryScreen(false);
+      setVictoryScreenVisible(false);
+      setPredictedVictoryTime(null);
+    }
+  }, [gameState?.runState]);
+
   return (
-    <>
+    <div className="game">
       <SoundManager 
         soundEffect={currentSound}
         isPlaying={isSoundPlaying}
@@ -850,15 +890,15 @@ const Game: React.FC = () => {
         <div className="game-container">
           <div className="side-decorations left"></div>
           <div className="side-decorations right"></div>
-          <div className="game-content" style={{backgroundImage: `url(${getBackground()})`}}>
-            {/* Only show turn banner when not in victory state */}
-            {!isClientSideVictory() && (
+          <div className="game-content" style={{ backgroundImage: `url(${getBackground()})` }}>
+            {showTurnBanner && !victoryScreenVisible && (
               <TurnBanner 
                 message={turnBannerMessage}
                 isVisible={showTurnBanner}
                 type={turnBannerType}
               />
             )}
+
             {/* Info Bar - Only show when not in whale room */}
             {gameState && gameState.runState !== 1 && (
               <InfoBar clientState={{
@@ -1030,14 +1070,14 @@ const Game: React.FC = () => {
 
             <div className="bottom-right">
               {/* Add End Turn button */}
-              {gameState && gameState.runState === 2 && turnState === 'player' && (
+              {gameState?.runState === 2 && !victoryScreenVisible && turnState === 'player' && (
                 <div className="end-turn-button-container">
                   <button 
                     className="end-turn-button"
                     onClick={handleEndTurn}
                     disabled={turnState !== 'player' || pendingEnemyTurnTransaction}
                   >
-                    {isClientSideVictory() ? 'Continue' : 'End Turn'}
+                    End Turn
                   </button>
                 </div>
               )}
@@ -1096,9 +1136,20 @@ const Game: React.FC = () => {
           onCancel={() => setShowAbandonConfirmation(false)}
           isLoading={isAbandoning}
         />
+
+        {/* Victory overlay */}
+        {showVictoryScreen && gameState?.runState === 2 && (
+          <div className={`victory-screen ${victoryScreenVisible ? 'visible' : ''}`} style={{ visibility: victoryScreenVisible ? 'visible' : 'hidden' }}>
+            <div className="sins-button" onClick={handleEndTurn}>
+              <div className="sins-button-text">
+                Pray for the lost
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 };
 
-export default Game; 
+export default Game;
