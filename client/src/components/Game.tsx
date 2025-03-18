@@ -101,6 +101,7 @@ const Game: React.FC = () => {
   const [victoryScreenVisible, setVictoryScreenVisible] = useState(false);
   const [showDefeatScreen, setShowDefeatScreen] = useState(false);
   const [defeatScreenVisible, setDefeatScreenVisible] = useState(false);
+  const [isPraying, setIsPraying] = useState(false);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -881,6 +882,12 @@ const Game: React.FC = () => {
     }
   }, [gameState?.runState, gameState?.currentFloor]);
 
+  const handlePray = async () => {
+    setIsPraying(true);
+    await handleEndTurn();
+    setIsPraying(false);
+  };
+
   return (
     <div className="game">
       <SoundManager 
@@ -996,13 +1003,23 @@ const Game: React.FC = () => {
 
             {/* Victory screen */}
             {showVictoryScreen && gameState?.runState === 2 && (
-              <div className={`victory-screen ${victoryScreenVisible ? 'visible' : ''}`}>
-                <div className="overlay-button" onClick={handleEndTurn}>
-                  <div className="overlay-button-text">
-                    PRAY FOR THE LOST
-                  </div>
+              <>
+                <div className={`victory-screen ${victoryScreenVisible ? 'visible' : ''}`}>
+                  {!isPraying && (
+                    <div className="overlay-button" onClick={handlePray}>
+                      <div className="overlay-button-text">
+                        PRAY FOR THE LOST
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+                {isPraying && (
+                  <LoadingOverlay 
+                    isVisible={true}
+                    message="A divine presence stirs within..." 
+                  />
+                )}
+              </>
             )}
 
             {/* Defeat screen */}

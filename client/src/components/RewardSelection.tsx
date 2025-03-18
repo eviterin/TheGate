@@ -28,7 +28,9 @@ const RewardSelection: React.FC<RewardSelectionProps> = ({
   return (
     <div className="reward-overlay">
       <div className="reward-content">
-        <h2>Choose Your Reward</h2>
+        <div className="reward-title">
+          Choose your path
+        </div>
         <div className="reward-cards">
           {cardData
             .filter(card => availableRewards.includes(card.numericId))

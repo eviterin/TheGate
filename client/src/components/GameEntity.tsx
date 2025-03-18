@@ -306,9 +306,9 @@ const GameEntity: React.FC<GameEntityProps> = ({
         position: 'absolute',
         // Show stats above if: enemy below y=50 or hero below y=85
         ...((!isHero && entityPosition.y > 50) || (isHero && entityPosition.y > 85) ? {
-          top: `${-45 * (scale || 1)}px`,
+          top: `${(isHero? -45 * (scale || 1) : -55 * (scale || 1))}px`,
         } : {
-          bottom: `${(isHero ? -25 : -45) * (scale || 1)}px`,
+          bottom: `${(isHero ? -0 : -45) * (scale || 1)}px`,
         }),
         left: '50%',
         transform: 'translateX(-50%)',
