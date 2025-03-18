@@ -318,7 +318,6 @@ const Game: React.FC = () => {
   useEffect(() => {
     // Set initial hand state when hand is first loaded
     if (gameState?.hand && gameState.hand.length > 0) {
-      console.log('[HAND] Setting initial hand state:', gameState.hand);
       setInitialHandState(gameState.hand);
     }
   }, [gameState?.hand]);

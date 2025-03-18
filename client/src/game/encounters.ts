@@ -126,8 +126,8 @@ const positions: Record<number, ClientData> = {
         heroPosition: {x: 80, y: 83},
         heroScale: 1.3,
         heroInvert: true,
-        enemyPositions: [{x: 30, y: 83}, {x: 50, y: 75}],
-        enemyScales: [2, 1.4],
+        enemyPositions: [{x: 41, y: 76}, {x: 50, y: 75}],
+        enemyScales: [1.3, 1.4],
         enemyInverted: [false, false]
     },
     6: {
