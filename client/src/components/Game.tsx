@@ -583,18 +583,18 @@ const Game: React.FC = () => {
       // Start transition to enemy turn
       setTurnState('transitioning');
       setShowTurnBanner(false);
-      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      // Show enemy turn banner immediately
       setTurnBannerMessage("Enemy Turn");
       setTurnBannerType('enemy');
       setShowTurnBanner(true);
       
-      // Hide enemy turn banner after 2 seconds
-      setTimeout(() => {
-        setShowTurnBanner(false);
-      }, 2000);
-
-      // Wait a moment after banner hides before starting enemy actions
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Show enemy turn banner for 2 seconds
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setShowTurnBanner(false);
+      
+      // Wait 1 second after banner hides before starting enemy actions
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setTurnState('enemy');
       
       // We can start processing enemy actions immediately with our current state
@@ -673,19 +673,8 @@ const Game: React.FC = () => {
         }
       }
       
-      // Wait for endTurn transaction to complete before transitioning back to player turn
-      console.log('[ENDTURN] Waiting for transaction to complete before player turn');
-      
-      // Wait for the endTurn transaction to complete
-      const waitForTransaction = async () => {
-        // Check every 500ms if the transaction is still pending
-        while (pendingEnemyTurnTransaction) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          console.log('[ENDTURN] Still waiting for transaction...');
-        }
-      };
-      
-      await waitForTransaction();
+      // Wait 1 second after all enemy actions before transitioning back
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Force a blockchain sync to get the latest state with new cards
       setNeedsBlockchainSync(true);
@@ -704,7 +693,7 @@ const Game: React.FC = () => {
       setTimeout(() => {
         setShowTurnBanner(false);
       }, 2000);
-      
+
       // Wait a moment after banner hides before starting player turn
       await new Promise(resolve => setTimeout(resolve, 800));
       
