@@ -92,23 +92,17 @@ contract GameEncounters {
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
         } else if (floor == 9) {
-            data.types = [ENEMY_TYPE_A];
-            data.maxHealth = [50];
-            data.currentHealth = [50];
-            data.blockAmount = new uint16[](1);
-            data.buffs = new uint8[](1);
+            data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
+            data.maxHealth = [50, 50];
+            data.currentHealth = [50, 50];
+            data.blockAmount = new uint16[](2);
+            data.buffs = new uint8[](2);
         } else if (floor == 10) {
             data.types = [ENEMY_TYPE_B];
             data.maxHealth = [40];
             data.currentHealth = [40];
             data.blockAmount = new uint16[](1);
             data.buffs = new uint8[](1);
-        } else { //should never happen
-            data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
-            data.maxHealth = [10, 12];
-            data.currentHealth = [10, 12];
-            data.blockAmount = new uint16[](2);
-            data.buffs = new uint8[](2);
         }
         
         for (uint i = 0; i < data.blockAmount.length; i++) {
@@ -262,26 +256,6 @@ contract GameEncounters {
             if (data.currentHealth[1] > 0) {
                 data.intents[1] = INTENT_VAMPIRIC_BITE;
             }
-        } else if (floor > 5) {
-            for (uint i = 0; i < data.types.length; i++) {
-                if (data.currentHealth[i] > 0) {
-                    uint8 enemyType = data.types[i];
-                    
-                    if (enemyType == ENEMY_TYPE_A) {
-                        data.intents[i] = uint16(6 + (seed % 5));
-                    } else if (enemyType == ENEMY_TYPE_B) {
-                        uint256 action = seed % 3;
-                        if (action == 0) {
-                            data.intents[i] = INTENT_BLOCK_5;
-                        } else if (action == 1) {
-                            data.intents[i] = INTENT_VAMPIRIC_BITE;
-                        } else {
-                            data.intents[i] = uint16(4 + (seed % 5));
-                        }
-                    }
-                }
-                seed = uint256(keccak256(abi.encodePacked(seed)));
-            }
         } else if (floor == 6) {
             if (data.currentHealth[0] > 0) {
                 data.intents[0] = INTENT_BLOCK_AND_ATTACK;
@@ -290,6 +264,24 @@ contract GameEncounters {
                 data.intents[1] = INTENT_VAMPIRIC_BITE;
             }
         } else if (floor == 7) {
+            if (data.currentHealth[0] > 0) {
+                data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+            }
+        } else if (floor == 8) {
+            if (data.currentHealth[0] > 0) {
+                data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+            }
+            if (data.currentHealth[1] > 0) {
+                data.intents[1] = INTENT_VAMPIRIC_BITE;
+            }
+        } else if (floor == 9) {
+            if (data.currentHealth[0] > 0) {
+                data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+            }
+            if (data.currentHealth[1] > 0) {
+                data.intents[1] = INTENT_VAMPIRIC_BITE;
+            }
+        } else if (floor == 10) {
             if (data.currentHealth[0] > 0) {
                 data.intents[0] = INTENT_BLOCK_AND_ATTACK;
             }
