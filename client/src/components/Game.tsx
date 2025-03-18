@@ -70,7 +70,6 @@ const Game: React.FC = () => {
   const [selectedReward, setSelectedReward] = useState<number | null>(null);
   const [optimisticHand, setOptimisticHand] = useState<number[]>([]);
   const [optimisticMana, setOptimisticMana] = useState<number | null>(null);
-  const [optimisticUpdatesEnabled, setOptimisticUpdatesEnabled] = useState(true);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isLoadingGameState, setIsLoadingGameState] = useState(true);
   const [isChoosingRoom, setIsChoosingRoom] = useState(false);
@@ -240,7 +239,6 @@ const Game: React.FC = () => {
           setOptimisticHand(state.hand || []);
           setOptimisticMana(state.currentMana || 0);
           setInitialHandState([...state.hand || []]);
-          setOptimisticUpdatesEnabled(true);
           setNeedsBlockchainSync(false);
           
           // Clear pending card arrays when syncing with blockchain
@@ -336,9 +334,6 @@ const Game: React.FC = () => {
   const handleEntityClick = async (targetIndex: number) => {
     if (selectedCardIndex === null) return;
     
-    // Don't set inTurn during player's card plays
-    // Only set it during turn transitions
-    
     const cardId = optimisticHand[selectedCardIndex];
     const card = cardData.find(c => c.numericId === cardId);
     
@@ -353,7 +348,6 @@ const Game: React.FC = () => {
     console.log(`[CARDPLAY] Playing card ${card.name} (ID: ${cardId}) from hand index ${selectedCardIndex} targeting enemy ${targetIndex}`);
     
     // Track both the card ID, its original index in the hand, and the target
-    // Using callback form to ensure we get the latest state
     const newPendingCardIDs = [...pendingCardIDs, cardId];
     const newPendingCardIndices = [...pendingCardIndices, selectedCardIndex];
     const newPendingCardTargets = [...pendingCardTargets, targetIndex];
@@ -366,6 +360,11 @@ const Game: React.FC = () => {
     
     // Explicitly set inTurn to true during card play to prevent blockchain sync
     setInTurn(true);
+
+    // Update optimistic mana and hand immediately
+    setOptimisticMana((prev) => (prev || 0) - card.manaCost);
+    setOptimisticHand(prev => prev.filter((_, i) => i !== selectedCardIndex));
+    setSelectedCardIndex(null);
 
     // Create current game state for prediction
     const currentGameState = {
@@ -457,15 +456,6 @@ const Game: React.FC = () => {
     // Small delay between enemy actions
     await new Promise(resolve => setTimeout(resolve, 200));
     
-    // Update optimistic mana
-    setOptimisticMana((prev) => (prev || 0) - prediction.manaSpent);
-    
-    // Update optimistic hand
-    setOptimisticHand(prev => prev.filter((_, i) => i !== selectedCardIndex));
-    
-    await new Promise(resolve => setTimeout(resolve, 100));
-    setSelectedCardIndex(null);
-    
     // Log pending cards after each card play
     console.log('[CARDPLAY] Updated pending cards after play:', pendingCardIDs, pendingCardIndices, 'targets:', pendingCardTargets);
   };
@@ -476,7 +466,7 @@ const Game: React.FC = () => {
     // Still in a turn for enemy actions
     setInTurn(true);
     setTurnState('transitioning');
-    setOptimisticUpdatesEnabled(false);
+    // Removed optimisticUpdatesEnabled state variable
 
     try {
       // Process all queued cards in a single transaction
@@ -849,12 +839,6 @@ const Game: React.FC = () => {
     
     if (needsBlockchainSync) {
       setNeedsBlockchainSync(false);
-    }
-    
-    // Enable optimistic updates in combat
-    const newIsInCombat = state.runState === 2;
-    if (newIsInCombat) {
-      setOptimisticUpdatesEnabled(true);
     }
   };
 
