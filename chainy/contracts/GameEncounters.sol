@@ -181,17 +181,17 @@ contract GameEncounters {
             if (data.currentHealth[0] > 0 && data.currentHealth[1] > 0) {
                 // On first turn, enemy 1 attacks and enemy 2 blocks
                 if (previousIntents.length == 0) {
-                    data.intents[0] = 8; // Attack for 8 damage
+                    data.intents[0] = 6; // Attack for 6 damage
                     data.intents[1] = INTENT_BLOCK_5;
                 } else {
                     // After first turn, they swap roles each turn
                     bool wasFirstBlocking = previousIntents[0] == INTENT_BLOCK_5;
                     if (wasFirstBlocking) {
-                        data.intents[0] = 8;
+                        data.intents[0] = 6;
                         data.intents[1] = INTENT_BLOCK_5;
                     } else {
                         data.intents[0] = INTENT_BLOCK_5;
-                        data.intents[1] = 7;
+                        data.intents[1] = 4;
                     }
                 }
             }
@@ -200,7 +200,7 @@ contract GameEncounters {
                 data.intents[0] = 12;
             }
             else if (data.currentHealth[1] > 0) {
-                data.intents[1] = 11;
+                data.intents[1] = 8;
             }
         }
         else if (floor == 2) {

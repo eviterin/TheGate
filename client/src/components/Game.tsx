@@ -584,14 +584,16 @@ const Game: React.FC = () => {
       setTurnState('transitioning');
       setShowTurnBanner(false);
       
-      // Show enemy turn banner immediately
-      setTurnBannerMessage("Enemy Turn");
-      setTurnBannerType('enemy');
-      setShowTurnBanner(true);
-      
-      // Show enemy turn banner for 2 seconds
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setShowTurnBanner(false);
+      // Only show enemy turn banner if we haven't won
+      if (!isClientSideVictory()) {
+        setTurnBannerMessage("Enemy Turn");
+        setTurnBannerType('enemy');
+        setShowTurnBanner(true);
+        
+        // Show enemy turn banner for 2 seconds
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setShowTurnBanner(false);
+      }
       
       // Wait 1 second after banner hides before starting enemy actions
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -831,6 +833,12 @@ const Game: React.FC = () => {
     }
   };
 
+  // Check if we think we've won based on client-side state
+  const isClientSideVictory = () => {
+    if (!gameState) return false;
+    return gameState.enemyCurrentHealth.every((health: number) => health <= 0);
+  };
+
   return (
     <>
       <SoundManager 
@@ -843,11 +851,14 @@ const Game: React.FC = () => {
           <div className="side-decorations left"></div>
           <div className="side-decorations right"></div>
           <div className="game-content" style={{backgroundImage: `url(${getBackground()})`}}>
-            <TurnBanner 
-              message={turnBannerMessage}
-              isVisible={showTurnBanner}
-              type={turnBannerType}
-            />
+            {/* Only show turn banner when not in victory state */}
+            {!isClientSideVictory() && (
+              <TurnBanner 
+                message={turnBannerMessage}
+                isVisible={showTurnBanner}
+                type={turnBannerType}
+              />
+            )}
             {/* Info Bar - Only show when not in whale room */}
             {gameState && gameState.runState !== 1 && (
               <InfoBar clientState={{
@@ -1026,7 +1037,7 @@ const Game: React.FC = () => {
                     onClick={handleEndTurn}
                     disabled={turnState !== 'player' || pendingEnemyTurnTransaction}
                   >
-                    End Turn
+                    {isClientSideVictory() ? 'Continue' : 'End Turn'}
                   </button>
                 </div>
               )}
