@@ -323,6 +323,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
       }
     };
 
+    const entityPosition = getEntityPosition();
+
     return (
       <div style={{
         position: 'absolute',
@@ -556,7 +558,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         style={getAnimationStyles()}
         onClick={() => isValidTarget && onEntityClick?.()}
       >
-        {renderIntent()}
+        {((currentFloor > 0 || !isHero) || block > 0 || buff > 0 || (!isHero && intent)) && renderIntent()}
         <div 
           style={{
             width: '100%',
