@@ -358,9 +358,11 @@ const GameEntity: React.FC<GameEntityProps> = ({
           paddingTop: !isHero && intentInfo ? '4px' : '0',
           order: 2
         }}>
-          <div className="stat-container" data-tooltip="Health Points">
-            <span>{health <= 0 ? '💔' : '❤️'} {health}/{maxHealth}</span>
-          </div>
+          {(currentFloor > 0 || !isHero) && (
+            <div className="stat-container" data-tooltip="Health Points">
+              <span>{health <= 0 ? '💔' : '❤️'} {health}/{maxHealth}</span>
+            </div>
+          )}
           {block > 0 && (
             <div className="stat-container" data-tooltip="Block">
               <span style={{ color: '#70ff70', fontWeight: 'bold' }}>

@@ -171,11 +171,6 @@ contract GameEncounters {
         uint16[] memory previousIntents = data.intents;
         data.intents = new uint16[](data.types.length);
 
-        // Reset block for all enemies at start of turn
-        for (uint i = 0; i < data.blockAmount.length; i++) {
-            data.blockAmount[i] = 0;
-        }
-        
         if (floor == 1) {
             if (data.currentHealth[0] > 0 && data.currentHealth[1] > 0) {
                 // On first turn, enemy 1 attacks and enemy 2 blocks
@@ -303,6 +298,9 @@ contract GameEncounters {
     function processIntent(address player, uint8 enemyIndex, uint16 intent) external onlyGameState returns (uint8 damageToHero) {
         EnemyData storage data = enemyData[player];
         require(enemyIndex < data.types.length, "Invalid enemy index");
+        
+        // Reset block at start of enemy's next turn
+        data.blockAmount[enemyIndex] = 0;
         
         if (intent == INTENT_BLOCK_5) {
             data.blockAmount[enemyIndex] = 5;
