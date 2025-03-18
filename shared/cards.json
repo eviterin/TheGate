@@ -77,7 +77,7 @@
             "id": "divine_protection",
             "name": "Sacred Ritual",
             "description": "Gain 10 block. Heal 3 HP.",
-            "manaCost": 2,
+            "manaCost": 3,
             "targeted": false,
             "animationType": "flip"
         },

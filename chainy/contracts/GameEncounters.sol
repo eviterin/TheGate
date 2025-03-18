@@ -176,6 +176,11 @@ contract GameEncounters {
         // Store previous intents before creating new array
         uint16[] memory previousIntents = data.intents;
         data.intents = new uint16[](data.types.length);
+
+        // Reset block for all enemies at start of turn
+        for (uint i = 0; i < data.blockAmount.length; i++) {
+            data.blockAmount[i] = 0;
+        }
         
         if (floor == 1) {
             if (data.currentHealth[0] > 0 && data.currentHealth[1] > 0) {

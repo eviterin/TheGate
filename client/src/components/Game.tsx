@@ -16,7 +16,6 @@ import { predictCardEffect, processEnemyIntent } from '../game/damageUtils';
 import AbandonConfirmation from './AbandonConfirmation';
 import FloatingMana from './FloatingMana';
 import WhaleRoom from './WhaleRoom';
-import GameOver from './GameOver';
 import RewardSelection from './RewardSelection';
 import CardPileViewer from './CardPileViewer';
 import SoundManager from './SoundManager';
@@ -100,6 +99,8 @@ const Game: React.FC = () => {
   const [predictedVictoryTime, setPredictedVictoryTime] = useState<number | null>(null);
   const [showVictoryScreen, setShowVictoryScreen] = useState(false);
   const [victoryScreenVisible, setVictoryScreenVisible] = useState(false);
+  const [showDefeatScreen, setShowDefeatScreen] = useState(false);
+  const [defeatScreenVisible, setDefeatScreenVisible] = useState(false);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -798,23 +799,13 @@ const Game: React.FC = () => {
   const handleRetry = async () => {
     setIsRetrying(true);
     try {
-      await abandonRun();
       await startRun();
-      
-      // Refresh game state after retrying
-      const newState = await getGameState();
-      if (newState) {
-        setGameState(newState);
-        setHand(newState.hand || []);
-        setDeck(newState.deck || []);
-        setDraw(newState.draw || []);
-        setDiscard(newState.discard || []);
-      }
+      setShowDefeatScreen(false);
+      setDefeatScreenVisible(false);
     } catch (error) {
       console.error('Failed to retry:', error);
-    } finally {
-      setIsRetrying(false);
     }
+    setIsRetrying(false);
   };
 
   const handleAbandonRun = async () => {
@@ -878,6 +869,18 @@ const Game: React.FC = () => {
     }
   }, [gameState?.runState]);
 
+  useEffect(() => {
+    if (gameState?.runState === 1 && gameState?.currentFloor > 0) {
+      setShowDefeatScreen(true);
+      // Use RAF to ensure mount happens before adding visible class
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setDefeatScreenVisible(true);
+        });
+      });
+    }
+  }, [gameState?.runState, gameState?.currentFloor]);
+
   return (
     <div className="game">
       <SoundManager 
@@ -890,7 +893,7 @@ const Game: React.FC = () => {
           <div className="side-decorations left"></div>
           <div className="side-decorations right"></div>
           <div className="game-content" style={{ backgroundImage: `url(${getBackground()})` }}>
-            {showTurnBanner && !victoryScreenVisible && (
+            {showTurnBanner && !victoryScreenVisible && !defeatScreenVisible && (
               <TurnBanner 
                 message={turnBannerMessage}
                 isVisible={showTurnBanner}
@@ -991,26 +994,26 @@ const Game: React.FC = () => {
               />
             )}
 
-            {/* Death Screen Overlay */}
-            {gameState?.runState === 4 && (
-              <GameOver
-                isVictory={false}
-                onRetry={handleRetry}
-                onAbandon={() => setShowAbandonConfirmation(true)}
-                onBackToMenu={handleBackToMenu}
-                isRetrying={isRetrying}
-              />
+            {/* Victory screen */}
+            {showVictoryScreen && gameState?.runState === 2 && (
+              <div className={`victory-screen ${victoryScreenVisible ? 'visible' : ''}`}>
+                <div className="overlay-button" onClick={handleEndTurn}>
+                  <div className="overlay-button-text">
+                    PRAY FOR THE LOST
+                  </div>
+                </div>
+              </div>
             )}
 
-            {/* Victory Screen Overlay */}
-            {gameState?.runState === 0 && gameState?.currentFloor === 11 && (
-              <GameOver
-                isVictory={true}
-                onRetry={handleRetry}
-                onAbandon={() => setShowAbandonConfirmation(true)}
-                onBackToMenu={handleBackToMenu}
-                isRetrying={isRetrying}
-              />
+            {/* Defeat screen */}
+            {showDefeatScreen && gameState?.runState === 1 && gameState?.currentFloor > 0 && (
+              <div className={`defeat-screen ${defeatScreenVisible ? 'visible' : ''}`}>
+                <div className="overlay-button" onClick={handleRetry}>
+                  <div className="overlay-button-text">
+                    TRY AGAIN?
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
@@ -1051,7 +1054,7 @@ const Game: React.FC = () => {
                     borderColor: 'rgba(220, 53, 69, 0.3)'
                   }}
                 >
-                  Abandon Run
+                  ABANDON RUN
                 </button>
               )}
             </div>
@@ -1069,14 +1072,14 @@ const Game: React.FC = () => {
 
             <div className="bottom-right">
               {/* Add End Turn button */}
-              {gameState?.runState === 2 && !victoryScreenVisible && turnState === 'player' && (
+              {gameState?.runState === 2 && !victoryScreenVisible && !defeatScreenVisible && turnState === 'player' && (
                 <div className="end-turn-button-container">
                   <button 
                     className="end-turn-button"
                     onClick={handleEndTurn}
                     disabled={turnState !== 'player' || pendingEnemyTurnTransaction}
                   >
-                    End Turn
+                    END TURN
                   </button>
                 </div>
               )}
@@ -1135,17 +1138,6 @@ const Game: React.FC = () => {
           onCancel={() => setShowAbandonConfirmation(false)}
           isLoading={isAbandoning}
         />
-
-        {/* Victory overlay */}
-        {showVictoryScreen && gameState?.runState === 2 && (
-          <div className={`victory-screen ${victoryScreenVisible ? 'visible' : ''}`} style={{ visibility: victoryScreenVisible ? 'visible' : 'hidden' }}>
-            <div className="sins-button" onClick={handleEndTurn}>
-              <div className="sins-button-text">
-                Pray for the lost
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

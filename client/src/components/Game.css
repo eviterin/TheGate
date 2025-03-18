@@ -153,16 +153,23 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
+.end-turn-button-container {
+  position: absolute;
+  bottom: 200px;
+  right: 20px;
+  z-index: 10;
+}
+
 .end-turn-button {
   padding: 8px 16px;
   background: rgba(89, 86, 108, 0.3);
-  border-color: rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   color: #ffcc00;
   font-weight: bold;
   border-radius: 4px;
   cursor: pointer;
   font-family: 'CardFont', sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   transition: all 0.2s ease;
   text-align: center;
   white-space: nowrap;
@@ -521,6 +528,29 @@
   transform: translateY(calc(-50% + 180px)) scale(1.02);
 }
 
+.overlay-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 3s ease;
+  pointer-events: none;
+  visibility: hidden;
+  background-color: rgba(0, 0, 0, 0.85);
+}
+
+.overlay-screen.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
 .victory-screen {
   position: fixed;
   top: 0;
@@ -535,13 +565,70 @@
   opacity: 0;
   transition: opacity 3s ease;
   pointer-events: none;
-  background-color: rgba(0, 0, 0, 0.85);
   visibility: hidden;
+  background-color: rgba(0, 0, 0, 0.85);
 }
 
 .victory-screen.visible {
   opacity: 1;
   visibility: visible;
+}
+
+.defeat-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 3s ease;
+  pointer-events: none;
+  visibility: hidden;
+  background-color: rgba(0, 0, 0, 0.85);
+}
+
+.defeat-screen.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.overlay-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1.5rem 3rem;
+  width: 300px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  font-family: 'CardFont', sans-serif;
+}
+
+.overlay-button:hover {
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.overlay-button-text {
+  color: #ffd700;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  white-space: nowrap;
 }
 
 .sins-button {
