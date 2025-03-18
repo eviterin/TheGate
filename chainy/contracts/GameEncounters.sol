@@ -104,7 +104,7 @@ contract GameEncounters {
             data.blockAmount = new uint16[](1);
             data.buffs = new uint8[](1);
         }
-        
+
         for (uint i = 0; i < data.blockAmount.length; i++) {
             data.blockAmount[i] = 0;
             data.buffs[i] = 0;
@@ -309,7 +309,8 @@ contract GameEncounters {
             return 0;
         } else if (intent == INTENT_BLOCK_AND_ATTACK) {
             data.blockAmount[enemyIndex] = 5;
-            return 6;
+            require(enemyIndex < data.buffs.length, "Invalid enemy index for buff");
+            return 6 + data.buffs[enemyIndex];
         } else if (intent == INTENT_HEAL) {
             _healEnemy(player, enemyIndex, 5);
             return 0;

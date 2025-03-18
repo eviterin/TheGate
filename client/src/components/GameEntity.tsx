@@ -52,7 +52,7 @@ interface IntentInfo {
   animation: string;
 }
 
-const getIntentInfo = (intent: number): IntentInfo => {
+const getIntentInfo = (intent: number, buff: number): IntentInfo => {
   if (intent === INTENT_TYPES.BLOCK_5) {
     return { type: 'block', value: 5, animation: ANIMATIONS.BLOCK };
   }
@@ -61,6 +61,7 @@ const getIntentInfo = (intent: number): IntentInfo => {
       type: 'block_and_attack', 
       value: 6,
       blockValue: 5,
+      buffValue: buff,
       animation: ANIMATIONS.BLOCK_AND_ATTACK 
     };
   }
@@ -215,7 +216,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
 
     // For enemies, use their intent to determine animation
     if (!isHero && intent && health > 0) {  // Only animate if enemy is alive
-      const intentInfo = getIntentInfo(intent);
+      const intentInfo = getIntentInfo(intent, buff);
       return {
         ...styles,
         animation: `${intentInfo.animation} 0.5s ease-in-out`,
@@ -273,7 +274,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
   const renderIntent = () => {
     if (runState === 1) return null;
 
-    const intentInfo = intent ? getIntentInfo(intent) : null;
+    const intentInfo = intent ? getIntentInfo(intent, buff) : null;
     
     const getIntentColor = (type: string) => {
       switch (type) {
@@ -298,6 +299,27 @@ const GameEntity: React.FC<GameEntityProps> = ({
         case 'block_and_heal': return '#40ffff';
         case 'vampiric_bite': return '#ff1060';
         default: return '#ff4040';
+      }
+    };
+
+    const getIntentDisplay = (info: IntentInfo): string => {
+      switch (info.type) {
+        case 'block':
+          return `Blocks for ${info.value} damage`;
+        case 'block_and_attack':
+          return `Blocks for ${info.blockValue} and attacks for ${info.value + (info.buffValue || 0)}`;
+        case 'heal':
+          return `Heals self for ${info.value} HP`;
+        case 'heal_all':
+          return `Heals all allies for ${info.value} HP`;
+        case 'attack_buff':
+          return `Increases attack damage by ${info.value}`;
+        case 'block_and_heal':
+          return `Blocks ${info.blockValue} damage and heals self for ${info.healValue} HP`;
+        case 'vampiric_bite':
+          return `Deals ${info.value} damage and heals self for ${info.healValue} HP`;
+        default:
+          return `Deals ${info.value} damage`;
       }
     };
 
@@ -367,28 +389,12 @@ const GameEntity: React.FC<GameEntityProps> = ({
               order: 1
             }} 
             className="stat-container" 
-            data-tooltip={
-              intentInfo.type === 'block' ? 
-                `Intends to: Block ${intentInfo.value} damage` :
-              intentInfo.type === 'block_and_attack' ? 
-                `Intends to: Block ${intentInfo.blockValue} damage and deal ${intentInfo.value} damage` :
-              intentInfo.type === 'heal' ? 
-                `Intends to: Heal self for ${intentInfo.value} HP` :
-              intentInfo.type === 'heal_all' ? 
-                `Intends to: Heal all allies for ${intentInfo.value} HP` :
-              intentInfo.type === 'attack_buff' ? 
-                `Intends to: Increase attack damage by ${intentInfo.value}` :
-              intentInfo.type === 'block_and_heal' ? 
-                `Intends to: Block ${intentInfo.blockValue} damage and heal self for ${intentInfo.healValue} HP` :
-              intentInfo.type === 'vampiric_bite' ?
-                `Intends to: Deal ${intentInfo.value} damage and heal self for ${intentInfo.healValue} HP` :
-                `Intends to: Deal ${intentInfo.value} damage`
-            }
+            data-tooltip={getIntentDisplay(intentInfo)}
           >
             {intentInfo.type === 'block' ? (
               <>🛡️{intentInfo.value}</>
             ) : intentInfo.type === 'block_and_attack' ? (
-              <>🛡️{intentInfo.blockValue}+⚔️{intentInfo.value}</>
+              <>🛡️{intentInfo.blockValue}+⚔️{intentInfo.value + (intentInfo.buffValue || 0)}</>
             ) : intentInfo.type === 'heal' ? (
               <>💚{intentInfo.value}</>
             ) : intentInfo.type === 'heal_all' ? (

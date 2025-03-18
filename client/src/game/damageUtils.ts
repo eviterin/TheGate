@@ -138,7 +138,7 @@ export const processEnemyIntent = (
   } else if (intentType === INTENT_BLOCK_AND_ATTACK) {
     // Enemy blocks and attacks
     newEnemyBlock = 5;
-    damageToHero = 6; // Base damage for this intent
+    damageToHero = 6 + enemyBuff;  // Add buff to base damage
     
     // Calculate damage to hero
     const result = calculateDamageToHero(damageToHero, newHeroBlock, newHeroHealth);

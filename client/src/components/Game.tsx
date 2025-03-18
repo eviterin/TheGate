@@ -574,7 +574,8 @@ const Game: React.FC = () => {
       enemyBlock: currentState.enemyBlock,
       heroHealth: currentState.currentHealth,
       heroBlock: currentState.currentBlock,
-      mana: currentState.currentMana
+      mana: currentState.currentMana,
+      enemyBuffs: currentState.enemyBuffs || []  // Include enemy buffs in current state
     });
   };
 
@@ -586,7 +587,8 @@ const Game: React.FC = () => {
       enemyBlock: number[], 
       heroHealth: number, 
       heroBlock: number,
-      mana: number 
+      mana: number,
+      enemyBuffs: number[]
     }
   ) => {
     try {
@@ -612,7 +614,10 @@ const Game: React.FC = () => {
       const enemyIntents = initialState.enemyIntents;
       
       // Current state tracks our optimistic predictions throughout the turn
-      let currentState = {...postPlayerTurnState};
+      let currentState = {
+        ...postPlayerTurnState,
+        enemyBuffs: initialState.enemyBuffs || []  // Include enemy buffs in current state
+      };
       
       // Process enemy intents one by one
       for (let i = 0; i < enemyTypes.length; i++) {
@@ -628,7 +633,7 @@ const Game: React.FC = () => {
             initialState.enemyMaxHealth ? initialState.enemyMaxHealth[i] : 100, // fallback
             currentState.heroHealth,
             currentState.heroBlock,
-            0 // enemyBuff
+            currentState.enemyBuffs[i] || 0  // Pass through enemy buff for accurate damage prediction
           );
 
           // Update our current state with the predicted results
