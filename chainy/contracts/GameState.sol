@@ -143,7 +143,7 @@ contract GameState {
         }
 
         data.runState = RUN_STATE_ENCOUNTER;
-        data.currentFloor++;
+        data.currentFloor = 10; //debug
         startEncounter();
     }
 

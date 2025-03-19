@@ -103,6 +103,7 @@ const Game: React.FC = () => {
   const [showDefeatScreen, setShowDefeatScreen] = useState(false);
   const [defeatScreenVisible, setDefeatScreenVisible] = useState(false);
   const [isPraying, setIsPraying] = useState(false);
+  const [hasPrayed, setHasPrayed] = useState(false);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -178,6 +179,7 @@ const Game: React.FC = () => {
           setOptimisticHand([]);
           setVictoryScreenVisible(false);
           setPredictedVictoryTime(null);
+          setHasPrayed(false); // Reset prayer state for next combat
         }
 
         setIsLoadingGameState(false);
@@ -395,6 +397,18 @@ const Game: React.FC = () => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setDefeatScreenVisible(true);
+        });
+      });
+    }
+
+    // Check for predicted victory - if all enemies are dead
+    if (!showVictoryScreen && prediction.enemyHealth.every(health => health <= 0)) {
+      console.log('[VICTORY] Predicted victory from card play');
+      setShowVictoryScreen(true);
+      setPredictedVictoryTime(Date.now());
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setVictoryScreenVisible(true);
         });
       });
     }
@@ -905,6 +919,7 @@ const Game: React.FC = () => {
       setShowVictoryScreen(false);
       setVictoryScreenVisible(false);
       setPredictedVictoryTime(null);
+      setHasPrayed(false); // Reset prayer state for next combat
     }
   }, [gameState?.runState]);
 
@@ -922,6 +937,7 @@ const Game: React.FC = () => {
 
   const handlePray = async () => {
     setIsPraying(true);
+    setHasPrayed(true);
     await handleEndTurn();
     setIsPraying(false);
   };
@@ -1042,7 +1058,7 @@ const Game: React.FC = () => {
             {/* Victory screen */}
             {showVictoryScreen && gameState?.runState === 2 && (
               <div className={`victory-screen ${victoryScreenVisible ? 'visible' : ''}`}>
-                {!isPraying && (
+                {!isPraying && !hasPrayed && (
                   <div className="overlay-button" onClick={handlePray}>
                     <div className="overlay-button-text">
                       PRAY FOR THE LOST

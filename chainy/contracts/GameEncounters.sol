@@ -94,13 +94,13 @@ contract GameEncounters {
         } else if (floor == 9) {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
             data.maxHealth = [50, 50];
-            data.currentHealth = [50, 50];
+            data.currentHealth = [1, 1];
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
         } else if (floor == 10) {
             data.types = [ENEMY_TYPE_B];
             data.maxHealth = [40];
-            data.currentHealth = [40];
+            data.currentHealth = [1];
             data.blockAmount = new uint16[](1);
             data.buffs = new uint8[](1);
         }
