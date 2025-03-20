@@ -48,7 +48,7 @@ library CardLibrary {
         } else if (lastChosen == CARD_ID_DIVINE_WRATH) {
             return (CARD_ID_EXPLODICATE, CARD_ID_SACRED_RITUAL); // (11, 9)
         }
-        return (0, 0); // Fallback, unreachable with proper flow
+        return (1, 2); // Fallback, unreachable with proper flow
     }
 
     function generateRewards(uint8 lastChosenCard, uint8 currentFloor) internal pure returns (uint8[] memory) {
