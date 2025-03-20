@@ -85,6 +85,7 @@ contract GameEncounters {
             data.maxHealth = [20];
             data.currentHealth = [20];
             data.blockAmount = new uint16[](1);
+            data.blockAmount[0] = 15;
             data.buffs = new uint8[](1);
         } else if (floor == 8) {
             data.types = [ENEMY_TYPE_A, 2, 3, 4, 5];
@@ -253,7 +254,7 @@ contract GameEncounters {
             }
         } else if (floor == 7) {
             if (data.currentHealth[0] > 0) {
-                data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+                data.intents[0] = uint16(10 + (seed % 3));
             }
         } else if (floor == 8) {
             if (data.currentHealth[0] > 0) {
