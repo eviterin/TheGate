@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import './src/polyfills'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -20,5 +19,8 @@ export default defineConfig({
   define: {
     global: 'globalThis',
     'process.env.NODE_DEBUG': false
+  },
+  optimizeDeps: {
+    include: ['./src/polyfills.ts']
   }
 })
