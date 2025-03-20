@@ -79,6 +79,7 @@ contract GameEncounters {
             data.currentHealth = [45];
             data.blockAmount = new uint16[](1);
             data.buffs = new uint8[](1);
+            data.buffs[0] += 4;
         } else if (floor == 7) {
             data.types = [ENEMY_TYPE_A];
             data.maxHealth = [20];
@@ -103,11 +104,6 @@ contract GameEncounters {
             data.currentHealth = [1];
             data.blockAmount = new uint16[](1);
             data.buffs = new uint8[](1);
-        }
-
-        for (uint i = 0; i < data.blockAmount.length; i++) {
-            data.blockAmount[i] = 0;
-            data.buffs[i] = 0;
         }
         
         setNewEnemyIntents(player, floor);
@@ -254,9 +250,6 @@ contract GameEncounters {
         } else if (floor == 6) {
             if (data.currentHealth[0] > 0) {
                 data.intents[0] = INTENT_BLOCK_AND_ATTACK;
-            }
-            if (data.currentHealth[1] > 0) {
-                data.intents[1] = INTENT_VAMPIRIC_BITE;
             }
         } else if (floor == 7) {
             if (data.currentHealth[0] > 0) {
