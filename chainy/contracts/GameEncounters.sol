@@ -260,8 +260,8 @@ contract GameEncounters {
             if (data.currentHealth[0] > 0) {
                 if (previousIntents.length == 0) {
                     data.intents[0] = INTENT_BLOCK_5;
-                } else if (previousIntents[0] == INTENT_BLOCK_5) {
-                    data.intents[0] = 6;
+                } else if (data.currentHealth[1] == 0 && data.currentHealth[2] == 0 && data.currentHealth[3] == 0 && data.currentHealth[4] == 0) {
+                    data.intents[0] = 15;
                 } else {
                     data.intents[0] = INTENT_BLOCK_5;
                 }
