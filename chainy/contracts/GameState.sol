@@ -72,6 +72,7 @@ contract GameState {
     uint8 constant RUN_STATE_ENCOUNTER = 2;
     uint8 constant RUN_STATE_CARD_REWARD = 3;
     uint8 constant RUN_STATE_DEATH = 4;
+    uint8 constant RUN_STATE_VICTORY = 5;
 
     constructor(address _encountersContract, address _victoryTracker) {
         encounters = IGameEncounters(_encountersContract);
@@ -143,7 +144,7 @@ contract GameState {
         }
 
         data.runState = RUN_STATE_ENCOUNTER;
-        data.currentFloor = 10; //debug
+        data.currentFloor = 9; //debug
         startEncounter();
     }
 
@@ -342,7 +343,14 @@ contract GameState {
             if (currentHealth[i] > 0) return false;
         }
         
-        completeEncounter();
+        GameData storage data = playerData[msg.sender];
+        if (data.currentFloor == 10) {
+            // Final level victory
+            data.runState = RUN_STATE_VICTORY;
+            victoryTracker.recordVictory(msg.sender);
+        } else {
+            completeEncounter();
+        }
         return true;
     }
 
@@ -371,13 +379,7 @@ contract GameState {
         delete data.availableCardRewards;
         data.runState = RUN_STATE_ENCOUNTER;
         data.currentFloor++;
-
-        if (data.currentFloor == 11) {
-            victoryTracker.recordVictory(msg.sender);
-            data.runState = RUN_STATE_NONE;
-        } else {
-            startEncounter();
-        }
+        startEncounter();
     }
 
     function getEnemyData(address player) public view returns (
