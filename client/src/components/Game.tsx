@@ -104,6 +104,8 @@ const Game: React.FC = () => {
   const [defeatScreenVisible, setDefeatScreenVisible] = useState(false);
   const [isPraying, setIsPraying] = useState(false);
   const [hasPrayed, setHasPrayed] = useState(false);
+  const [showGameVictoryScreen, setShowGameVictoryScreen] = useState(false);
+  const [gameVictoryScreenVisible, setGameVictoryScreenVisible] = useState(false);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -935,6 +937,17 @@ const Game: React.FC = () => {
     }
   }, [gameState?.runState, gameState?.currentFloor]);
 
+  useEffect(() => {
+    if (gameState?.runState === 5 && !showGameVictoryScreen) {
+      setShowGameVictoryScreen(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setGameVictoryScreenVisible(true);
+        });
+      });
+    }
+  }, [gameState?.runState]);
+
   const handlePray = async () => {
     setIsPraying(true);
     setHasPrayed(true);
@@ -954,7 +967,7 @@ const Game: React.FC = () => {
           <div className="side-decorations left"></div>
           <div className="side-decorations right"></div>
           <div className="game-content" style={{ backgroundImage: `url(${getBackground()})` }}>
-            {showTurnBanner && !victoryScreenVisible && !defeatScreenVisible && (
+            {showTurnBanner && !victoryScreenVisible && !defeatScreenVisible && !gameVictoryScreenVisible && (
               <TurnBanner 
                 message={turnBannerMessage}
                 isVisible={showTurnBanner}
@@ -1080,6 +1093,22 @@ const Game: React.FC = () => {
                 )}
               </div>
             )}
+
+            {/* Game Victory screen */}
+            {showGameVictoryScreen && gameState?.runState === 5 && (
+              <div className={`game-victory-screen ${gameVictoryScreenVisible ? 'visible' : ''}`}>
+                <div className="victory-message">
+                  Your journey has ended.
+                  <br />
+                  Your name has been etched into the sacred record.
+                </div>
+                <div className="whale-room-gate" onClick={handleAbandonRun}>
+                  <div className="whale-room-gate-text">
+                    END GAME
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bottom-area">
@@ -1137,7 +1166,7 @@ const Game: React.FC = () => {
 
             <div className="bottom-right">
               {/* Add End Turn button */}
-              {gameState?.runState === 2 && !victoryScreenVisible && !defeatScreenVisible && turnState === 'player' && (
+              {gameState?.runState === 2 && !victoryScreenVisible && !defeatScreenVisible && !gameVictoryScreenVisible && turnState === 'player' && (
                 <div className="end-turn-button-container">
                   <button 
                     className="end-turn-button"

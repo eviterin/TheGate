@@ -8,9 +8,11 @@ contract VictoryTracker {
     event GameCompleted(address indexed player);
 
     function recordVictory(address player) external {
-        require(!victoriousPlayers[player], "Player already recorded as victor");
-        victoriousPlayers[player] = true;
-        winners.push(player);
+        //require(!victoriousPlayers[player], "Player already recorded as victor");
+        if(!victoriousPlayers[player]) {
+            victoriousPlayers[player] = true;
+            winners.push(player);
+        }
         emit GameCompleted(player);
     }
 

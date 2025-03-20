@@ -664,3 +664,65 @@
   letter-spacing: 2px;
   white-space: nowrap;
 }
+
+.game-victory-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0);
+  transition: background 1s ease;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.game-victory-screen.visible {
+  background: rgba(0, 0, 0, 0.95);
+  pointer-events: all;
+}
+
+.game-victory-screen .victory-message {
+  position: absolute;
+  top: 25%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: all 1s ease;
+  transition-delay: 0.5s;
+  font-size: 1.5em;
+  text-align: center;
+  line-height: 1.5;
+  color: #FFD700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.game-victory-screen.visible .victory-message {
+  opacity: 1;
+}
+
+.game-victory-screen .whale-room-gate {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: all 0.3s ease;
+  padding: 1.5rem 2rem;
+  width: 200px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+.game-victory-screen .whale-room-gate:hover {
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.game-victory-screen.visible .whale-room-gate {
+  opacity: 1;
+}
