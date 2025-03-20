@@ -95,7 +95,6 @@
 
 .hand-card.selected .card {
   transform: translateY(-25px) scale(1.15);
-  filter: brightness(1.3);
 }
 
 /* Override the card's own selected state */
@@ -116,7 +115,6 @@
   right: -3px;
   bottom: -3px;
   border-radius: 10px;
-  box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.5);
   pointer-events: none;
   z-index: -1;
 }
