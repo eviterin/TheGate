@@ -264,7 +264,13 @@ contract GameEncounters {
             }
         } else if (floor == 8) {
             if (data.currentHealth[0] > 0) {
-                data.intents[0] = INTENT_BLOCK_5;
+                if (previousIntents.length == 0) {
+                    data.intents[0] = INTENT_BLOCK_5;
+                } else if (previousIntents[0] == INTENT_BLOCK_5) {
+                    data.intents[0] = 6;
+                } else {
+                    data.intents[0] = INTENT_BLOCK_5;
+                }
             }
             for(uint i = 1; i < 5; i++) {
                 if (data.currentHealth[i] > 0) {
