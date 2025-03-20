@@ -3,6 +3,7 @@ import './Card.css';
 import { CardData } from '../data/cards';
 import cardFrame from '../assets/misc/cardframe.png';
 import defaultCardArt from '../assets/cardart/default.png';
+import cardBackground from '../assets/misc/cardbackground.png';
 
 interface CardProps extends Omit<CardData, 'numericId'> {
   isSelected?: boolean;
@@ -35,11 +36,7 @@ const Card: React.FC<CardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="card-frame" style={{ backgroundImage: `url(${cardFrame})` }}>
-        <div className="card-mana-cost">
-          {[...Array(manaCost)].map((_, i) => (
-            <div key={i} className="mana-orb" />
-          ))}
-        </div>
+        <div className="card-background" style={{ backgroundImage: `url(${cardBackground})` }}></div>
         <div className="card-image">
           <img 
             src={imageError ? defaultCardArt : (imageUrl || defaultCardArt)} 
@@ -47,6 +44,11 @@ const Card: React.FC<CardProps> = ({
             className="card-artwork"
             onError={() => setImageError(true)}
           />
+        </div>
+        <div className="card-mana-cost">
+          {[...Array(manaCost)].map((_, i) => (
+            <div key={i} className="mana-orb" />
+          ))}
         </div>
         <div className="card-content">
           <h3 className="card-name">{name}</h3>
@@ -57,4 +59,4 @@ const Card: React.FC<CardProps> = ({
   );
 };
 
-export default Card; 
+export default Card;

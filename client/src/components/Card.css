@@ -19,6 +19,33 @@
   border-radius: 10px;
   background-size: 170px 238px;
   position: relative;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  z-index: 0;
+}
+
+.card-frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: inherit;
+  background-size: inherit;
+  background-position: inherit;
+  background-repeat: inherit;
+  z-index: 3;
+}
+
+.card-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: 100% 100%;
+  z-index: 0;
 }
 
 .card-mana-cost {
@@ -28,7 +55,7 @@
   display: flex;
   flex-direction: row-reverse;
   gap: 3px;
-  z-index: 3;
+  z-index: 4;
 }
 
 .mana-orb {
@@ -68,18 +95,19 @@
 
 .card-image {
   position: absolute;
-  top: 22px;
-  left: 16px;
-  width: 136px;
-  height: 110px;
+  top: 12px;
+  left: 2px;
+  width: 166px;
+  height: 120px;
   border-radius: 5px;
   overflow: hidden;
+  z-index: 1;
 }
 
 .card-artwork {
-  width: 136px;
-  height: 110px;
-  object-fit: contain;
+  width: 150px;
+  height: 120px;
+  object-fit: cover;
   border-radius: 5px;
 }
 
@@ -136,4 +164,4 @@
 .insufficient-mana .mana-orb::after {
   color: #999;
   filter: none;
-} 
+}
