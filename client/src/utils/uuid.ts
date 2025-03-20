@@ -5,10 +5,29 @@ export function generateUUID(): `${string}-${string}-${string}-${string}-${strin
   }) as `${string}-${string}-${string}-${string}-${string}`;
 }
 
-// Override crypto.randomUUID if it doesn't exist
-if (typeof window !== 'undefined' && (!window.crypto?.randomUUID)) {
+// Create a global crypto object if it doesn't exist
+declare global {
+  var crypto: {
+    randomUUID: () => `${string}-${string}-${string}-${string}-${string}`;
+  };
+}
+
+// Ensure crypto exists in global scope
+if (typeof crypto === 'undefined') {
+  (globalThis as any).crypto = {
+    randomUUID: generateUUID
+  };
+} else if (!crypto.randomUUID) {
+  crypto.randomUUID = generateUUID;
+}
+
+// Also ensure it exists in window scope
+if (typeof window !== 'undefined') {
   if (!window.crypto) {
-    (window as any).crypto = {};
+    (window as any).crypto = {
+      randomUUID: generateUUID
+    };
+  } else if (!window.crypto.randomUUID) {
+    window.crypto.randomUUID = generateUUID;
   }
-  window.crypto.randomUUID = generateUUID;
 } 
