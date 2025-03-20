@@ -21,6 +21,11 @@ export default defineConfig({
     'process.env.NODE_DEBUG': false
   },
   optimizeDeps: {
-    include: ['./src/polyfills.ts']
+    include: ['./src/polyfills.ts'],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis'
+      }
+    }
   }
 })
