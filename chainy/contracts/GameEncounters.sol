@@ -86,11 +86,11 @@ contract GameEncounters {
             data.blockAmount = new uint16[](1);
             data.buffs = new uint8[](1);
         } else if (floor == 8) {
-            data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
-            data.maxHealth = [20, 24];
-            data.currentHealth = [20, 24];
-            data.blockAmount = new uint16[](2);
-            data.buffs = new uint8[](2);
+            data.types = [ENEMY_TYPE_A, 2, 3, 4, 5];
+            data.maxHealth = [20, 4, 5, 4, 6];
+            data.currentHealth = [20, 4, 5, 4, 6];
+            data.blockAmount = new uint16[](5);
+            data.buffs = new uint8[](5);
         } else if (floor == 9) {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
             data.maxHealth = [50, 50];
@@ -264,10 +264,13 @@ contract GameEncounters {
             }
         } else if (floor == 8) {
             if (data.currentHealth[0] > 0) {
-                data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+                data.intents[0] = INTENT_BLOCK_5;
             }
-            if (data.currentHealth[1] > 0) {
-                data.intents[1] = INTENT_VAMPIRIC_BITE;
+            for(uint i = 1; i < 5; i++) {
+                if (data.currentHealth[i] > 0) {
+                    data.intents[i] = uint16(2 + (seed % 3));
+                }
+                seed = uint256(keccak256(abi.encodePacked(seed)));
             }
         } else if (floor == 9) {
             if (data.currentHealth[0] > 0) {

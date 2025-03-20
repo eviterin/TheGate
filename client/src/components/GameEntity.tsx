@@ -109,7 +109,7 @@ const getIntentInfo = (intent: number, buff: number): IntentInfo => {
 
 // Import room 1-10 enemy models dynamically
 for (let floor = 1; floor <= 10; floor++) {
-  for (let position = 1; position <= 2; position++) {
+  for (let position = 1; position <= 5; position++) {
     const modelKey = `room_${floor}_enemy_${position}`;
     try {
       enemyModels[modelKey] = new URL(`../assets/models/${modelKey}.png`, import.meta.url).href;
