@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { readContract, simulateContract, writeContract } from '@wagmi/core';
+import { connect, injected, readContract, simulateContract, writeContract } from '@wagmi/core';
 import { config } from '../../wagmi';
 import { useHappyChain } from '@happy.tech/react';
 import { useContracts } from './ContractsContext';
 import { requestSessionKey } from '@happy.tech/core';
 import { getContractAddress } from '../utils/contractUtils';
+import { happyWagmiConnector } from '@happy.tech/core'
 
 interface QuickTransactionsState {
   isEnabled: boolean;
@@ -64,6 +65,8 @@ export function useQuickTransactions() {
         throw new Error('GameState contract address not found');
       }
 
+      await connect(config, { connector: happyWagmiConnector() })
+
       // First request session key from HappyChain
       await requestSessionKey(contractAddress as `0x${string}`);
 
@@ -74,7 +77,7 @@ export function useQuickTransactions() {
         args: [],
       });
 
-      // Send transaction but don't wait for receipt
+      // Send it
       writeContract(config, request).catch(error => {
         console.error('Failed to enable quick transactions in contract:', error);
       });
