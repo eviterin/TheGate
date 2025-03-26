@@ -106,6 +106,9 @@ const Game: React.FC = () => {
   const [hasPrayed, setHasPrayed] = useState(false);
   const [showGameVictoryScreen, setShowGameVictoryScreen] = useState(false);
   const [gameVictoryScreenVisible, setGameVictoryScreenVisible] = useState(false);
+  const [currentIntent, setCurrentIntent] = useState<number | undefined>(undefined);
+  const [currentEnemy, setCurrentEnemy] = useState<number | undefined>(undefined);
+  const [initialEnemyHealth, setInitialEnemyHealth] = useState<number[]>([]);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -329,6 +332,12 @@ const Game: React.FC = () => {
     }
   }, [gameState?.hand]);
 
+  useEffect(() => {
+    if (turnState === 'player' && gameState?.enemyCurrentHealth) {
+      setInitialEnemyHealth([...gameState.enemyCurrentHealth]);
+    }
+  }, [turnState, gameState?.enemyCurrentHealth]);
+
   const handleCardSelect = (cardIndex: number) => {
     
     if (cardIndex === selectedCardIndex) {
@@ -391,6 +400,27 @@ const Game: React.FC = () => {
       targetIndex,
       currentGameState
     );
+
+    // Check for predicted enemy deaths by comparing with their initial health
+    const predictedDeaths = prediction.enemyHealth.map((health, idx) => ({
+      index: idx,
+      // An enemy died if:
+      // 1. Their new health is 0 or less AND
+      // 2. Their health at the start of the turn was above 0
+      died: health <= 0 && initialEnemyHealth[idx] > 0
+    })).filter(enemy => enemy.died);
+
+    console.log('💀 Initial enemy health at turn start:', initialEnemyHealth);
+    console.log('💀 Current enemy health:', currentGameState.enemyCurrentHealth);
+    console.log('💀 Predicted health after card:', prediction.enemyHealth);
+    console.log('💀 Predicted deaths from card:', predictedDeaths);
+
+    if (predictedDeaths.length > 0) {
+      console.log('🔊 Playing death sounds for', predictedDeaths.length, 'enemies');
+      Promise.all(predictedDeaths.map(death => 
+        soundEffectManager.playEventSound('enemyDeath', gameState.currentFloor, death.index)
+      ));
+    }
 
     // Check for predicted defeat
     if (prediction.heroDied && !predictedDefeatTime) {
@@ -480,16 +510,6 @@ const Game: React.FC = () => {
     // Reset animation and sound
     setCurrentAnimation(null);
     setIsSoundPlaying(false);
-    
-    // Play death sound if enemy died
-    if (prediction.enemyDied && 
-        prediction.enemyHealth[targetIndex] <= 0 && 
-        gameState.enemyCurrentHealth[targetIndex] > 0) {
-      soundEffectManager.playEventSound('enemyDeath');
-    }
-    
-    // Small delay between enemy actions
-    await new Promise(resolve => setTimeout(resolve, 200));
     
     // Log pending cards after each card play
     console.log('[CARDPLAY] Updated pending cards after play:', pendingCardIDs, pendingCardIndices, 'targets:', pendingCardTargets);
@@ -632,10 +652,22 @@ const Game: React.FC = () => {
       setTurnBannerMessage("Enemy Turn");
       setTurnBannerType('enemy');
       setShowTurnBanner(true);
+      soundEffectManager.playEventSound('enemyTurn');
       
       // Show enemy turn banner for 2 seconds
       await new Promise(resolve => setTimeout(resolve, 2000));
       setShowTurnBanner(false);
+      
+      // Play taunt sounds for all living enemies before their actions
+      for (let i = 0; i < initialState.enemyTypes.length; i++) {
+        if (postPlayerTurnState.enemyHealth[i] > 0) {
+          soundEffectManager.playTauntSound(initialState.currentFloor, i);
+          // Small delay between taunts if multiple enemies
+          if (i < initialState.enemyTypes.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
+      }
       
       // Wait 1 second after banner hides before starting enemy actions
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -687,6 +719,20 @@ const Game: React.FC = () => {
           currentState.enemyHealth[i] = enemyIntentResult.newEnemyHealth;
           currentState.enemyBlock[i] = enemyIntentResult.newEnemyBlock;
           
+          // Check for predicted deaths from this enemy action
+          const predictedDeaths = currentState.enemyHealth.map((health, idx) => ({
+            index: idx,
+            died: health <= 0 && initialState.enemyCurrentHealth[idx] > 0
+          })).filter(enemy => enemy.died);
+
+          console.log('💀 Predicted deaths from enemy action:', predictedDeaths);
+          if (predictedDeaths.length > 0) {
+            console.log('🔊 Playing death sounds for', predictedDeaths.length, 'enemies');
+            Promise.all(predictedDeaths.map(death => 
+              soundEffectManager.playEventSound('enemyDeath', initialState.currentFloor, death.index)
+            ));
+          }
+          
           // Then play animation and sound
           const animationState: AnimationState = {
             sourceType: 'enemy',
@@ -697,7 +743,9 @@ const Game: React.FC = () => {
           };
 
           setCurrentAnimation(animationState);
-          setCurrentSound(`enemy_intent_${enemyIntents[i]}`);
+          setCurrentSound(undefined);
+          setCurrentIntent(enemyIntents[i]);
+          setCurrentEnemy(i);
           setSoundType('intent');
           setIsSoundPlaying(true);
           
@@ -723,11 +771,6 @@ const Game: React.FC = () => {
           setCurrentAnimation(null);
           setIsSoundPlaying(false);
           
-          // Play death sound if enemy died
-          if (currentState.enemyHealth[i] <= 0 && initialState.enemyCurrentHealth[i] > 0) {
-            soundEffectManager.playEventSound('enemyDeath');
-          }
-          
           // Small delay between enemy actions
           await new Promise(resolve => setTimeout(resolve, 200));
         }
@@ -748,6 +791,7 @@ const Game: React.FC = () => {
       setTurnBannerMessage("Your Turn");
       setTurnBannerType('player');
       setShowTurnBanner(true);
+      soundEffectManager.playEventSound('playerTurn');
       
       // Hide player turn banner after 2 seconds
       setTimeout(() => {
@@ -965,6 +1009,9 @@ const Game: React.FC = () => {
     <div className="game">
       <SoundManager 
         soundEffect={currentSound}
+        intent={currentIntent}
+        enemyIndex={currentEnemy}
+        currentFloor={gameState?.currentFloor}
         isPlaying={isSoundPlaying}
         type={soundType}
       />
