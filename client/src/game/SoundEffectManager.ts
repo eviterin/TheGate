@@ -1,3 +1,6 @@
+// Import the central audio controller
+import { audioController } from '../components/MusicPlayer';
+
 // Import enemy sound files
 import enemyAttackSound from '../assets/soundeffects/enemy_attack.wav';
 import enemyBlockSound from '../assets/soundeffects/enemy_block.wav';
@@ -54,6 +57,8 @@ export class SoundEffectManager {
     private readonly MIN_REPLAY_DELAY = 50; // ms to wait before playing the same sound again
     private readonly MAX_ROOMS = 10;
     private readonly MAX_ENEMIES_PER_ROOM = 10;
+    private readonly DEFAULT_VOLUME = 0.5;
+    private readonly TURN_VOLUME = 0.8;
 
     private constructor() {
         this.loadCardSounds();
@@ -134,24 +139,8 @@ export class SoundEffectManager {
 
     private createAndCacheAudio(soundPath: string): void {
         if (!this.audioCache.has(soundPath)) {
-            console.log('🎵 Creating new Audio for:', soundPath);
             const audio = new Audio(soundPath);
-            audio.volume = 0.5;
-            
-            // Add error handler to debug loading issues
-            audio.onerror = (error) => {
-                console.error('❌ Error loading audio:', soundPath, error);
-                console.error('Audio error details:', {
-                    code: audio.error?.code,
-                    message: audio.error?.message
-                });
-            };
-            
-            // Add load handler to confirm successful loading
-            audio.oncanplaythrough = () => {
-                console.log('✅ Audio loaded successfully:', soundPath);
-            };
-            
+            audio.volume = this.DEFAULT_VOLUME;
             this.audioCache.set(soundPath, {
                 audio,
                 isPlaying: false,
@@ -160,83 +149,28 @@ export class SoundEffectManager {
         }
     }
 
-    private async playSound(soundPath: string): Promise<void> {
-        if (!soundPath) {
-            console.log('⚠️ No sound path provided');
-            return;
-        }
+    private async playSound(soundPath: string, volume: number = this.DEFAULT_VOLUME): Promise<void> {
+        if (!soundPath) return;
 
-        console.log('🎵 Attempting to play sound:', soundPath);
-
+        // Check replay delay using cache
         const cache = this.audioCache.get(soundPath);
-        if (!cache) {
-            console.log(`⚠️ Sound not found in cache: ${soundPath}`);
-            console.log('📦 Current cache keys:', Array.from(this.audioCache.keys()));
-            // Try to create the cache entry if missing
-            console.log('🎵 Attempting to create cache entry for:', soundPath);
-            this.createAndCacheAudio(soundPath);
-            return;
-        }
-
-        const now = Date.now();
-        if (now - cache.lastPlayedTime < this.MIN_REPLAY_DELAY) {
-            console.log('⏱️ Skipping sound, too soon after last play');
-            return;
-        }
-
-        try {
-            // Always create a new audio instance for better reliability
-            console.log('🎵 Creating new audio instance for playing sound');
-            const newAudio = new Audio();
-            newAudio.volume = 0.5;
-            
-            // Set up error handling
-            newAudio.onerror = (error) => {
-                console.error('❌ Audio failed to load:', error);
-                console.error('Audio error code:', newAudio.error?.code);
-                console.error('Audio error message:', newAudio.error?.message);
-            };
-            
-            // Set up load handling
-            newAudio.oncanplaythrough = () => {
-                console.log('✅ Audio loaded and ready to play');
-            };
-            
-            // Set the source and play
-            newAudio.src = soundPath;
-            console.log('🎵 Starting playback of:', soundPath);
-            
-            try {
-                await newAudio.play();
-                console.log('✅ Playback started successfully');
-            } catch (playError) {
-                console.error('❌ Failed to start playback:', playError);
-                if (playError instanceof Error) {
-                    console.error('Play error details:', playError.message);
-                }
+        if (cache) {
+            const now = Date.now();
+            if (now - cache.lastPlayedTime < this.MIN_REPLAY_DELAY) {
+                return;
             }
-            
-            // Clean up the audio instance after it's done
-            newAudio.onended = () => {
-                console.log('✅ Sound finished playing');
-                newAudio.remove();
-            };
-            
-            // Update the cache's last played time
             cache.lastPlayedTime = now;
-            
-        } catch (error) {
-            console.error('❌ Sound playback failed:', error);
-            if (error instanceof Error) {
-                console.error('Error details:', error.message);
-            }
         }
+
+        // Create new audio instance and play through controller
+        const audio = new Audio(soundPath);
+        audioController.playAudio(audio, volume);
     }
 
     public getCardSoundEffect(cardName: string): { soundPath: string; volume: number } {
         const defaultSound = this.cardSounds.get('holy_fire') || '';
         const soundPath = this.cardSounds.get(cardName.toLowerCase()) || defaultSound;
-        return { soundPath, volume: 0.5 };
+        return { soundPath, volume: this.DEFAULT_VOLUME };
     }
 
     public async playIntentSound(intent: number, room?: number, enemy?: number): Promise<void> {
@@ -278,9 +212,7 @@ export class SoundEffectManager {
     public async playTauntSound(room: number, enemy: number): Promise<void> {
         const enemyKey = `room_${room}_enemy_${enemy}`;
         
-        // Only play the specific taunt sound the first time
         if (!this.enemyHasTaunted.has(enemyKey)) {
-            console.log('🗣️ Playing first taunt for:', enemyKey);
             const soundPath = await this.getEnemySound(room, enemy, 'taunt', DEFAULT_TAUNT_SOUND);
             await this.playSound(soundPath);
             this.enemyHasTaunted.add(enemyKey);
@@ -293,11 +225,8 @@ export class SoundEffectManager {
     }
 
     public async playEventSound(eventName: string, room?: number, enemy?: number): Promise<void> {
-        console.log('🔊 Playing event sound:', eventName);
-        
         let soundPath;
         
-        // Handle room-specific death sounds
         if (eventName === 'enemyDeath' && room !== undefined && enemy !== undefined) {
             soundPath = await this.getEnemySound(room, enemy, 'outro', EVENT_SOUNDS[eventName]);
         } else {
@@ -305,34 +234,15 @@ export class SoundEffectManager {
         }
         
         if (!soundPath) {
-            console.log(`⚠️ No sound found for event ${eventName}`);
             return;
         }
-        console.log('🎵 Using sound path:', soundPath);
         
-        // Ensure the sound is cached before playing
         if (!this.audioCache.has(soundPath)) {
-            console.log('🎵 Caching sound before playback:', soundPath);
             this.createAndCacheAudio(soundPath);
         }
         
-        // Increase volume for turn sounds
-        if (eventName === 'enemyTurn' || eventName === 'playerTurn') {
-            const cache = this.audioCache.get(soundPath);
-            if (cache) {
-                cache.audio.volume = 0.8;
-            }
-        }
-        
-        await this.playSound(soundPath);
-        
-        // Reset volume after playing turn sounds
-        if (eventName === 'enemyTurn' || eventName === 'playerTurn') {
-            const cache = this.audioCache.get(soundPath);
-            if (cache) {
-                cache.audio.volume = 0.5;
-            }
-        }
+        const volume = (eventName === 'enemyTurn' || eventName === 'playerTurn') ? this.TURN_VOLUME : this.DEFAULT_VOLUME;
+        await this.playSound(soundPath, volume);
     }
 
     public async playCardSound(cardName: string): Promise<void> {

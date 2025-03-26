@@ -3,35 +3,56 @@ import boomboxIcon from '../assets/misc/boombox.svg';
 import themeMusic from '../assets/music/theme.mp3';
 import './MusicPlayer.css';
 
-interface MusicPlayerProps {
+// Create a global audio controller
+class GlobalAudioController {
+    private static instance: GlobalAudioController;
+    private isEnabled: boolean = true;
+
+    private constructor() {}
+
+    public static getInstance(): GlobalAudioController {
+        if (!GlobalAudioController.instance) {
+            GlobalAudioController.instance = new GlobalAudioController();
+        }
+        return GlobalAudioController.instance;
+    }
+
+    public setEnabled(enabled: boolean) {
+        this.isEnabled = enabled;
+    }
+
+    public playAudio(audio: HTMLAudioElement, volume: number = 0.5) {
+        if (!this.isEnabled) return;
+        
+        audio.volume = volume;
+        
+        // Just play/resume the audio
+        audio.play().catch(() => {
+            // Silently handle autoplay errors
+        });
+    }
+}
+
+export const audioController = GlobalAudioController.getInstance();
+
+interface AudioControllerProps {
     track?: string;
     currentFloor?: number;
 }
 
-const MusicPlayer: React.FC<MusicPlayerProps> = ({ track }) => {
-    const [isPlaying, setIsPlaying] = useState(false);
+const AudioController: React.FC<AudioControllerProps> = ({ track }) => {
+    const [isEnabled, setIsEnabled] = useState(true);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
-        // Create audio element with error handling
         if (!audioRef.current) {
             audioRef.current = new Audio(themeMusic);
             audioRef.current.loop = true;
-            audioRef.current.volume = 0.5; // Set a moderate volume
+            audioRef.current.volume = 0.5;
 
-            // Add error handling
-            audioRef.current.addEventListener('error', (e) => {
-                console.error('Audio error:', e);
-            });
-
-            // Add load handling
-            audioRef.current.addEventListener('canplaythrough', () => {
-                console.log('Audio loaded and ready to play');
-            });
-
-            // Activate the audio element (and update the frontend state)
-            audioRef.current.play().catch(e => console.error('Failed to autoplay:', e));
-            setIsPlaying(true);
+            if (isEnabled) {
+                audioController.playAudio(audioRef.current);
+            }
         }
 
         return () => {
@@ -43,41 +64,33 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ track }) => {
         };
     }, []);
 
-    const toggleMusic = async () => {
+    const toggleAudio = async () => {
+        const newEnabledState = !isEnabled;
         if (audioRef.current) {
-            try {
-                if (isPlaying) {
-                    await audioRef.current.pause();
-                    console.log('Music paused');
-                } else {
-                    const playPromise = audioRef.current.play();
-                    if (playPromise !== undefined) {
-                        playPromise
-                            .then(() => {
-                                console.log('Music started playing');
-                            })
-                            .catch(error => {
-                                console.error('Playback failed:', error);
-                            });
-                    }
-                }
-                setIsPlaying(!isPlaying);
-            } catch (error) {
-                console.error('Toggle music error:', error);
+            if (newEnabledState) {
+                // Resume from where it was paused
+                audioRef.current.play().catch(() => {
+                    // Silently handle autoplay errors
+                });
+            } else {
+                audioRef.current.pause();
             }
         }
+        audioController.setEnabled(newEnabledState);
+        setIsEnabled(newEnabledState);
     };
 
     return (
         <div className="music-player">
             <button 
-                className={`music-toggle ${isPlaying ? 'playing' : ''}`}
-                onClick={toggleMusic}
+                className={`music-toggle ${isEnabled ? 'playing' : ''}`}
+                onClick={toggleAudio}
+                title={isEnabled ? "Disable audio" : "Enable audio"}
             >
-                <img src={boomboxIcon} alt="Toggle music" />
+                <img src={boomboxIcon} alt="Toggle audio" />
             </button>
         </div>
     );
 };
 
-export default MusicPlayer;
+export default AudioController;
