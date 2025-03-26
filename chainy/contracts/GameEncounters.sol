@@ -70,8 +70,8 @@ contract GameEncounters {
             data.buffs = new uint8[](2);
         } else if (floor == 5) {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
-            data.maxHealth = [38, 38];
-            data.currentHealth = [17, 38];
+            data.maxHealth = [38, 21];
+            data.currentHealth = [17, 21];
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
         } else if (floor == 6) {
@@ -330,9 +330,9 @@ contract GameEncounters {
             }
             return 0;
         } else if (intent == INTENT_VAMPIRIC_BITE) {
-            // Vampiric bite deals 7 damage and heals for the same amount
-            _healEnemy(player, enemyIndex, 7);
-            return 7;
+            // Vampiric bite deals 5 damage and heals for the same amount
+            _healEnemy(player, enemyIndex, 5);
+            return 5;
         } else {
             require(enemyIndex < data.buffs.length, "Invalid enemy index for buff");
             return uint8(intent) + data.buffs[enemyIndex];

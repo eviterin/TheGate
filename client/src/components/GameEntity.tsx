@@ -98,8 +98,8 @@ const getIntentInfo = (intent: number, buff: number): IntentInfo => {
   if (intent === INTENT_TYPES.VAMPIRIC_BITE) {
     return {
       type: 'vampiric_bite',
-      value: 7,
-      healValue: 7,
+      value: 5,
+      healValue: 5,
       animation: ANIMATIONS.ATTACK
     };
   }

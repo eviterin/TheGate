@@ -161,8 +161,8 @@ export const processEnemyIntent = (
     // Heal all enemies - this is handled separately in the game component
     newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 5);
   } else if (intentType === INTENT_VAMPIRIC_BITE) {
-    // Vampiric bite - deal 7 damage and heal for 7
-    damageToHero = 7;
+    // Vampiric bite - deal 5 damage and heal for 5
+    damageToHero = 5;
     
     // Calculate damage to hero
     const result = calculateDamageToHero(damageToHero, newHeroBlock, newHeroHealth);
@@ -171,7 +171,7 @@ export const processEnemyIntent = (
     heroDied = newHeroHealth <= 0;
     
     // Heal enemy
-    newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 7);
+    newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 5);
   } else if (intentType > 0 && intentType < 1000) {
     // Regular attack intent
     damageToHero = intentType + enemyBuff;
