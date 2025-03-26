@@ -41,7 +41,7 @@ library CardLibrary {
             return (CARD_ID_READ_SCRIPTURE, CARD_ID_PREACH); // (7, 4)
         } else if (lastChosen == CARD_ID_UNVEIL) {
             return (CARD_ID_BALANCE, CARD_ID_UNFOLD_TRUTH); // (5, 3)
-        } else if (lastChosen == CARD_ID_READ_SCRIPTURE && currentFloor >= 7) {
+        } else if (lastChosen == CARD_ID_READ_SCRIPTURE) {
             return (CARD_ID_SACRED_RITUAL, CARD_ID_DIVINE_WRATH); // (9, 10)
         } else if (lastChosen == CARD_ID_SACRED_RITUAL) {
             return (CARD_ID_EXPLODICATE, CARD_ID_DIVINE_WRATH); // (11, 10)
