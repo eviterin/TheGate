@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
-import { readContract, writeContract, simulateContract, waitForTransaction, connect } from '@wagmi/core';
+import { readContract, writeContract, simulateContract, waitForTransaction } from '@wagmi/core';
 import { config } from '../../wagmi';
 import { getCurrentUser } from '@happy.tech/core';
 import { useContracts } from './ContractsContext';
-import { happyWagmiConnector } from '@happy.tech/core';
 import { getContractAddress } from '../utils/contractUtils';
+import { useWalletConnection } from './useWalletConnection';
 
 interface GameStateData {
     runState: number;
@@ -46,6 +46,7 @@ export function useVictoryTrackerContract() {
 
 export function useStartRun() {
     const contractConfig = useGameContract();
+    const { ensureConnected } = useWalletConnection();
 
     const startRun = useCallback(async () => {
         const currentUser = getCurrentUser();
@@ -59,8 +60,8 @@ export function useStartRun() {
                 callerAddress: currentUser.address,
             });
 
-            // Ensure we're connected with the happyWagmiConnector
-            await connect(config, { connector: happyWagmiConnector() });
+            // Ensure we're connected before proceeding
+            await ensureConnected();
             
             // First simulate the transaction
             const { request } = await simulateContract(config, {
@@ -80,13 +81,14 @@ export function useStartRun() {
             console.error('Error starting run:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     return { startRun };
 }
 
 export function useAbandonRun() {
     const contractConfig = useGameContract();
+    const { ensureConnected } = useWalletConnection();
 
     const abandonRun = useCallback(async () => {
         const currentUser = getCurrentUser();
@@ -100,8 +102,8 @@ export function useAbandonRun() {
                 callerAddress: currentUser.address,
             });
 
-            // Ensure we're connected with the happyWagmiConnector
-            await connect(config, { connector: happyWagmiConnector() });
+            // Ensure we're connected before proceeding
+            await ensureConnected();
             
             // First simulate the transaction
             const { request } = await simulateContract(config, {
@@ -121,13 +123,14 @@ export function useAbandonRun() {
             console.error('Error abandoning run:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     return { abandonRun };
 }
 
 export function useChooseRoom() {
     const contractConfig = useGameContract();
+    const { ensureConnected } = useWalletConnection();
 
     const chooseRoom = useCallback(async (option: number) => {
         const currentUser = getCurrentUser();
@@ -139,8 +142,8 @@ export function useChooseRoom() {
         try {
             console.log('Choosing room with option:', option);
             
-            // Ensure we're connected with the happyWagmiConnector
-            await connect(config, { connector: happyWagmiConnector() });
+            // Ensure we're connected before proceeding
+            await ensureConnected();
             
             // First simulate the transaction
             const { request } = await simulateContract(config, {
@@ -160,13 +163,14 @@ export function useChooseRoom() {
             console.error('Error choosing room:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     return { chooseRoom };
 }
 
 export function usePlayCard() {
     const contractConfig = useGameContract();
+    const { ensureConnected } = useWalletConnection();
 
     const playCard = useCallback(async (cardIndex: number, targetIndex: number) => {
         const currentUser = getCurrentUser();
@@ -178,8 +182,8 @@ export function usePlayCard() {
         try {
             console.log('Playing card...', { cardIndex, targetIndex });
             
-            // Ensure we're connected with the happyWagmiConnector
-            await connect(config, { connector: happyWagmiConnector() });
+            // Ensure we're connected before proceeding
+            await ensureConnected();
             
             // First simulate the transaction
             const { request } = await simulateContract(config, {
@@ -202,7 +206,7 @@ export function usePlayCard() {
             console.error('Error playing card:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     return { playCard };
 }
@@ -215,6 +219,7 @@ export interface CardPlay {
 
 export function usePlayCards() {
     const contractConfig = useGameContract();
+    const { ensureConnected } = useWalletConnection();
 
     const playCards = useCallback(async (plays: CardPlay[]) => {
         const currentUser = getCurrentUser();
@@ -232,8 +237,8 @@ export function usePlayCards() {
                 targetIndex: play.targetIndex as number
             }));
             
-            // Ensure we're connected with the happyWagmiConnector
-            await connect(config, { connector: happyWagmiConnector() });
+            // Ensure we're connected before proceeding
+            await ensureConnected();
             
             // First simulate the transaction to check for potential errors
             const { request } = await simulateContract(config, {
@@ -256,13 +261,14 @@ export function usePlayCards() {
             console.error('Error playing multiple cards:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     return { playCards };
 }
 
 export function useEndTurn() {
     const contractConfig = useGameContract();
+    const { ensureConnected } = useWalletConnection();
 
     const endTurn = useCallback(async () => {
         const currentUser = getCurrentUser();
@@ -274,8 +280,8 @@ export function useEndTurn() {
         try {
             console.log('Ending turn...');
             
-            // Ensure we're connected with the happyWagmiConnector
-            await connect(config, { connector: happyWagmiConnector() });
+            // Ensure we're connected before proceeding
+            await ensureConnected();
             
             // First simulate the transaction
             const { request } = await simulateContract(config, {
@@ -298,7 +304,7 @@ export function useEndTurn() {
             console.error('Error ending turn:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     return { endTurn };
 }
@@ -616,6 +622,7 @@ export function useGetAllObamaNumbers() {
 
 export function useDebugFloorControls() {
     const contractConfig = useGameContract();
+    const { ensureConnected } = useWalletConnection();
 
     const nextFloor = useCallback(async () => {
         const currentUser = getCurrentUser();
@@ -625,20 +632,29 @@ export function useDebugFloorControls() {
         }
 
         try {
-            console.log('🔼 Moving to next floor...');
-            const hash = await writeContract(config, {
+            console.log('Moving to next floor...');
+            
+            // Ensure we're connected before proceeding
+            await ensureConnected();
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'debugNextFloor',
                 args: [],
+                account: currentUser.address,
             });
-            console.log('✅ Moved to next floor:', { hash });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
+            
             return hash;
         } catch (error) {
-            console.error('❌ Error moving to next floor:', error);
+            console.error('Error moving to next floor:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     const previousFloor = useCallback(async () => {
         const currentUser = getCurrentUser();
@@ -648,20 +664,29 @@ export function useDebugFloorControls() {
         }
 
         try {
-            console.log('🔽 Moving to previous floor...');
-            const hash = await writeContract(config, {
+            console.log('Moving to previous floor...');
+            
+            // Ensure we're connected before proceeding
+            await ensureConnected();
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'debugPreviousFloor',
                 args: [],
+                account: currentUser.address,
             });
-            console.log('✅ Moved to previous floor:', { hash });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
+            
             return hash;
         } catch (error) {
-            console.error('❌ Error moving to previous floor:', error);
+            console.error('Error moving to previous floor:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     const setFloor = useCallback(async (floor: number) => {
         const currentUser = getCurrentUser();
@@ -671,26 +696,36 @@ export function useDebugFloorControls() {
         }
 
         try {
-            console.log('🎯 Setting floor to:', floor);
-            const hash = await writeContract(config, {
+            console.log('Setting floor to:', floor);
+            
+            // Ensure we're connected before proceeding
+            await ensureConnected();
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'debugSetFloor',
                 args: [floor],
+                account: currentUser.address,
             });
-            console.log('✅ Set floor:', { hash, floor });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
+            
             return hash;
         } catch (error) {
-            console.error('❌ Error setting floor:', error);
+            console.error('Error setting floor:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     return { nextFloor, previousFloor, setFloor };
 }
 
 export function useDebugHealthControls() {
     const contractConfig = useGameContract();
+    const { ensureConnected } = useWalletConnection();
 
     const addHealth = useCallback(async (amount: number) => {
         const currentUser = getCurrentUser();
@@ -700,20 +735,29 @@ export function useDebugHealthControls() {
         }
 
         try {
-            console.log('💚 Adding health:', amount);
-            const hash = await writeContract(config, {
+            console.log('Adding health:', amount);
+            
+            // Ensure we're connected before proceeding
+            await ensureConnected();
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'debugAddHealth',
                 args: [amount],
+                account: currentUser.address,
             });
-            console.log('✅ Added health:', { hash, amount });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
+            
             return hash;
         } catch (error) {
-            console.error('❌ Error adding health:', error);
+            console.error('Error adding health:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     const removeHealth = useCallback(async (amount: number) => {
         const currentUser = getCurrentUser();
@@ -723,20 +767,29 @@ export function useDebugHealthControls() {
         }
 
         try {
-            console.log('💔 Removing health:', amount);
-            const hash = await writeContract(config, {
+            console.log('Removing health:', amount);
+            
+            // Ensure we're connected before proceeding
+            await ensureConnected();
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'debugRemoveHealth',
                 args: [amount],
+                account: currentUser.address,
             });
-            console.log('✅ Removed health:', { hash, amount });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
+            
             return hash;
         } catch (error) {
-            console.error('❌ Error removing health:', error);
+            console.error('Error removing health:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     const setMaxHealth = useCallback(async (newMax: number) => {
         const currentUser = getCurrentUser();
@@ -746,26 +799,36 @@ export function useDebugHealthControls() {
         }
 
         try {
-            console.log('🔄 Setting max health:', newMax);
-            const hash = await writeContract(config, {
+            console.log('Setting max health:', newMax);
+            
+            // Ensure we're connected before proceeding
+            await ensureConnected();
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'debugSetMaxHealth',
                 args: [newMax],
+                account: currentUser.address,
             });
-            console.log('✅ Set max health:', { hash, newMax });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
+            
             return hash;
         } catch (error) {
-            console.error('❌ Error setting max health:', error);
+            console.error('Error setting max health:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     return { addHealth, removeHealth, setMaxHealth };
 }
 
 export function useChooseCardReward() {
     const contractConfig = useGameContract();
+    const { ensureConnected } = useWalletConnection();
 
     const chooseCardReward = useCallback(async (cardId: number) => {
         const currentUser = getCurrentUser();
@@ -777,8 +840,8 @@ export function useChooseCardReward() {
         try {
             console.log('Choosing card reward...', { cardId });
             
-            // Ensure we're connected with the happyWagmiConnector
-            await connect(config, { connector: happyWagmiConnector() });
+            // Ensure we're connected before proceeding
+            await ensureConnected();
             
             // First simulate the transaction
             const { request } = await simulateContract(config, {
@@ -798,7 +861,7 @@ export function useChooseCardReward() {
             console.error('Error choosing card reward:', error);
             throw error;
         }
-    }, [contractConfig]);
+    }, [contractConfig, ensureConnected]);
 
     return { chooseCardReward };
 }
