@@ -25,7 +25,7 @@ export const WHALE_ROOM_OPTIONS = [
     id: 4, 
     title: '💪 Sacred Might', 
     description: 'Your body is strengthened by divine power.',
-    effect: '21 → 36 ❤️'
+    effect: '32 → 40 ❤️'
   }
 ];
 

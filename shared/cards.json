@@ -85,7 +85,7 @@
             "numericId": 10,
             "id": "foly_hire",
             "name": "Divine Wrath",
-            "description": "Deal 5 damage. If enemy is at full HP, deal double.",
+            "description": "Deal 4 damage. If enemy is at full HP, deal double.",
             "manaCost": 1,
             "targeted": true,
             "animationType": "flip"
@@ -94,7 +94,7 @@
             "numericId": 11,
             "id": "explodicate",
             "name": "Explodicate",
-            "description": "Deal 7 damage. Ignores block.",
+            "description": "Deal 4 damage. Ignores block.",
             "manaCost": 1,
             "targeted": true,
             "animationType": "flip"

@@ -93,8 +93,8 @@ contract GameState {
         
         data.runState = RUN_STATE_WHALE_ROOM;
         data.currentFloor = 0;
-        data.maxHealth = 21;
-        data.currentHealth = 21;
+        data.maxHealth = 32;
+        data.currentHealth = 32;
         data.maxMana = 3;
         data.currentMana = 0;
         data.extraCardDrawEnabled = false;
@@ -102,7 +102,7 @@ contract GameState {
         data.lastChosenCard = 0;
         delete data.deck;
         
-        data.deck = [CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_PRAY, CardLibrary.CARD_ID_PRAY];
+        data.deck = [CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_EXPLODICATE, CardLibrary.CARD_ID_DIVINE_WRATH, CardLibrary.CARD_ID_PREACH, CardLibrary.CARD_ID_PRAY, CardLibrary.CARD_ID_PRAY];
     }
     
     function abandonRun() public {
@@ -139,8 +139,8 @@ contract GameState {
             data.hasProtectionBlessing = true;
             data.currentBlock = 5;
         } else if (option == 4) {
-            data.maxHealth += 15;
-            data.currentHealth += 15;
+            data.maxHealth += 8;
+            data.currentHealth += 8;
         }
 
         data.runState = RUN_STATE_ENCOUNTER;
@@ -239,7 +239,7 @@ contract GameState {
             }
         } else if (playedCardID == CardLibrary.CARD_ID_EXPLODICATE && data.currentMana >= 1) {
             data.currentMana -= 1;
-            if (encounters.dealDirectDamage(msg.sender, targetIndex, 7)) {
+            if (encounters.dealDirectDamage(msg.sender, targetIndex, 4)) {
                 checkWinCondition();
             }
         }
