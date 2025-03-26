@@ -300,19 +300,21 @@ export const predictCardEffect = (
       heroHealth = Math.min(gameState.maxHealth, heroHealth + 3);
       break;
       
-    case 10: // Divine Wrath - Deal 5 damage. Double if enemy at full HP.
+    case 10: // Divine Wrath - Deal 4 damage. Double if enemy at full HP.
       manaSpent = 1;
-      const isEnemyFull = enemyCurrentHealth[targetIndex] === gameState.enemyMaxHealth[targetIndex];
-      const wrathDamage = isEnemyFull ? 10 : 5;
-      const wrathResult = calculateDamageToEnemy(wrathDamage, enemyBlock[targetIndex], enemyCurrentHealth[targetIndex]);
+      const maxHealth = gameState.enemyMaxHealth[targetIndex];
+      const currentHealth = enemyCurrentHealth[targetIndex];
+      const isEnemyFull = currentHealth === maxHealth;
+      const wrathDamage = isEnemyFull ? 8 : 4;
+      const wrathResult = calculateDamageToEnemy(wrathDamage, enemyBlock[targetIndex], currentHealth);
       enemyCurrentHealth[targetIndex] = wrathResult.newHealth;
       enemyBlock[targetIndex] = wrathResult.newBlock;
       enemyDied = wrathResult.isDead;
       break;
       
-    case 11: // Explodicate - Deal 7 damage. Ignores block.
+    case 11: // Explodicate - Deal 4 damage. Ignores block.
       manaSpent = 1;
-      const explodicateResult = calculateDirectDamageToEnemy(7, enemyCurrentHealth[targetIndex]);
+      const explodicateResult = calculateDirectDamageToEnemy(4, enemyCurrentHealth[targetIndex]);
       enemyCurrentHealth[targetIndex] = explodicateResult.newHealth;
       enemyDied = explodicateResult.isDead;
       break;

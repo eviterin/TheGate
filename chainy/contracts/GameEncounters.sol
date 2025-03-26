@@ -64,7 +64,7 @@ contract GameEncounters {
             data.buffs = new uint8[](1);
         } else if (floor == 4) {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
-            data.maxHealth = [18, 22];
+            data.maxHealth = [25, 22];
             data.currentHealth = [18, 22];
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
@@ -230,13 +230,11 @@ contract GameEncounters {
                     if (data.types[i] == ENEMY_TYPE_A) {
                         data.intents[i] = uint16(8 + (seed % 5));
                     } else if (data.types[i] == ENEMY_TYPE_B) {
-                        uint256 action = seed % 10;
-                        if (action < 3) {
-                            data.intents[i] = INTENT_HEAL;
-                        } else if (action < 6) {
-                            data.intents[i] = INTENT_BLOCK_5;
+                        // If friend is dead (health 0) or at full health, attack for 2
+                        if (i == 1 && (data.currentHealth[0] == 0 || data.currentHealth[0] == data.maxHealth[0])) {
+                            data.intents[i] = 2;
                         } else {
-                            data.intents[i] = uint16(6 + (seed % 5));
+                            data.intents[i] = INTENT_HEAL_ALL;
                         }
                     }
                 }
