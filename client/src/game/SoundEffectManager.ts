@@ -7,6 +7,7 @@ import enemyDeathSound from '../assets/soundeffects/enemy_death.wav';
 import enemyBiteSound from '../assets/soundeffects/enemy_bite.wav';
 import heroDeathSound from '../assets/soundeffects/hero_death.wav';
 import victorySound from '../assets/soundeffects/victory.wav';
+import defeatSound from '../assets/soundeffects/defeat.wav';
 import enemyTurnSound from '../assets/soundeffects/enemy_turn.wav';
 import playerTurnSound from '../assets/soundeffects/player_turn.wav';
 
@@ -18,6 +19,7 @@ const EVENT_SOUNDS: Record<string, string> = {
     'enemyDeath': enemyDeathSound,
     'heroDeath': heroDeathSound,
     'victory': victorySound,
+    'defeat': defeatSound,
     'enemy_turn': enemyTurnSound,
     'player_turn': playerTurnSound
 };

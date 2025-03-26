@@ -59,12 +59,20 @@ export function useStartRun() {
                 callerAddress: currentUser.address,
             });
 
-            const hash = await writeContract(config, {
+            // Ensure we're connected with the happyWagmiConnector
+            await connect(config, { connector: happyWagmiConnector() });
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'startRun',
                 args: [],
-            })
+                account: currentUser.address,
+            });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
 
             console.log('Run started:', { hash, user: currentUser.address });
             return hash;
@@ -92,12 +100,20 @@ export function useAbandonRun() {
                 callerAddress: currentUser.address,
             });
 
-            const hash = await writeContract(config, {
+            // Ensure we're connected with the happyWagmiConnector
+            await connect(config, { connector: happyWagmiConnector() });
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'abandonRun',
                 args: [],
-            })
+                account: currentUser.address,
+            });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
 
             console.log('Run abandoned:', { hash });
             return hash;
@@ -122,12 +138,21 @@ export function useChooseRoom() {
 
         try {
             console.log('Choosing room with option:', option);
-            const hash = await writeContract(config, {
+            
+            // Ensure we're connected with the happyWagmiConnector
+            await connect(config, { connector: happyWagmiConnector() });
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'chooseRoom',
                 args: [option],
-            })
+                account: currentUser.address,
+            });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
 
             console.log('Room chosen:', { hash, option });
             return hash;
@@ -152,12 +177,21 @@ export function usePlayCard() {
 
         try {
             console.log('Playing card...', { cardIndex, targetIndex });
-            const hash = await writeContract(config, {
+            
+            // Ensure we're connected with the happyWagmiConnector
+            await connect(config, { connector: happyWagmiConnector() });
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'playCard',
                 args: [cardIndex, targetIndex],
+                account: currentUser.address,
             });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
 
             // Wait for transaction to be confirmed
             await waitForTransaction(config, { hash });
@@ -198,8 +232,11 @@ export function usePlayCards() {
                 targetIndex: play.targetIndex as number
             }));
             
+            // Ensure we're connected with the happyWagmiConnector
+            await connect(config, { connector: happyWagmiConnector() });
+            
             // First simulate the transaction to check for potential errors
-            await simulateContract(config, {
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'playCards',
@@ -208,12 +245,7 @@ export function usePlayCards() {
             });
 
             // If simulation succeeds, send the actual transaction
-            const hash = await writeContract(config, {
-                address: contractConfig.address,
-                abi: contractConfig.abi,
-                functionName: 'playCards',
-                args: [contractPlays],
-            });
+            const hash = await writeContract(config, request);
 
             // Wait for transaction to be confirmed
             await waitForTransaction(config, { hash });
@@ -241,12 +273,21 @@ export function useEndTurn() {
 
         try {
             console.log('Ending turn...');
-            const hash = await writeContract(config, {
+            
+            // Ensure we're connected with the happyWagmiConnector
+            await connect(config, { connector: happyWagmiConnector() });
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'endTurn',
                 args: [],
+                account: currentUser.address,
             });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
 
             // Wait for transaction to be confirmed
             await waitForTransaction(config, { hash });

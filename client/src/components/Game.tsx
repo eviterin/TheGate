@@ -396,6 +396,8 @@ const Game: React.FC = () => {
     if (prediction.heroDied && !predictedDefeatTime) {
       setPredictedDefeatTime(Date.now());
       setShowDefeatScreen(true);
+      // Play defeat sound immediately when we predict a loss
+      soundEffectManager.playEventSound('defeat');
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setDefeatScreenVisible(true);
@@ -408,6 +410,8 @@ const Game: React.FC = () => {
       console.log('[VICTORY] Predicted victory from card play');
       setShowVictoryScreen(true);
       setPredictedVictoryTime(Date.now());
+      // Play victory sound immediately when we predict victory
+      soundEffectManager.playEventSound('victory');
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setVictoryScreenVisible(true);
@@ -668,6 +672,8 @@ const Game: React.FC = () => {
           if (enemyIntentResult.heroDied && !predictedDefeatTime) {
             setPredictedDefeatTime(Date.now());
             setShowDefeatScreen(true);
+            // Play defeat sound immediately when we predict a loss
+            soundEffectManager.playEventSound('defeat');
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
                 setDefeatScreenVisible(true);
