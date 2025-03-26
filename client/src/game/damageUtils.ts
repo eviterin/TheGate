@@ -318,19 +318,18 @@ export const predictCardEffect = (
       // Card draw handled separately
       break;
       
-    case 9: // Sacred Ritual - Gain 10 block. Heal 3 HP.
+    case 9: // Sacred Ritual - Gain 10 block. Heal 30 HP.
       manaSpent = 2;
       heroBlock += 10;
-      heroHealth = Math.min(gameState.maxHealth, heroHealth + 3);
+      heroHealth = Math.min(gameState.maxHealth, heroHealth + 30);
       break;
       
-    case 10: // Divine Wrath - Deal 4 damage. If enemy is at full HP, deal double.
+    case 10: // Divine Wrath - Deal 4 damage. Double if enemy at full HP.
       manaSpent = 1;
       const maxHealth = gameState.enemyMaxHealth[targetIndex];
       const currentHealth = enemyCurrentHealth[targetIndex];
       const isEnemyFull = currentHealth === maxHealth;
-      const baseDamage = 4;
-      const wrathDamage = isEnemyFull ? baseDamage * 2 : baseDamage;
+      const wrathDamage = isEnemyFull ? 8 : 4;
       const wrathResult = calculateDamageToEnemy(wrathDamage, enemyBlock[targetIndex], currentHealth);
       enemyCurrentHealth[targetIndex] = wrathResult.newHealth;
       enemyBlock[targetIndex] = wrathResult.newBlock;

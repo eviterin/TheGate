@@ -197,11 +197,13 @@ contract GameState {
         } else if (playedCardID == CardLibrary.CARD_ID_SACRED_RITUAL && data.currentMana >= 2) {
             data.currentMana -= 2;
             data.currentBlock += 10;
-            if (data.currentHealth + 3 > data.maxHealth) {
+            if (data.currentHealth + 30 > data.maxHealth) {
                 data.currentHealth = data.maxHealth;
             } else {
-                data.currentHealth += 3;
+                data.currentHealth += 30;
             }
+            DeckManager.removeCardFromGame(data.hand, data.deck, playedCardIndex);
+            return;
         } else if (playedCardID == CardLibrary.CARD_ID_DIVINE_WRATH && data.currentMana >= 1) {
             data.currentMana--;
             (,uint16[] memory maxHealth, uint16[] memory enemyHealth,,,) = encounters.getEnemyData(msg.sender);

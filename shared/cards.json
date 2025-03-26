@@ -76,7 +76,7 @@
             "numericId": 9,
             "id": "divine_protection",
             "name": "Sacred Ritual",
-            "description": "Gain 10 block. Heal 3 HP.",
+            "description": "Gain 10 block. Heal 30 HP. Card is removed from deck after use.",
             "manaCost": 3,
             "targeted": false,
             "animationType": "flip"
