@@ -99,6 +99,8 @@ export const calculateDamageToHero = (
  * @param heroHealth Current hero health
  * @param heroBlock Current hero block
  * @param enemyBuff Current enemy buff value
+ * @param allEnemiesHealth Array of current healths of all enemies
+ * @param allEnemiesMaxHealth Array of maximum healths of all enemies
  * @returns Object containing updated stats after processing the intent
  */
 export const processEnemyIntent = (
@@ -109,7 +111,9 @@ export const processEnemyIntent = (
   enemyMaxHealth: number,
   heroHealth: number,
   heroBlock: number,
-  enemyBuff: number = 0
+  enemyBuff: number = 0,
+  allEnemiesHealth?: number[],
+  allEnemiesMaxHealth?: number[]
 ): {
   newEnemyBlock: number;
   newEnemyHealth: number;
@@ -117,6 +121,7 @@ export const processEnemyIntent = (
   newHeroBlock: number;
   damageToHero: number;
   heroDied: boolean;
+  allEnemiesNewHealth?: number[];
 } => {
   // Get constants from shared data
   const INTENT_BLOCK_5 = 1000;
@@ -158,7 +163,23 @@ export const processEnemyIntent = (
     newEnemyBlock = 5;
     newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 5);
   } else if (intentType === INTENT_HEAL_ALL) {
-    // Heal all enemies - this is handled separately in the game component
+    // Heal all enemies for 5 HP
+    if (allEnemiesHealth && allEnemiesMaxHealth) {
+      const healedHealth = allEnemiesHealth.map((health, i) => 
+        Math.min(allEnemiesMaxHealth[i], health + 5)
+      );
+      newEnemyHealth = healedHealth[enemyHealth] || enemyHealth;
+      return {
+        newEnemyBlock,
+        newEnemyHealth,
+        newHeroHealth,
+        newHeroBlock,
+        damageToHero,
+        heroDied,
+        allEnemiesNewHealth: healedHealth
+      };
+    }
+    // Fallback if arrays not provided
     newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 5);
   } else if (intentType === INTENT_VAMPIRIC_BITE) {
     // Vampiric bite - deal 5 damage and heal for 5
@@ -189,7 +210,8 @@ export const processEnemyIntent = (
     newHeroHealth,
     newHeroBlock,
     damageToHero,
-    heroDied
+    heroDied,
+    allEnemiesNewHealth: undefined
   };
 };
 

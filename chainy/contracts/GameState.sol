@@ -205,9 +205,9 @@ contract GameState {
         } else if (playedCardID == CardLibrary.CARD_ID_DIVINE_WRATH && data.currentMana >= 1) {
             data.currentMana--;
             (,uint16[] memory maxHealth, uint16[] memory enemyHealth,,,) = encounters.getEnemyData(msg.sender);
-            uint8 damage = 5;
+            uint8 damage = 4;
             if (enemyHealth[targetIndex] == maxHealth[targetIndex]) {
-                damage = 10;
+                damage = 8;
             }
             if (encounters.dealDamageToEnemy(msg.sender, targetIndex, damage)) {
                 checkWinCondition();
