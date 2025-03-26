@@ -138,6 +138,7 @@ interface GameEntityProps {
   scale?: number;
   invert?: boolean;
   runState?: number;
+  currentEnemy?: number;
 }
 
 const GameEntity: React.FC<GameEntityProps> = ({ 
@@ -158,10 +159,12 @@ const GameEntity: React.FC<GameEntityProps> = ({
   buff = 0,
   scale = 1,
   invert = false,
-  runState = 2
+  runState = 2,
+  currentEnemy
 }) => {
   const isHero = type === 'hero';
   const [isShaking, setIsShaking] = useState(false);
+  const [isPreAnimation, setIsPreAnimation] = useState(false);
   const entityRef = useRef<HTMLDivElement>(null);
 
   // Track health changes
@@ -171,6 +174,16 @@ const GameEntity: React.FC<GameEntityProps> = ({
       setTimeout(() => setIsShaking(false), 500);
     }
   }, [health, previousHealth]);
+
+  // Track animation state
+  useEffect(() => {
+    if (!isHero && intent && currentEnemy === position) {
+      // Show glow when this enemy is the current enemy, regardless of animation state
+      setIsPreAnimation(true);
+    } else {
+      setIsPreAnimation(false);
+    }
+  }, [isAnimating, isHero, intent, currentEnemy, position]);
 
   // Get animation styles based on type and intent
   const getAnimationStyles = () => {
@@ -195,6 +208,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
 
   // Get sprite animation styles
   const getSpriteStyles = () => {
+    const baseTransform = `translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1})${!isHero && health <= 0 ? ' rotate(90deg)' : ''}`;
     const styles: React.CSSProperties = {
       position: 'absolute',
       top: '50%',
@@ -205,7 +219,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
       backgroundSize: 'contain',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',
-      transform: `translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1})${!isHero && health <= 0 ? ' rotate(90deg)' : ''}`,
+      transform: baseTransform,
       transformOrigin: 'center center',
       zIndex: !isHero && health <= 0 ? 1 : 2,
       filter: !isHero && health <= 0 ? 'brightness(0.4) grayscale(0.7)' : 'none',
@@ -217,9 +231,11 @@ const GameEntity: React.FC<GameEntityProps> = ({
     // For enemies, use their intent to determine animation
     if (!isHero && intent && health > 0) {  // Only animate if enemy is alive
       const intentInfo = getIntentInfo(intent, buff);
+      console.log('Animation for intent:', intent, 'is:', intentInfo.animation);
       return {
         ...styles,
         animation: `${intentInfo.animation} 0.5s ease-in-out`,
+        transform: baseTransform
       };
     }
 
@@ -228,6 +244,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
       return {
         ...styles,
         animation: `${animationType || 'jump'} 0.5s ease-in-out`,
+        transform: baseTransform
       };
     }
 
@@ -420,6 +437,20 @@ const GameEntity: React.FC<GameEntityProps> = ({
 
   const entityPosition = getEntityPosition();
   
+  const getGlowStyle = () => {
+    if (isValidTarget) {
+      return {
+        boxShadow: '0 0 20px 10px rgba(255, 255, 0, 0.5)'
+      };
+    }
+    if (isPreAnimation) {
+      return {
+        boxShadow: '0 0 30px 15px rgba(255, 0, 0, 0.6)'  // Increased size and intensity
+      };
+    }
+    return {};
+  };
+
   return (
     <>
       <style>
@@ -444,16 +475,18 @@ const GameEntity: React.FC<GameEntityProps> = ({
           }
 
           @keyframes heal-pulse {
-            0% { transform: translate(-50%, -50%) scale(${scale}); filter: brightness(1); }
-            50% { transform: translate(-50%, -50%) scale(${scale * 1.1}); filter: brightness(1.5) hue-rotate(90deg); }
-            100% { transform: translate(-50%, -50%) scale(${scale}); filter: brightness(1); }
+            0% { transform: translate(-50%, -50%) scale(${scale}); }
+            25% { transform: translate(-50%, -50%) scale(${scale * 1.4}); }
+            50% { transform: translate(-50%, -50%) scale(${scale * 1.2}); }
+            75% { transform: translate(-50%, -50%) scale(${scale * 1.3}); }
+            100% { transform: translate(-50%, -50%) scale(${scale}); }
           }
 
           @keyframes power-up {
-            0% { transform: translate(-50%, -50%) scale(${scale}); filter: brightness(1); }
-            50% { transform: translate(-50%, -50%) scale(${scale * 1.15}); filter: brightness(1.5) saturate(1.5); }
+            0% { transform: translate(-50%, -50%) scale(${scale}); }
+            50% { transform: translate(-50%, -50%) scale(${scale * 1.15}); }
             75% { transform: translate(-50%, -50%) scale(${scale * 1.1}) rotate(5deg); }
-            100% { transform: translate(-50%, -50%) scale(${scale}); filter: brightness(1); }
+            100% { transform: translate(-50%, -50%) scale(${scale}); }
           }
 
           @keyframes shake {
@@ -536,19 +569,6 @@ const GameEntity: React.FC<GameEntityProps> = ({
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.1);
             text-shadow: none;
-            white-space: normal;
-          }
-
-          .stat-container:hover::before {
-            display: none;
-          }
-
-          /* Ensure tooltips stay within viewport */
-          @media (max-height: 800px) {
-            .stat-container:hover::after {
-              bottom: auto;
-              top: calc(100% + 5px);
-            }
           }
         `}
       </style>
@@ -572,8 +592,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
           {/* Entity model (hero or enemy) */}
           <div style={getSpriteStyles()} />
 
-          {/* Glow effect for valid target or during animation */}
-          {(isValidTarget || (!isHero && isAnimating)) && (
+          {/* Glow effect for valid target or pre-animation */}
+          {(isValidTarget || (!isHero && isPreAnimation)) && (
             <div style={{
               position: 'absolute',
               top: '50%',
@@ -593,8 +613,9 @@ const GameEntity: React.FC<GameEntityProps> = ({
               transform: `translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1})`,
               transformOrigin: 'center center',
               zIndex: 1,
-              opacity: isAnimating ? '1' : '0.8',
-              transition: 'opacity 0.2s ease-in-out'
+              opacity: isPreAnimation ? '1' : '0.8',
+              transition: 'opacity 0.2s ease-in-out',
+              ...getGlowStyle()
             }} />
           )}
         </div>

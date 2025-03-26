@@ -1096,6 +1096,14 @@ const Game: React.FC = () => {
                     scale={getLevelConfig(gameState.currentFloor).enemyScales?.[index]}
                     invert={getLevelConfig(gameState.currentFloor).enemyInverted?.[index]}
                     runState={gameState.runState}
+                    currentEnemy={turnState === 'enemy' ? (
+                      // If currentEnemy is not set yet but we're in enemy turn,
+                      // show for the first enemy that has intent and is alive
+                      currentEnemy !== undefined ? currentEnemy :
+                      gameState.enemyTypes.findIndex((type: number, i: number) => 
+                        gameState.enemyCurrentHealth[i] > 0 && gameState.enemyIntents[i]
+                      )
+                    ) : undefined}
                   />
                 ))}
               </>
