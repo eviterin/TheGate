@@ -1,7 +1,7 @@
 const ethers = require('ethers');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+require('dotenv').config();
 
 let encountersArtifact;
 let gameStateArtifact;
@@ -24,20 +24,8 @@ async function loadArtifacts() {
     deckManagerArtifact = JSON.parse(fs.readFileSync(deckManagerPath));
 }
 
-async function runStep(name, command) {
-    console.log(`\n📝 ${name}...`);
-    try {
-        execSync(command, { stdio: 'inherit' });
-        console.log(`✅ ${name} completed successfully`);
-        return true;
-    } catch (error) {
-        console.error(`❌ ${name} failed:`, error.message);
-        return false;
-    }
-}
-
 async function deployVictoryTracker(wallet) {
-    console.log('\n📝 Deploying VictoryTracker contract...');
+    console.log('Deploying VictoryTracker contract...');
     
     const factory = new ethers.ContractFactory(
         victoryTrackerArtifact.abi,
@@ -49,7 +37,7 @@ async function deployVictoryTracker(wallet) {
     await contract.waitForDeployment();
 
     const deployedAddress = await contract.getAddress();
-    console.log('✅ VictoryTracker deployed to:', deployedAddress);
+    console.log('VictoryTracker contract deployed to:', deployedAddress);
     
     appendToDeployedContracts({
         name: 'VictoryTracker.sol',
@@ -57,7 +45,7 @@ async function deployVictoryTracker(wallet) {
         abi: victoryTrackerArtifact.abi
     });
 
-    return contract;
+    return deployedAddress;
 }
 
 async function deployEncounters(wallet) {
@@ -69,7 +57,7 @@ async function deployEncounters(wallet) {
         wallet
     );
 
-    const contract = await factory.deploy('0x0000000000000000000000000000000000000000');
+    const contract = await factory.deploy();
     await contract.waitForDeployment();
 
     const deployedAddress = await contract.getAddress();
@@ -180,59 +168,48 @@ function appendToDeployedContracts(contractInfo) {
 }
 
 async function main() {
-    console.log('🚀 Starting full deployment process...\n');
+    console.log('🚀 Starting deployment process...\n');
 
     try {
-        // Step 1: Compile contracts
-        if (!await runStep(
-            'Compiling contracts',
-            'npx hardhat compile'
-        )) throw new Error('Compilation failed');
-
-        // Step 2: Load artifacts
+        // Step 1: Load artifacts
         await loadArtifacts();
 
-        // Connect to HappyChain Sepolia
-        const provider = new ethers.JsonRpcProvider("https://rpc.testnet.happy.tech/http");
+        // Connect to network using environment variables
+        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         
         // Load your wallet using private key from .env
         const privateKey = process.env.PRIVATE_KEY;
         const wallet = new ethers.Wallet(privateKey, provider);
         
+        console.log(`Deploying to ${process.env.CHAIN_NAME} (Chain ID: ${process.env.CHAIN_ID})`);
         console.log("Deploying from address:", wallet.address);
 
-        // Step 3: Deploy libraries first
+        // Step 2: Deploy libraries first
         const cardLibrary = await deployCardLibrary(wallet);
         const cardLibraryAddress = await cardLibrary.getAddress();
 
         const deckManager = await deployDeckManager(wallet, cardLibraryAddress);
         const deckManagerAddress = await deckManager.getAddress();
 
-        // Step 4: Deploy VictoryTracker contract
+        // Step 3: Deploy VictoryTracker contract
         const victoryTracker = await deployVictoryTracker(wallet);
         const victoryTrackerAddress = await victoryTracker.getAddress();
 
-        // Step 5: Deploy GameEncounters contract
+        // Step 4: Deploy GameEncounters contract
         const encounters = await deployEncounters(wallet);
         const encountersAddress = await encounters.getAddress();
 
-        // Step 6: Deploy GameState contract with all dependencies
+        // Step 5: Deploy GameState contract with all dependencies
         const gameState = await deployGameState(wallet, encountersAddress, victoryTrackerAddress);
         const gameStateAddress = await gameState.getAddress();
 
-        // Step 7: Update GameEncounters with GameState address
+        // Step 6: Update GameEncounters with GameState address
         console.log('\n📝 Updating GameEncounters with GameState address...');
         const tx = await encounters.setGameStateContract(gameStateAddress);
         await tx.wait();
         console.log('✅ GameEncounters updated with GameState address');
 
-        // Step 8: Deploy cards
-        if (!await runStep(
-            'Deploying cards',
-            'node scripts/deploy-cards.js'
-        )) throw new Error('Cards deployment failed');
-
-        console.log('\n🎉 Full deployment completed successfully!');
+        console.log('\n🎉 Deployment completed successfully!');
         
     } catch (error) {
         console.error('\n❌ Deployment process failed:', error.message);
@@ -240,8 +217,7 @@ async function main() {
     }
 }
 
-// Load environment variables and run
-require('dotenv').config();
+// Run deployment
 main()
     .then(() => process.exit(0))
     .catch((error) => {

@@ -1,7 +1,8 @@
 const ethers = require('ethers');
 const fs = require('fs');
 const path = require('path');
-const { enrichGameState } = require('./enrich-gamestate');
+const { execSync } = require('child_process');
+require('dotenv').config();
 
 let encountersArtifact;
 let gameStateArtifact;
@@ -11,11 +12,11 @@ let deckManagerArtifact;
 
 async function loadArtifacts() {
     // Read the contract artifacts
-    const encountersPath = path.join(__dirname, '../artifacts/contracts/GameEncounters.sol/GameEncounters.json');
-    const gameStatePath = path.join(__dirname, '../artifacts/contracts/GameState.sol/GameState.json');
-    const victoryTrackerPath = path.join(__dirname, '../artifacts/contracts/VictoryTracker.sol/VictoryTracker.json');
-    const cardLibraryPath = path.join(__dirname, '../artifacts/contracts/CardLibrary.sol/CardLibrary.json');
-    const deckManagerPath = path.join(__dirname, '../artifacts/contracts/DeckManager.sol/DeckManager.json');
+    const encountersPath = path.join(__dirname, '../../artifacts/contracts/GameEncounters.sol/GameEncounters.json');
+    const gameStatePath = path.join(__dirname, '../../artifacts/contracts/GameState.sol/GameState.json');
+    const victoryTrackerPath = path.join(__dirname, '../../artifacts/contracts/VictoryTracker.sol/VictoryTracker.json');
+    const cardLibraryPath = path.join(__dirname, '../../artifacts/contracts/CardLibrary.sol/CardLibrary.json');
+    const deckManagerPath = path.join(__dirname, '../../artifacts/contracts/DeckManager.sol/DeckManager.json');
 
     encountersArtifact = JSON.parse(fs.readFileSync(encountersPath));
     gameStateArtifact = JSON.parse(fs.readFileSync(gameStatePath));
@@ -24,8 +25,20 @@ async function loadArtifacts() {
     deckManagerArtifact = JSON.parse(fs.readFileSync(deckManagerPath));
 }
 
+async function runStep(name, command) {
+    console.log(`\n📝 ${name}...`);
+    try {
+        execSync(command, { stdio: 'inherit' });
+        console.log(`✅ ${name} completed successfully`);
+        return true;
+    } catch (error) {
+        console.error(`❌ ${name} failed:`, error.message);
+        return false;
+    }
+}
+
 async function deployVictoryTracker(wallet) {
-    console.log('Deploying VictoryTracker contract...');
+    console.log('\n📝 Deploying VictoryTracker contract...');
     
     const factory = new ethers.ContractFactory(
         victoryTrackerArtifact.abi,
@@ -37,7 +50,7 @@ async function deployVictoryTracker(wallet) {
     await contract.waitForDeployment();
 
     const deployedAddress = await contract.getAddress();
-    console.log('VictoryTracker contract deployed to:', deployedAddress);
+    console.log('✅ VictoryTracker deployed to:', deployedAddress);
     
     appendToDeployedContracts({
         name: 'VictoryTracker.sol',
@@ -45,7 +58,7 @@ async function deployVictoryTracker(wallet) {
         abi: victoryTrackerArtifact.abi
     });
 
-    return deployedAddress;
+    return contract;
 }
 
 async function deployEncounters(wallet) {
@@ -57,7 +70,7 @@ async function deployEncounters(wallet) {
         wallet
     );
 
-    const contract = await factory.deploy();
+    const contract = await factory.deploy('0x0000000000000000000000000000000000000000');
     await contract.waitForDeployment();
 
     const deployedAddress = await contract.getAddress();
@@ -145,7 +158,7 @@ async function deployDeckManager(wallet, cardLibraryAddress) {
 }
 
 function appendToDeployedContracts(contractInfo) {
-    const dirPath = path.join(__dirname, "../artifacts/contracts");
+    const dirPath = path.join(__dirname, "../../artifacts/contracts");
     if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath, { recursive: true });
     }
@@ -168,47 +181,60 @@ function appendToDeployedContracts(contractInfo) {
 }
 
 async function main() {
-    console.log('🚀 Starting deployment process...\n');
+    console.log('🚀 Starting full deployment process...\n');
 
     try {
-        // Step 1: Load artifacts
+        // Step 1: Compile contracts
+        if (!await runStep(
+            'Compiling contracts',
+            'npx hardhat compile'
+        )) throw new Error('Compilation failed');
+
+        // Step 2: Load artifacts
         await loadArtifacts();
 
-        // Connect to HappyChain Sepolia
-        const provider = new ethers.JsonRpcProvider("https://rpc.testnet.happy.tech/http");
+        // Connect to network using environment variables
+        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         
         // Load your wallet using private key from .env
         const privateKey = process.env.PRIVATE_KEY;
         const wallet = new ethers.Wallet(privateKey, provider);
         
+        console.log(`Deploying to ${process.env.CHAIN_NAME} (Chain ID: ${process.env.CHAIN_ID})`);
         console.log("Deploying from address:", wallet.address);
 
-        // Step 2: Deploy libraries first
+        // Step 3: Deploy libraries first
         const cardLibrary = await deployCardLibrary(wallet);
         const cardLibraryAddress = await cardLibrary.getAddress();
 
         const deckManager = await deployDeckManager(wallet, cardLibraryAddress);
         const deckManagerAddress = await deckManager.getAddress();
 
-        // Step 3: Deploy VictoryTracker contract
+        // Step 4: Deploy VictoryTracker contract
         const victoryTracker = await deployVictoryTracker(wallet);
         const victoryTrackerAddress = await victoryTracker.getAddress();
 
-        // Step 4: Deploy GameEncounters contract
+        // Step 5: Deploy GameEncounters contract
         const encounters = await deployEncounters(wallet);
         const encountersAddress = await encounters.getAddress();
 
-        // Step 5: Deploy GameState contract with all dependencies
+        // Step 6: Deploy GameState contract with all dependencies
         const gameState = await deployGameState(wallet, encountersAddress, victoryTrackerAddress);
         const gameStateAddress = await gameState.getAddress();
 
-        // Step 6: Update GameEncounters with GameState address
+        // Step 7: Update GameEncounters with GameState address
         console.log('\n📝 Updating GameEncounters with GameState address...');
         const tx = await encounters.setGameStateContract(gameStateAddress);
         await tx.wait();
         console.log('✅ GameEncounters updated with GameState address');
 
-        console.log('\n🎉 Deployment completed successfully!');
+        // Step 8: Deploy cards
+        if (!await runStep(
+            'Deploying cards',
+            'node scripts/deploy/deploy-cards.js'
+        )) throw new Error('Cards deployment failed');
+
+        console.log('\n🎉 Full deployment completed successfully!');
         
     } catch (error) {
         console.error('\n❌ Deployment process failed:', error.message);
@@ -216,8 +242,7 @@ async function main() {
     }
 }
 
-// Load environment variables and run
-require('dotenv').config();
+// Run deployment
 main()
     .then(() => process.exit(0))
     .catch((error) => {

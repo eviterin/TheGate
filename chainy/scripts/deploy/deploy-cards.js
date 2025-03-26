@@ -1,13 +1,14 @@
 const ethers = require('ethers');
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config();
 
 // Read the contract artifacts
-const cardsPath = path.join(__dirname, '../artifacts/contracts/Cards.sol/Cards.json');
+const cardsPath = path.join(__dirname, '../../artifacts/contracts/Cards.sol/Cards.json');
 const cardsArtifact = JSON.parse(fs.readFileSync(cardsPath));
 
 // Read the shared card data
-const sharedDataPath = path.join(__dirname, '../../shared/cards.json');
+const sharedDataPath = path.join(__dirname, '../../../shared/cards.json');
 const { cards } = JSON.parse(fs.readFileSync(sharedDataPath));
 
 async function deployCards(wallet) {
@@ -55,7 +56,7 @@ async function initializeCards(contract) {
 }
 
 function appendToDeployedContracts(contractInfo) {
-    const dirPath = path.join(__dirname, "../artifacts/contracts");
+    const dirPath = path.join(__dirname, "../../artifacts/contracts");
     if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath, { recursive: true });
     }
@@ -78,21 +79,21 @@ function appendToDeployedContracts(contractInfo) {
 }
 
 async function main() {
-    // Connect to HappyChain Sepolia
-    const provider = new ethers.JsonRpcProvider("https://rpc.testnet.happy.tech/http");
+    // Connect to network using environment variables
+    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
     
     // Load your wallet using private key from .env
     const privateKey = process.env.PRIVATE_KEY;
     const wallet = new ethers.Wallet(privateKey, provider);
     
+    console.log(`Deploying to ${process.env.CHAIN_NAME} (Chain ID: ${process.env.CHAIN_ID})`);
     console.log("Deploying from address:", wallet.address);
 
     // Deploy Cards contract
     await deployCards(wallet);
 }
 
-// Load environment variables and run
-require('dotenv').config();
+// Run deployment
 main()
     .then(() => process.exit(0))
     .catch((error) => {
