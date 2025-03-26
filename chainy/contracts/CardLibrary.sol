@@ -7,7 +7,7 @@ library CardLibrary {
     uint8 constant CARD_ID_PRAY = 2;
     uint8 constant CARD_ID_UNFOLD_TRUTH = 3;
     uint8 constant CARD_ID_PREACH = 4;
-    uint8 constant CARD_ID_BALANCE = 5; 
+    uint8 constant CARD_ID_BALANCE = 5;
     uint8 constant CARD_ID_UNVEIL = 6;
     uint8 constant CARD_ID_READ_SCRIPTURE = 7;
     uint8 constant CARD_ID_SEEK_GUIDANCE = 8;
@@ -26,31 +26,72 @@ library CardLibrary {
         return false;
     }
 
-    // getRewardPair ensures every non-starter card (IDs 3-11) is available as a reward
-    // through some path in the reward tree, making all cards obtainable during gameplay.
+
     function getRewardPair(uint8 lastChosen, uint8 currentFloor) internal pure returns (uint8, uint8) {
+        // Starting deck: 2x Smite, 2x Pray, 1x Preach
+        
         if (currentFloor == 1) {
-            return (CARD_ID_UNFOLD_TRUTH, CARD_ID_BALANCE);
-        } else if(currentFloor == 5) {
-            return (CARD_ID_SACRED_RITUAL, CARD_ID_SEEK_GUIDANCE);
-        } else if (lastChosen == CARD_ID_UNFOLD_TRUTH) {
-            return (CARD_ID_PREACH, CARD_ID_SEEK_GUIDANCE); // (4, 8)
-        } else if (lastChosen == CARD_ID_BALANCE) {
-            return (CARD_ID_READ_SCRIPTURE, CARD_ID_UNVEIL); // (7, 6)
-        } else if (lastChosen == CARD_ID_PREACH) {
-            return (CARD_ID_SEEK_GUIDANCE, CARD_ID_UNVEIL); // (8, 6)
-        } else if (lastChosen == CARD_ID_SEEK_GUIDANCE) {
-            return (CARD_ID_READ_SCRIPTURE, CARD_ID_PREACH); // (7, 4)
-        } else if (lastChosen == CARD_ID_UNVEIL) {
-            return (CARD_ID_BALANCE, CARD_ID_UNFOLD_TRUTH); // (5, 3)
-        } else if (lastChosen == CARD_ID_READ_SCRIPTURE) {
-            return (CARD_ID_SACRED_RITUAL, CARD_ID_DIVINE_WRATH); // (9, 10)
-        } else if (lastChosen == CARD_ID_SACRED_RITUAL) {
-            return (CARD_ID_EXPLODICATE, CARD_ID_DIVINE_WRATH); // (11, 10)
-        } else if (lastChosen == CARD_ID_DIVINE_WRATH) {
-            return (CARD_ID_EXPLODICATE, CARD_ID_SACRED_RITUAL); // (11, 9)
+            // First choice: Divine Wrath or Explodicate
+            return (CARD_ID_DIVINE_WRATH, CARD_ID_EXPLODICATE);
         }
-        return (1, 2); // Fallback, unreachable with proper flow
+        
+        if (currentFloor == 2) {
+            // Second choice: Balance or the card not chosen from floor 1
+            if (lastChosen == CARD_ID_DIVINE_WRATH) {
+                return (CARD_ID_BALANCE, CARD_ID_EXPLODICATE);
+            } else if (lastChosen == CARD_ID_EXPLODICATE) {
+                return (CARD_ID_BALANCE, CARD_ID_DIVINE_WRATH);
+            }
+        }
+        
+        if (currentFloor == 3) {
+            // Third choice: Unfold Truth or the card not chosen from floor 2
+            if (lastChosen == CARD_ID_BALANCE) {
+                if (currentFloor == 1) {
+                    return (CARD_ID_UNFOLD_TRUTH, CARD_ID_DIVINE_WRATH);
+                } else {
+                    return (CARD_ID_UNFOLD_TRUTH, CARD_ID_EXPLODICATE);
+                }
+            } else {
+                return (CARD_ID_UNFOLD_TRUTH, CARD_ID_BALANCE);
+            }
+        }
+        
+        if (currentFloor == 4) {
+            // Fourth choice: Read Scripture or the card not chosen from floor 3
+            if (lastChosen == CARD_ID_UNFOLD_TRUTH) {
+                return (CARD_ID_READ_SCRIPTURE, CARD_ID_BALANCE);
+            } else {
+                return (CARD_ID_READ_SCRIPTURE, CARD_ID_UNFOLD_TRUTH);
+            }
+        }
+        
+        if (currentFloor == 5) {
+            // Fifth choice: Seek Guidance or Sacred Ritual
+            return (CARD_ID_SEEK_GUIDANCE, CARD_ID_SACRED_RITUAL);
+        }
+        
+        if (currentFloor == 6) {
+            // Sixth choice: Unveil or the card not chosen from floor 4
+            if (lastChosen == CARD_ID_READ_SCRIPTURE) {
+                return (CARD_ID_UNVEIL, CARD_ID_BALANCE);
+            } else {
+                return (CARD_ID_UNVEIL, CARD_ID_READ_SCRIPTURE);
+            }
+        }
+        
+        if (currentFloor == 7 || currentFloor == 8) {
+            // Seventh and Eighth choice: Smite or Pray
+            return (CARD_ID_SMITE, CARD_ID_PRAY);
+        }
+        
+        if (currentFloor == 9) {
+            // Ninth choice: Seek Guidance or Sacred Ritual
+            return (CARD_ID_SEEK_GUIDANCE, CARD_ID_SACRED_RITUAL);
+        }
+        
+        // Fallback for floor 10 or invalid floors
+        return (CARD_ID_SMITE, CARD_ID_PRAY);
     }
 
     function generateRewards(uint8 lastChosenCard, uint8 currentFloor) internal pure returns (uint8[] memory) {
