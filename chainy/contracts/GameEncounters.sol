@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+import "./CardEffects.sol";
+
 contract GameEncounters {
+    using CardEffects for uint16;
+
     struct EnemyData {
         uint8[] types;
         uint16[] maxHealth;
@@ -114,24 +118,10 @@ contract GameEncounters {
 
     function dealDamageToEnemy(address player, uint8 enemyIndex, uint8 damage) external onlyGameState returns (bool isDead) {
         EnemyData storage data = enemyData[player];
-        uint16 remainingDamage = damage;
-        
-        if (data.blockAmount[enemyIndex] > 0) {
-            if (data.blockAmount[enemyIndex] >= remainingDamage) {
-                data.blockAmount[enemyIndex] -= remainingDamage;
-                return false;
-            }
-            remainingDamage -= data.blockAmount[enemyIndex];
-            data.blockAmount[enemyIndex] = 0;
-        }
-        
-        if (data.currentHealth[enemyIndex] <= remainingDamage) {
-            data.currentHealth[enemyIndex] = 0;
-            return true;
-        } else {
-            data.currentHealth[enemyIndex] -= remainingDamage;
-            return false;
-        }
+        (uint16 newHealth, uint16 newBlock, bool died) = CardEffects.dealDamageToEnemy(damage, data.blockAmount[enemyIndex], data.currentHealth[enemyIndex]);
+        data.currentHealth[enemyIndex] = newHealth;
+        data.blockAmount[enemyIndex] = newBlock;
+        return died;
     }
 
     function dealDirectDamage(address player, uint8 enemyIndex, uint8 damage) external onlyGameState returns (bool isDead) {

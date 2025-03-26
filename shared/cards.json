@@ -67,7 +67,7 @@
             "numericId": 8,
             "id": "pray",
             "name": "Seek Guidance",
-            "description": "Draw an additional 2 cards next turn.",
+            "description": "Permanently gain 1 Faith. Card is removed from deck after use.",
             "manaCost": 1,
             "targeted": false,
             "animationType": "flip"

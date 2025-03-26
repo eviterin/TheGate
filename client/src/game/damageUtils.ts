@@ -313,9 +313,11 @@ export const predictCardEffect = (
       enemyDied = scriptureResult.isDead;
       break;
       
-    case 8: // Seek Guidance - Draw 2 cards.
+    case 8: // Seek Guidance - Permanently gain 1 Faith.
       manaSpent = 1;
-      // Card draw handled separately
+      // Note: maxMana increase handled in contract
+      // Note: current mana increase handled in contract
+      // Note: card removal handled in contract
       break;
       
     case 9: // Sacred Ritual - Gain 10 block. Heal 30 HP.

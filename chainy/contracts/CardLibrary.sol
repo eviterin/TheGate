@@ -32,7 +32,7 @@ library CardLibrary {
         if (currentFloor == 1) {
             return (CARD_ID_UNFOLD_TRUTH, CARD_ID_BALANCE);
         } else if(currentFloor == 5) {
-            return (CARD_ID_SACRED_RITUAL, CARD_ID_SACRED_RITUAL);
+            return (CARD_ID_SACRED_RITUAL, CARD_ID_SEEK_GUIDANCE);
         } else if (lastChosen == CARD_ID_UNFOLD_TRUTH) {
             return (CARD_ID_PREACH, CARD_ID_SEEK_GUIDANCE); // (4, 8)
         } else if (lastChosen == CARD_ID_BALANCE) {

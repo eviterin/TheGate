@@ -3,35 +3,8 @@ pragma solidity ^0.8.28;
 
 import "./CardLibrary.sol";
 import "./DeckManager.sol";
-
-interface IGameEncounters {
-    struct IEnemyData {
-        uint8[] types;
-        uint16[] maxHealth;
-        uint16[] currentHealth;
-        uint16[] intents;
-        uint16[] blockAmount;
-        uint8[] buffs;
-    }
-    
-    function startEncounter(address player, uint8 floor) external returns (IEnemyData memory);
-    function dealDamageToEnemy(address player, uint8 enemyIndex, uint8 damage) external returns (bool);
-    function dealDirectDamage(address player, uint8 enemyIndex, uint8 damage) external returns (bool);
-    function healEnemy(address player, uint8 enemyIndex, uint8 amount) external;
-    function setNewEnemyIntents(address player, uint8 floor) external;
-    function setEnemyBlock(address player, uint8 enemyIndex, uint16 amount) external;
-    function setEnemyBuff(address player, uint8 enemyIndex, uint8 amount) external;
-    function processIntent(address player, uint8 enemyIndex, uint16 intent) external returns (uint8 damageToHero);
-    function getEnemyData(address player) external view returns (
-        uint8[] memory types,
-        uint16[] memory maxHealth,
-        uint16[] memory currentHealth,
-        uint16[] memory intents,
-        uint16[] memory blockAmount,
-        uint8[] memory buffs
-    );
-    function clearEnemyData(address player) external;
-}
+import "./IGameEncounters.sol";
+import "./CardEffects.sol";
 
 interface IVictoryTracker {
     function recordVictory(address player) external;
@@ -40,6 +13,7 @@ interface IVictoryTracker {
 contract GameState {
     using CardLibrary for uint8;
     using DeckManager for uint8[];
+    using CardEffects for uint8;
 
     struct GameData {
         uint8 runState;
@@ -197,11 +171,7 @@ contract GameState {
         } else if (playedCardID == CardLibrary.CARD_ID_SACRED_RITUAL && data.currentMana >= 2) {
             data.currentMana -= 2;
             data.currentBlock += 10;
-            if (data.currentHealth + 30 > data.maxHealth) {
-                data.currentHealth = data.maxHealth;
-            } else {
-                data.currentHealth += 30;
-            }
+            data.currentHealth = CardEffects.healHero(30, data.currentHealth, data.maxHealth);
             DeckManager.removeCardFromGame(data.hand, data.deck, playedCardIndex);
             return;
         } else if (playedCardID == CardLibrary.CARD_ID_DIVINE_WRATH && data.currentMana >= 1) {
@@ -222,8 +192,10 @@ contract GameState {
             data.currentBlock += 5;
         } else if (playedCardID == CardLibrary.CARD_ID_SEEK_GUIDANCE && data.currentMana >= 1) {
             data.currentMana--;
-            DeckManager.drawCard(data.hand, data.draw, data.discard);
-            DeckManager.drawCard(data.hand, data.draw, data.discard);
+            data.maxMana += 1;
+            data.currentMana += 1;
+            DeckManager.removeCardFromGame(data.hand, data.deck, playedCardIndex);
+            return;
         } else if (playedCardID == CardLibrary.CARD_ID_UNVEIL && data.currentMana >= 3) {
             data.currentMana -= 3;
             data.currentBlock += 10;
@@ -313,17 +285,7 @@ contract GameState {
 
     function dealDamageToHero(uint8 damage) private {
         GameData storage data = playerData[msg.sender];
-        if (data.currentBlock >= damage) {
-            data.currentBlock -= damage;
-        } else {
-            uint8 newDamage = damage - data.currentBlock;
-            data.currentBlock = 0;
-            if (newDamage >= data.currentHealth) {
-                data.currentHealth = 0;
-            } else {
-                data.currentHealth -= newDamage;
-            }
-        }
+        (data.currentHealth, data.currentBlock) = CardEffects.dealDamageToHero(damage, data.currentBlock, data.currentHealth);
     }
 
     function startEncounter() private {
