@@ -1,8 +1,10 @@
 import { useCallback } from 'react';
-import { readContract, writeContract, simulateContract, waitForTransaction } from '@wagmi/core';
+import { readContract, writeContract, simulateContract, waitForTransaction, connect } from '@wagmi/core';
 import { config } from '../../wagmi';
 import { getCurrentUser } from '@happy.tech/core';
 import { useContracts } from './ContractsContext';
+import { happyWagmiConnector } from '@happy.tech/core';
+import { getContractAddress } from '../utils/contractUtils';
 
 interface GameStateData {
     runState: number;
@@ -733,12 +735,21 @@ export function useChooseCardReward() {
 
         try {
             console.log('Choosing card reward...', { cardId });
-            const hash = await writeContract(config, {
+            
+            // Ensure we're connected with the happyWagmiConnector
+            await connect(config, { connector: happyWagmiConnector() });
+            
+            // First simulate the transaction
+            const { request } = await simulateContract(config, {
                 address: contractConfig.address,
                 abi: contractConfig.abi,
                 functionName: 'chooseCardReward',
                 args: [cardId],
-            })
+                account: currentUser.address,
+            });
+            
+            // Then execute it
+            const hash = await writeContract(config, request);
 
             console.log('Card reward chosen:', { hash });
             return hash;
