@@ -31,6 +31,7 @@ export const calculateDamageToEnemy = (
   let newHealth = currentHealth;
   if (newHealth <= remainingDamage) {
     newHealth = 0;
+    soundEffectManager.playEventSound('enemyDeath');
     return { newHealth, newBlock, isDead: true };
   } else {
     newHealth -= remainingDamage;
@@ -51,6 +52,7 @@ export const calculateDirectDamageToEnemy = (
   let newHealth = currentHealth;
   if (newHealth <= damage) {
     newHealth = 0;
+    soundEffectManager.playEventSound('enemyDeath');
     return { newHealth, isDead: true };
   } else {
     newHealth -= damage;
@@ -322,12 +324,13 @@ export const predictCardEffect = (
       heroHealth = Math.min(gameState.maxHealth, heroHealth + 3);
       break;
       
-    case 10: // Divine Wrath - Deal 4 damage. Double if enemy at full HP.
+    case 10: // Divine Wrath - Deal 4 damage. If enemy is at full HP, deal double.
       manaSpent = 1;
       const maxHealth = gameState.enemyMaxHealth[targetIndex];
       const currentHealth = enemyCurrentHealth[targetIndex];
       const isEnemyFull = currentHealth === maxHealth;
-      const wrathDamage = isEnemyFull ? 8 : 4;
+      const baseDamage = 4;
+      const wrathDamage = isEnemyFull ? baseDamage * 2 : baseDamage;
       const wrathResult = calculateDamageToEnemy(wrathDamage, enemyBlock[targetIndex], currentHealth);
       enemyCurrentHealth[targetIndex] = wrathResult.newHealth;
       enemyBlock[targetIndex] = wrathResult.newBlock;
