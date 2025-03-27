@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+import "./CardEffects.sol";
+
 contract GameEncounters {
+    using CardEffects for uint16;
+
     struct EnemyData {
         uint8[] types;
         uint16[] maxHealth;
@@ -64,20 +68,20 @@ contract GameEncounters {
             data.buffs = new uint8[](1);
         } else if (floor == 4) {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
-            data.maxHealth = [18, 22];
+            data.maxHealth = [25, 22];
             data.currentHealth = [18, 22];
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
         } else if (floor == 5) {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
-            data.maxHealth = [38, 38];
-            data.currentHealth = [17, 38];
+            data.maxHealth = [38, 21];
+            data.currentHealth = [17, 21];
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
         } else if (floor == 6) {
             data.types = [ENEMY_TYPE_B];
-            data.maxHealth = [45];
-            data.currentHealth = [45];
+            data.maxHealth = [35];
+            data.currentHealth = [35];
             data.blockAmount = new uint16[](1);
             data.buffs = new uint8[](1);
             data.buffs[0] += 4;
@@ -96,8 +100,8 @@ contract GameEncounters {
             data.buffs = new uint8[](5);
         } else if (floor == 9) {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
-            data.maxHealth = [50, 50];
-            data.currentHealth = [1, 1];
+            data.maxHealth = [30, 30];
+            data.currentHealth = [30, 30];
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
         } else if (floor == 10) {
@@ -114,24 +118,10 @@ contract GameEncounters {
 
     function dealDamageToEnemy(address player, uint8 enemyIndex, uint8 damage) external onlyGameState returns (bool isDead) {
         EnemyData storage data = enemyData[player];
-        uint16 remainingDamage = damage;
-        
-        if (data.blockAmount[enemyIndex] > 0) {
-            if (data.blockAmount[enemyIndex] >= remainingDamage) {
-                data.blockAmount[enemyIndex] -= remainingDamage;
-                return false;
-            }
-            remainingDamage -= data.blockAmount[enemyIndex];
-            data.blockAmount[enemyIndex] = 0;
-        }
-        
-        if (data.currentHealth[enemyIndex] <= remainingDamage) {
-            data.currentHealth[enemyIndex] = 0;
-            return true;
-        } else {
-            data.currentHealth[enemyIndex] -= remainingDamage;
-            return false;
-        }
+        (uint16 newHealth, uint16 newBlock, bool died) = CardEffects.dealDamageToEnemy(damage, data.blockAmount[enemyIndex], data.currentHealth[enemyIndex]);
+        data.currentHealth[enemyIndex] = newHealth;
+        data.blockAmount[enemyIndex] = newBlock;
+        return died;
     }
 
     function dealDirectDamage(address player, uint8 enemyIndex, uint8 damage) external onlyGameState returns (bool isDead) {
@@ -230,13 +220,11 @@ contract GameEncounters {
                     if (data.types[i] == ENEMY_TYPE_A) {
                         data.intents[i] = uint16(8 + (seed % 5));
                     } else if (data.types[i] == ENEMY_TYPE_B) {
-                        uint256 action = seed % 10;
-                        if (action < 3) {
-                            data.intents[i] = INTENT_HEAL;
-                        } else if (action < 6) {
-                            data.intents[i] = INTENT_BLOCK_5;
+                        // If friend is dead (health 0) or at full health, attack for 2
+                        if (i == 1 && (data.currentHealth[0] == 0 || data.currentHealth[0] == data.maxHealth[0])) {
+                            data.intents[i] = 2;
                         } else {
-                            data.intents[i] = uint16(6 + (seed % 5));
+                            data.intents[i] = INTENT_HEAL_ALL;
                         }
                     }
                 }
@@ -274,15 +262,52 @@ contract GameEncounters {
                 seed = uint256(keccak256(abi.encodePacked(seed)));
             }
         } else if (floor == 9) {
-            if (data.currentHealth[0] > 0) {
-                data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+            // Implement alternating behavior for both enemies in floor 9
+            // When one enemy buffs, the other attacks, and vice versa
+            if (data.currentHealth[0] > 0 && data.currentHealth[1] > 0) {
+                // On first turn, enemy 1 buffs and enemy 2 attacks
+                if (previousIntents.length == 0) {
+                    data.intents[0] = INTENT_ATTACK_BUFF;
+                    data.intents[1] = INTENT_BLOCK_AND_ATTACK;
+                } else {
+                    // Then they swap roles each turn
+                    if (previousIntents[0] == INTENT_ATTACK_BUFF) {
+                        data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+                        data.intents[1] = INTENT_ATTACK_BUFF;
+                    } else {
+                        data.intents[0] = INTENT_ATTACK_BUFF;
+                        data.intents[1] = INTENT_BLOCK_AND_ATTACK;
+                    }
+                }
+            } 
+            // If only one enemy is alive, they do both
+            else if (data.currentHealth[0] > 0) {
+                if (previousIntents.length == 0 || previousIntents[0] == INTENT_BLOCK_AND_ATTACK) {
+                    data.intents[0] = INTENT_ATTACK_BUFF;
+                } else {
+                    data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+                }
             }
-            if (data.currentHealth[1] > 0) {
-                data.intents[1] = INTENT_VAMPIRIC_BITE;
+            else if (data.currentHealth[1] > 0) {
+                if (previousIntents.length == 0 || previousIntents[1] == INTENT_BLOCK_AND_ATTACK) {
+                    data.intents[1] = INTENT_ATTACK_BUFF;
+                } else {
+                    data.intents[1] = INTENT_BLOCK_AND_ATTACK;
+                }
             }
         } else if (floor == 10) {
             if (data.currentHealth[0] > 0) {
-                data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+                // Floor 10 enemy alternates between blocking and attacking
+                // Start by blocking
+                if (previousIntents.length == 0) {
+                    data.intents[0] = INTENT_BLOCK_5;
+                } else if (previousIntents[0] == INTENT_BLOCK_5) {
+                    // After blocking, attack
+                    data.intents[0] = 12; // Strong attack
+                } else {
+                    // After attacking, block again
+                    data.intents[0] = INTENT_BLOCK_5;
+                }
             }
         }
     }
@@ -332,9 +357,9 @@ contract GameEncounters {
             }
             return 0;
         } else if (intent == INTENT_VAMPIRIC_BITE) {
-            // Vampiric bite deals 7 damage and heals for the same amount
-            _healEnemy(player, enemyIndex, 7);
-            return 7;
+            // Vampiric bite deals 5 damage and heals for the same amount
+            _healEnemy(player, enemyIndex, 5);
+            return 5;
         } else {
             require(enemyIndex < data.buffs.length, "Invalid enemy index for buff");
             return uint8(intent) + data.buffs[enemyIndex];
@@ -362,5 +387,12 @@ contract GameEncounters {
 
     function clearEnemyData(address player) external onlyGameState {
         delete enemyData[player];
+    }
+
+    function removeAllEnemyBlock(address player) external onlyGameState {
+        EnemyData storage data = enemyData[player];
+        for (uint8 i = 0; i < data.types.length; i++) {
+            data.blockAmount[i] = 0;
+        }
     }
 } 

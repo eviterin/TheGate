@@ -67,7 +67,7 @@
             "numericId": 8,
             "id": "pray",
             "name": "Seek Guidance",
-            "description": "Draw an additional 2 cards next turn.",
+            "description": "Permanently gain 1 Faith. Card is removed from deck after use.",
             "manaCost": 1,
             "targeted": false,
             "animationType": "flip"
@@ -76,7 +76,7 @@
             "numericId": 9,
             "id": "divine_protection",
             "name": "Sacred Ritual",
-            "description": "Gain 10 block. Heal 3 HP.",
+            "description": "Gain 10 block. Heal 30 HP. Card is removed from deck after use.",
             "manaCost": 3,
             "targeted": false,
             "animationType": "flip"
@@ -97,6 +97,33 @@
             "description": "Deal 4 damage. Ignores block.",
             "manaCost": 1,
             "targeted": true,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 12,
+            "id": "radiate",
+            "name": "Radiance",
+            "description": "Remove all block of all enemies.",
+            "manaCost": 1,
+            "targeted": true,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 13,
+            "id": "heal",
+            "name": "Resolve",
+            "description": "Heal 6 HP. Card is removed from deck after use.",
+            "manaCost": 0,
+            "targeted": false,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 14,
+            "id": "brace",
+            "name": "Brace",
+            "description": "Gain 15 block. Card is removed from deck after use.",
+            "manaCost": 0,
+            "targeted": false,
             "animationType": "flip"
         }
     ]

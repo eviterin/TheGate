@@ -31,6 +31,7 @@ export const calculateDamageToEnemy = (
   let newHealth = currentHealth;
   if (newHealth <= remainingDamage) {
     newHealth = 0;
+    soundEffectManager.playEventSound('enemyDeath');
     return { newHealth, newBlock, isDead: true };
   } else {
     newHealth -= remainingDamage;
@@ -51,6 +52,7 @@ export const calculateDirectDamageToEnemy = (
   let newHealth = currentHealth;
   if (newHealth <= damage) {
     newHealth = 0;
+    soundEffectManager.playEventSound('enemyDeath');
     return { newHealth, isDead: true };
   } else {
     newHealth -= damage;
@@ -99,6 +101,8 @@ export const calculateDamageToHero = (
  * @param heroHealth Current hero health
  * @param heroBlock Current hero block
  * @param enemyBuff Current enemy buff value
+ * @param allEnemiesHealth Array of current healths of all enemies
+ * @param allEnemiesMaxHealth Array of maximum healths of all enemies
  * @returns Object containing updated stats after processing the intent
  */
 export const processEnemyIntent = (
@@ -109,7 +113,9 @@ export const processEnemyIntent = (
   enemyMaxHealth: number,
   heroHealth: number,
   heroBlock: number,
-  enemyBuff: number = 0
+  enemyBuff: number = 0,
+  allEnemiesHealth?: number[],
+  allEnemiesMaxHealth?: number[]
 ): {
   newEnemyBlock: number;
   newEnemyHealth: number;
@@ -117,6 +123,7 @@ export const processEnemyIntent = (
   newHeroBlock: number;
   damageToHero: number;
   heroDied: boolean;
+  allEnemiesNewHealth?: number[];
 } => {
   // Get constants from shared data
   const INTENT_BLOCK_5 = 1000;
@@ -158,11 +165,28 @@ export const processEnemyIntent = (
     newEnemyBlock = 5;
     newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 5);
   } else if (intentType === INTENT_HEAL_ALL) {
-    // Heal all enemies - this is handled separately in the game component
+    // Heal all enemies for 5 HP
+    if (allEnemiesHealth && allEnemiesMaxHealth) {
+      const healedHealth = allEnemiesHealth.map((health, i) => 
+        Math.min(allEnemiesMaxHealth[i], health + 5)
+      );
+      // Use the current enemy's index to get their new health
+      newEnemyHealth = healedHealth[allEnemiesHealth.indexOf(enemyHealth)] || enemyHealth;
+      return {
+        newEnemyBlock,
+        newEnemyHealth,
+        newHeroHealth,
+        newHeroBlock,
+        damageToHero,
+        heroDied,
+        allEnemiesNewHealth: healedHealth
+      };
+    }
+    // Fallback if arrays not provided
     newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 5);
   } else if (intentType === INTENT_VAMPIRIC_BITE) {
-    // Vampiric bite - deal 7 damage and heal for 7
-    damageToHero = 7;
+    // Vampiric bite - deal 5 damage and heal for 5
+    damageToHero = 5;
     
     // Calculate damage to hero
     const result = calculateDamageToHero(damageToHero, newHeroBlock, newHeroHealth);
@@ -171,7 +195,7 @@ export const processEnemyIntent = (
     heroDied = newHeroHealth <= 0;
     
     // Heal enemy
-    newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 7);
+    newEnemyHealth = Math.min(enemyMaxHealth, enemyHealth + 5);
   } else if (intentType > 0 && intentType < 1000) {
     // Regular attack intent
     damageToHero = intentType + enemyBuff;
@@ -189,7 +213,8 @@ export const processEnemyIntent = (
     newHeroHealth,
     newHeroBlock,
     damageToHero,
-    heroDied
+    heroDied,
+    allEnemiesNewHealth: undefined
   };
 };
 
@@ -289,22 +314,26 @@ export const predictCardEffect = (
       enemyDied = scriptureResult.isDead;
       break;
       
-    case 8: // Seek Guidance - Draw 2 cards.
+    case 8: // Seek Guidance - Permanently gain 1 Faith.
       manaSpent = 1;
-      // Card draw handled separately
+      // Note: maxMana increase handled in contract
+      // Note: current mana increase handled in contract
+      // Note: card removal handled in contract
       break;
       
-    case 9: // Sacred Ritual - Gain 10 block. Heal 3 HP.
+    case 9: // Sacred Ritual - Gain 10 block. Heal 30 HP.
       manaSpent = 2;
       heroBlock += 10;
-      heroHealth = Math.min(gameState.maxHealth, heroHealth + 3);
+      heroHealth = Math.min(gameState.maxHealth, heroHealth + 30);
       break;
       
     case 10: // Divine Wrath - Deal 4 damage. Double if enemy at full HP.
       manaSpent = 1;
-      const isEnemyFull = enemyCurrentHealth[targetIndex] === gameState.enemyMaxHealth[targetIndex];
+      const maxHealth = gameState.enemyMaxHealth[targetIndex];
+      const currentHealth = enemyCurrentHealth[targetIndex];
+      const isEnemyFull = currentHealth === maxHealth;
       const wrathDamage = isEnemyFull ? 8 : 4;
-      const wrathResult = calculateDamageToEnemy(wrathDamage, enemyBlock[targetIndex], enemyCurrentHealth[targetIndex]);
+      const wrathResult = calculateDamageToEnemy(wrathDamage, enemyBlock[targetIndex], currentHealth);
       enemyCurrentHealth[targetIndex] = wrathResult.newHealth;
       enemyBlock[targetIndex] = wrathResult.newBlock;
       enemyDied = wrathResult.isDead;
@@ -315,6 +344,26 @@ export const predictCardEffect = (
       const explodicateResult = calculateDirectDamageToEnemy(4, enemyCurrentHealth[targetIndex]);
       enemyCurrentHealth[targetIndex] = explodicateResult.newHealth;
       enemyDied = explodicateResult.isDead;
+      break;
+      
+    case 12: // Radiance - Remove all block from all enemies (not targeted despite cards.json entry)
+      manaSpent = 1;
+      // Set block to 0 for all enemies
+      for (let i = 0; i < enemyBlock.length; i++) {
+        enemyBlock[i] = 0;
+      }
+      break;
+      
+    case 13: // Resolve - Heal 6 HP. Card is removed from deck after use.
+      manaSpent = 1;
+      heroHealth = Math.min(gameState.maxHealth, heroHealth + 6);
+      // Card removal handled in contract
+      break;
+      
+    case 14: // Brace - Gain 15 block. Card is removed from deck after use.
+      manaSpent = 0; // Free card
+      heroBlock += 15;
+      // Card removal handled in contract
       break;
       
     default:

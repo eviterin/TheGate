@@ -9,6 +9,7 @@ let gameStateArtifact;
 let victoryTrackerArtifact;
 let cardLibraryArtifact;
 let deckManagerArtifact;
+let cardEffectsArtifact;
 
 async function loadArtifacts() {
     // Read the contract artifacts
@@ -17,12 +18,14 @@ async function loadArtifacts() {
     const victoryTrackerPath = path.join(__dirname, '../../artifacts/contracts/VictoryTracker.sol/VictoryTracker.json');
     const cardLibraryPath = path.join(__dirname, '../../artifacts/contracts/CardLibrary.sol/CardLibrary.json');
     const deckManagerPath = path.join(__dirname, '../../artifacts/contracts/DeckManager.sol/DeckManager.json');
+    const cardEffectsPath = path.join(__dirname, '../../artifacts/contracts/CardEffects.sol/CardEffects.json');
 
     encountersArtifact = JSON.parse(fs.readFileSync(encountersPath));
     gameStateArtifact = JSON.parse(fs.readFileSync(gameStatePath));
     victoryTrackerArtifact = JSON.parse(fs.readFileSync(victoryTrackerPath));
     cardLibraryArtifact = JSON.parse(fs.readFileSync(cardLibraryPath));
     deckManagerArtifact = JSON.parse(fs.readFileSync(deckManagerPath));
+    cardEffectsArtifact = JSON.parse(fs.readFileSync(cardEffectsPath));
 }
 
 async function runStep(name, command) {
@@ -157,6 +160,30 @@ async function deployDeckManager(wallet, cardLibraryAddress) {
     return contract;
 }
 
+async function deployCardEffects(wallet) {
+    console.log('\n📝 Deploying CardEffects library...');
+    
+    const factory = new ethers.ContractFactory(
+        cardEffectsArtifact.abi,
+        cardEffectsArtifact.bytecode,
+        wallet
+    );
+
+    const contract = await factory.deploy();
+    await contract.waitForDeployment();
+
+    const deployedAddress = await contract.getAddress();
+    console.log('✅ CardEffects deployed to:', deployedAddress);
+    
+    appendToDeployedContracts({
+        name: 'CardEffects.sol',
+        address: deployedAddress,
+        abi: cardEffectsArtifact.abi
+    });
+
+    return contract;
+}
+
 function appendToDeployedContracts(contractInfo) {
     const dirPath = path.join(__dirname, "../../artifacts/contracts");
     if (!fs.existsSync(dirPath)) {
@@ -209,6 +236,9 @@ async function main() {
 
         const deckManager = await deployDeckManager(wallet, cardLibraryAddress);
         const deckManagerAddress = await deckManager.getAddress();
+
+        const cardEffects = await deployCardEffects(wallet);
+        const cardEffectsAddress = await cardEffects.getAddress();
 
         // Step 4: Deploy VictoryTracker contract
         const victoryTracker = await deployVictoryTracker(wallet);

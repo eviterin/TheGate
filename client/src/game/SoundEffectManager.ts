@@ -152,19 +152,28 @@ export class SoundEffectManager {
     private async playSound(soundPath: string, volume: number = this.DEFAULT_VOLUME): Promise<void> {
         if (!soundPath) return;
 
-        // Check replay delay using cache
-        const cache = this.audioCache.get(soundPath);
-        if (cache) {
-            const now = Date.now();
-            if (now - cache.lastPlayedTime < this.MIN_REPLAY_DELAY) {
-                return;
-            }
-            cache.lastPlayedTime = now;
+        // Get or create cached audio instance
+        let cache = this.audioCache.get(soundPath);
+        if (!cache) {
+            const audio = new Audio(soundPath);
+            cache = {
+                audio,
+                isPlaying: false,
+                lastPlayedTime: 0
+            };
+            this.audioCache.set(soundPath, cache);
         }
 
-        // Create new audio instance and play through controller
-        const audio = new Audio(soundPath);
-        audioController.playAudio(audio, volume);
+        // Check replay delay
+        const now = Date.now();
+        if (now - cache.lastPlayedTime < this.MIN_REPLAY_DELAY) {
+            return;
+        }
+        cache.lastPlayedTime = now;
+
+        // Reset the audio to start and play through controller
+        cache.audio.currentTime = 0;
+        audioController.playAudio(cache.audio, volume);
     }
 
     public getCardSoundEffect(cardName: string): { soundPath: string; volume: number } {

@@ -333,10 +333,11 @@ const Game: React.FC = () => {
   }, [gameState?.hand]);
 
   useEffect(() => {
-    if (turnState === 'player' && gameState?.enemyCurrentHealth) {
+    if (gameState && gameState.isHeroTurn) {
+      // Reset initial enemy health at the start of hero's turn
       setInitialEnemyHealth([...gameState.enemyCurrentHealth]);
     }
-  }, [turnState, gameState?.enemyCurrentHealth]);
+  }, [gameState?.isHeroTurn]);
 
   const handleCardSelect = (cardIndex: number) => {
     
@@ -401,25 +402,30 @@ const Game: React.FC = () => {
       currentGameState
     );
 
-    // Check for predicted enemy deaths by comparing with their initial health
+    // Check for predicted enemy deaths by comparing with their current health
     const predictedDeaths = prediction.enemyHealth.map((health, idx) => ({
       index: idx,
       // An enemy died if:
       // 1. Their new health is 0 or less AND
-      // 2. Their health at the start of the turn was above 0
-      died: health <= 0 && initialEnemyHealth[idx] > 0
+      // 2. They were alive before this card
+      died: health <= 0 && gameState.enemyCurrentHealth[idx] > 0
     })).filter(enemy => enemy.died);
 
-    console.log('💀 Initial enemy health at turn start:', initialEnemyHealth);
-    console.log('💀 Current enemy health:', currentGameState.enemyCurrentHealth);
+    console.log('💀 Current enemy health:', gameState.enemyCurrentHealth);
     console.log('💀 Predicted health after card:', prediction.enemyHealth);
     console.log('💀 Predicted deaths from card:', predictedDeaths);
 
+    // Play both card sound and death sounds if needed
+    setCurrentSound(card.name.toLowerCase());
+    setSoundType('card');
+    setIsSoundPlaying(true);
+
     if (predictedDeaths.length > 0) {
       console.log('🔊 Playing death sounds for', predictedDeaths.length, 'enemies');
-      Promise.all(predictedDeaths.map(death => 
+      // Play death sounds immediately without waiting
+      predictedDeaths.forEach(death => 
         soundEffectManager.playEventSound('enemyDeath', gameState.currentFloor, death.index)
-      ));
+      );
     }
 
     // Check for predicted defeat
@@ -474,7 +480,7 @@ const Game: React.FC = () => {
       enemyBlock: prediction.enemyBlock
     };
 
-    // Then play animation and sound
+    // Then play animation
     const animationState: AnimationState = {
       sourceType: 'hero',
       sourceIndex: 0,
@@ -484,9 +490,6 @@ const Game: React.FC = () => {
     };
 
     setCurrentAnimation(animationState);
-    setCurrentSound(card.name.toLowerCase());
-    setSoundType('card');
-    setIsSoundPlaying(true);
     
     // Wait for animation to be halfway through before showing damage
     await new Promise(resolve => setTimeout(resolve, 250));
@@ -1096,6 +1099,14 @@ const Game: React.FC = () => {
                     scale={getLevelConfig(gameState.currentFloor).enemyScales?.[index]}
                     invert={getLevelConfig(gameState.currentFloor).enemyInverted?.[index]}
                     runState={gameState.runState}
+                    currentEnemy={turnState === 'enemy' ? (
+                      // If currentEnemy is not set yet but we're in enemy turn,
+                      // show for the first enemy that has intent and is alive
+                      currentEnemy !== undefined ? currentEnemy :
+                      gameState.enemyTypes.findIndex((type: number, i: number) => 
+                        gameState.enemyCurrentHealth[i] > 0 && gameState.enemyIntents[i]
+                      )
+                    ) : undefined}
                   />
                 ))}
               </>

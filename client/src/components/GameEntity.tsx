@@ -50,11 +50,46 @@ interface IntentInfo {
   buffValue?: number;
   healValue?: number;
   animation: string;
+  color?: string;
+  borderColor?: string;
 }
 
 const getIntentInfo = (intent: number, buff: number): IntentInfo => {
+  // Get intent color and border color utility functions
+  const getIntentColor = (type: string) => {
+    switch (type) {
+      case 'block': return 'rgba(112, 255, 112, 0.8)'; // #70ff70
+      case 'block_and_attack': return 'rgba(255, 255, 112, 0.8)'; // #ffff70
+      case 'heal': return 'rgba(255, 112, 255, 0.8)'; // #ff70ff
+      case 'heal_all': return 'rgba(255, 112, 255, 0.8)'; // #ff70ff
+      case 'attack_buff': return 'rgba(255, 144, 112, 0.8)'; // #ff9070
+      case 'block_and_heal': return 'rgba(112, 255, 255, 0.8)'; // #70ffff
+      case 'vampiric_bite': return 'rgba(255, 48, 128, 0.8)'; // #ff3080
+      default: return 'rgba(255, 112, 112, 0.8)'; // #ff7070
+    }
+  };
+
+  const getBorderColor = (type: string) => {
+    switch (type) {
+      case 'block': return '#40ff40';
+      case 'block_and_attack': return '#ffff40';
+      case 'heal': return '#ff40ff';
+      case 'heal_all': return '#ff40ff';
+      case 'attack_buff': return '#ff6040';
+      case 'block_and_heal': return '#40ffff';
+      case 'vampiric_bite': return '#ff1060';
+      default: return '#ff4040';
+    }
+  };
+
   if (intent === INTENT_TYPES.BLOCK_5) {
-    return { type: 'block', value: 5, animation: ANIMATIONS.BLOCK };
+    return { 
+      type: 'block', 
+      value: 5, 
+      animation: ANIMATIONS.BLOCK,
+      color: getIntentColor('block'),
+      borderColor: getBorderColor('block')
+    };
   }
   if (intent === INTENT_TYPES.BLOCK_AND_ATTACK) {
     return { 
@@ -62,28 +97,36 @@ const getIntentInfo = (intent: number, buff: number): IntentInfo => {
       value: 6,
       blockValue: 5,
       buffValue: buff,
-      animation: ANIMATIONS.BLOCK_AND_ATTACK 
+      animation: ANIMATIONS.BLOCK_AND_ATTACK,
+      color: getIntentColor('block_and_attack'),
+      borderColor: getBorderColor('block_and_attack')
     };
   }
   if (intent === INTENT_TYPES.HEAL) {
     return {
       type: 'heal',
       value: 5,
-      animation: ANIMATIONS.HEAL
+      animation: ANIMATIONS.HEAL,
+      color: getIntentColor('heal'),
+      borderColor: getBorderColor('heal')
     };
   }
   if (intent === INTENT_TYPES.HEAL_ALL) {
     return {
       type: 'heal_all',
       value: 5,
-      animation: ANIMATIONS.HEAL
+      animation: ANIMATIONS.HEAL,
+      color: getIntentColor('heal_all'),
+      borderColor: getBorderColor('heal_all')
     };
   }
   if (intent === INTENT_TYPES.ATTACK_BUFF) {
     return {
       type: 'attack_buff',
       value: 2,
-      animation: ANIMATIONS.BUFF
+      animation: ANIMATIONS.BUFF,
+      color: getIntentColor('attack_buff'),
+      borderColor: getBorderColor('attack_buff')
     };
   }
   if (intent === INTENT_TYPES.BLOCK_AND_HEAL) {
@@ -92,19 +135,29 @@ const getIntentInfo = (intent: number, buff: number): IntentInfo => {
       value: 5,
       blockValue: 5,
       healValue: 5,
-      animation: ANIMATIONS.BLOCK
+      animation: ANIMATIONS.BLOCK,
+      color: getIntentColor('block_and_heal'),
+      borderColor: getBorderColor('block_and_heal')
     };
   }
   if (intent === INTENT_TYPES.VAMPIRIC_BITE) {
     return {
       type: 'vampiric_bite',
-      value: 7,
-      healValue: 7,
-      animation: ANIMATIONS.ATTACK
+      value: 5,
+      healValue: 5,
+      animation: ANIMATIONS.ATTACK,
+      color: getIntentColor('vampiric_bite'),
+      borderColor: getBorderColor('vampiric_bite')
     };
   }
   // Any other number is an attack with that damage value
-  return { type: 'attack', value: intent, animation: ANIMATIONS.ATTACK };
+  return { 
+    type: 'attack', 
+    value: intent, 
+    animation: ANIMATIONS.ATTACK,
+    color: getIntentColor('attack'),
+    borderColor: getBorderColor('attack')
+  };
 };
 
 // Import room 1-10 enemy models dynamically
@@ -138,6 +191,7 @@ interface GameEntityProps {
   scale?: number;
   invert?: boolean;
   runState?: number;
+  currentEnemy?: number;
 }
 
 const GameEntity: React.FC<GameEntityProps> = ({ 
@@ -158,10 +212,12 @@ const GameEntity: React.FC<GameEntityProps> = ({
   buff = 0,
   scale = 1,
   invert = false,
-  runState = 2
+  runState = 2,
+  currentEnemy
 }) => {
   const isHero = type === 'hero';
   const [isShaking, setIsShaking] = useState(false);
+  const [isPreAnimation, setIsPreAnimation] = useState(false);
   const entityRef = useRef<HTMLDivElement>(null);
 
   // Track health changes
@@ -171,6 +227,16 @@ const GameEntity: React.FC<GameEntityProps> = ({
       setTimeout(() => setIsShaking(false), 500);
     }
   }, [health, previousHealth]);
+
+  // Track animation state
+  useEffect(() => {
+    if (!isHero && intent && currentEnemy === position) {
+      // Show glow when this enemy is the current enemy, regardless of animation state
+      setIsPreAnimation(true);
+    } else {
+      setIsPreAnimation(false);
+    }
+  }, [isAnimating, isHero, intent, currentEnemy, position]);
 
   // Get animation styles based on type and intent
   const getAnimationStyles = () => {
@@ -205,29 +271,27 @@ const GameEntity: React.FC<GameEntityProps> = ({
       backgroundSize: 'contain',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',
-      transform: `translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1})${!isHero && health <= 0 ? ' rotate(90deg)' : ''}`,
+      transform: 'translate(-50%, -50%)',
       transformOrigin: 'center center',
-      zIndex: !isHero && health <= 0 ? 1 : 2, // Lower z-index for dead enemies
+      zIndex: !isHero && health <= 0 ? 1 : 2,
       filter: !isHero && health <= 0 ? 'brightness(0.4) grayscale(0.7)' : 'none',
       transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.5s ease-out, z-index 0s'
     };
 
     if (!isAnimating) return styles;
 
-    // For enemies, use their intent to determine animation
-    if (!isHero && intent && health > 0) {  // Only animate if enemy is alive
-      const intentInfo = getIntentInfo(intent, buff);
-      return {
-        ...styles,
-        animation: `${intentInfo.animation} 0.5s ease-in-out`,
-      };
-    }
-
-    // For hero, use the provided animation type or fall back to jump
     if (isHero && isAnimating) {
       return {
         ...styles,
         animation: `${animationType || 'jump'} 0.5s ease-in-out`,
+      };
+    }
+
+    if (!isHero && intent && health > 0) {
+      const intentInfo = getIntentInfo(intent, buff);
+      return {
+        ...styles,
+        animation: `${intentInfo.animation} 0.5s ease-in-out`,
       };
     }
 
@@ -276,32 +340,6 @@ const GameEntity: React.FC<GameEntityProps> = ({
 
     const intentInfo = intent ? getIntentInfo(intent, buff) : null;
     
-    const getIntentColor = (type: string) => {
-      switch (type) {
-        case 'block': return '#70ff70';
-        case 'block_and_attack': return '#ffff70';
-        case 'heal': return '#ff70ff';
-        case 'heal_all': return '#ff70ff';
-        case 'attack_buff': return '#ff9070';
-        case 'block_and_heal': return '#70ffff';
-        case 'vampiric_bite': return '#ff3080';
-        default: return '#ff7070';
-      }
-    };
-
-    const getBorderColor = (type: string) => {
-      switch (type) {
-        case 'block': return '#40ff40';
-        case 'block_and_attack': return '#ffff40';
-        case 'heal': return '#ff40ff';
-        case 'heal_all': return '#ff40ff';
-        case 'attack_buff': return '#ff6040';
-        case 'block_and_heal': return '#40ffff';
-        case 'vampiric_bite': return '#ff1060';
-        default: return '#ff4040';
-      }
-    };
-
     const getIntentDisplay = (info: IntentInfo): string => {
       switch (info.type) {
         case 'block':
@@ -344,7 +382,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         gap: '4px',
-        border: !isHero && intentInfo ? `1px solid ${getBorderColor(intentInfo.type)}` : '1px solid rgba(255, 255, 255, 0.2)',
+        border: !isHero && intentInfo ? `1px solid ${intentInfo.borderColor}` : '1px solid rgba(255, 255, 255, 0.2)',
         zIndex: 3,
         whiteSpace: 'nowrap',
         width: 'fit-content'
@@ -385,7 +423,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         {!isHero && intentInfo && (
           <div 
             style={{
-              color: getIntentColor(intentInfo.type),
+              color: intentInfo.color,
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
@@ -420,73 +458,91 @@ const GameEntity: React.FC<GameEntityProps> = ({
 
   const entityPosition = getEntityPosition();
   
+  const getGlowStyle = () => {
+    const intentInfo = intent ? getIntentInfo(intent, buff) : null;
+    
+    if (isValidTarget) {
+      return {
+        boxShadow: '0 0 20px 10px rgba(255, 255, 0, 0.5)'
+      };
+    }
+    if (isPreAnimation && intentInfo) {
+      return {
+        boxShadow: `0 0 30px 15px ${intentInfo.color}`
+      };
+    }
+    return {};
+  };
+
   return (
     <>
       <style>
         {`
           @keyframes jump {
-            0%, 100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
-            50% { transform: translate(-50%, calc(-50% - ${50 * scale}px)) scale(${scale}) scaleX(${invert ? -1 : 1}); }
+            0% { transform: translate(-50%, -50%); }
+            50% { transform: translate(-50%, -50%) scale(1.3); }
+            100% { transform: translate(-50%, -50%); }
           }
 
           @keyframes flip {
-            0%, 100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}) rotateY(0deg); }
-            100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}) rotateY(360deg); }
+            0% { transform: translate(-50%, -50%) rotateY(0deg); }
+            50% { transform: translate(-50%, -50%) rotateY(180deg); }
+            100% { transform: translate(-50%, -50%) rotateY(360deg); }
           }
 
           @keyframes flip-attack {
-            0%, 100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}) rotateY(0deg); }
-            50% { transform: translate(-50%, -50%) scale(${scale * 1.2}) scaleX(${invert ? -1 : 1}) rotateY(360deg); }
+            0% { transform: translate(-50%, -50%) rotateY(0deg); }
+            25% { transform: translate(-50%, -50%) scale(1.2) rotateY(180deg); }
+            50% { transform: translate(-50%, -50%) scale(1.2) rotateY(360deg); }
+            100% { transform: translate(-50%, -50%) rotateY(360deg); }
           }
 
           @keyframes heal-pulse {
-            0% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); filter: brightness(1); }
-            50% { transform: translate(-50%, -50%) scale(${scale * 1.1}) scaleX(${invert ? -1 : 1}); filter: brightness(1.5) hue-rotate(90deg); }
-            100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); filter: brightness(1); }
+            0% { transform: translate(-50%, -50%); }
+            25% { transform: translate(-50%, -50%) scale(1.4); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            75% { transform: translate(-50%, -50%) scale(1.3); }
+            100% { transform: translate(-50%, -50%); }
           }
 
           @keyframes power-up {
-            0% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); filter: brightness(1); }
-            50% { transform: translate(-50%, -50%) scale(${scale * 1.15}) scaleX(${invert ? -1 : 1}); filter: brightness(1.5) saturate(1.5); }
-            75% { transform: translate(-50%, -50%) scale(${scale * 1.1}) scaleX(${invert ? -1 : 1}) rotate(5deg); }
-            100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); filter: brightness(1); }
+            0% { transform: translate(-50%, -50%); }
+            50% { transform: translate(-50%, -50%) scale(1.15); }
+            75% { transform: translate(-50%, -50%) scale(1.1) rotate(5deg); }
+            100% { transform: translate(-50%, -50%); }
           }
 
           @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 0, 0) scaleX(${invert ? -1 : 1}); }
-            20%, 80% { transform: translate3d(2px, 0, 0) scaleX(${invert ? -1 : 1}); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0) scaleX(${invert ? -1 : 1}); }
-            40%, 60% { transform: translate3d(4px, 0, 0) scaleX(${invert ? -1 : 1}); }
-          }
-
-          @keyframes flash {
-            0%, 100% { filter: brightness(1); }
-            50% { filter: brightness(2) saturate(2); }
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
           }
 
           @keyframes zigzag {
-            0% { transform: translate(-60%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
-            25% { transform: translate(-40%, -60%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
-            50% { transform: translate(-60%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
-            75% { transform: translate(-40%, -40%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
-            100% { transform: translate(-60%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
+            0% { transform: translate(-60%, -50%); }
+            25% { transform: translate(-40%, -60%); }
+            50% { transform: translate(-60%, -50%); }
+            75% { transform: translate(-40%, -40%); }
+            100% { transform: translate(-60%, -50%); }
           }
 
           @keyframes float {
-            0%, 100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
-            50% { transform: translate(-50%, -70%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
+            0% { transform: translate(-50%, -50%); }
+            50% { transform: translate(-50%, -70%); }
+            100% { transform: translate(-50%, -50%); }
           }
 
           @keyframes pulse {
-            0% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
-            50% { transform: translate(-50%, -50%) scale(${scale * 1.2}) scaleX(${invert ? -1 : 1}); }
-            100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}); }
+            0% { transform: translate(-50%, -50%); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%); }
           }
 
           @keyframes slash {
-            0% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}) rotate(-45deg); }
-            50% { transform: translate(-50%, -50%) scale(${scale * 1.2}) scaleX(${invert ? -1 : 1}) rotate(45deg); }
-            100% { transform: translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1}) rotate(-45deg); }
+            0% { transform: translate(-50%, -50%) rotate(-45deg); }
+            50% { transform: translate(-50%, -50%) scale(1.2) rotate(45deg); }
+            100% { transform: translate(-50%, -50%) rotate(-45deg); }
           }
 
           .game-entity {
@@ -536,19 +592,6 @@ const GameEntity: React.FC<GameEntityProps> = ({
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.1);
             text-shadow: none;
-            white-space: normal;
-          }
-
-          .stat-container:hover::before {
-            display: none;
-          }
-
-          /* Ensure tooltips stay within viewport */
-          @media (max-height: 800px) {
-            .stat-container:hover::after {
-              bottom: auto;
-              top: calc(100% + 5px);
-            }
           }
         `}
       </style>
@@ -567,21 +610,23 @@ const GameEntity: React.FC<GameEntityProps> = ({
             backgroundColor: 'transparent',
             borderRadius: '0',
             boxShadow: 'none',
+            transform: `scale(${scale}) scaleX(${invert ? -1 : 1})`,
           }}
         >
           {/* Entity model (hero or enemy) */}
           <div style={getSpriteStyles()} />
 
-          {/* Glow effect for valid target */}
-          {isValidTarget && (
+          {/* Glow effect for valid target or pre-animation */}
+          {(isValidTarget || (!isHero && isPreAnimation)) && (
             <div style={{
               position: 'absolute',
               top: '50%',
               left: '50%',
               width: 'calc(100% + 24px)',
               height: 'calc(100% + 24px)',
-              backgroundColor: 'rgba(255, 255, 0, 0.8)',
-              filter: 'blur(20px) brightness(1.5)',
+              backgroundColor: isValidTarget ? 'rgba(255, 255, 0, 0.8)' : 
+                               (intent ? getIntentInfo(intent, buff).color : 'rgba(255, 0, 0, 0.6)'),
+              filter: `blur(20px) brightness(${isValidTarget ? '1.5' : '1.4'})`,
               WebkitMaskImage: `url(${isHero ? heroModel : getEnemyModel()})`,
               maskImage: `url(${isHero ? heroModel : getEnemyModel()})`,
               WebkitMaskSize: 'contain',
@@ -590,9 +635,12 @@ const GameEntity: React.FC<GameEntityProps> = ({
               maskPosition: 'center',
               WebkitMaskRepeat: 'no-repeat',
               maskRepeat: 'no-repeat',
-              transform: `translate(-50%, -50%) scale(${scale}) scaleX(${invert ? -1 : 1})`,
+              transform: 'translate(-50%, -50%)',
               transformOrigin: 'center center',
-              zIndex: 1
+              zIndex: 1,
+              opacity: isPreAnimation ? '1' : '0.8',
+              transition: 'opacity 0.2s ease-in-out',
+              ...getGlowStyle()
             }} />
           )}
         </div>

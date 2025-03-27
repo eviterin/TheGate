@@ -45,6 +45,28 @@ library DeckManager {
         }
     }
 
+    function removeCardFromGame(
+        uint8[] storage hand,
+        uint8[] storage deck,
+        uint cardIndex
+    ) internal {
+        uint8 cardID = hand[cardIndex];
+        if (cardID != CardLibrary.CARD_ID_NONE) {
+            for (uint i = cardIndex; i < hand.length - 1; i++) {
+                hand[i] = hand[i + 1];
+            }
+            hand.pop();
+
+            for (uint i = 0; i < deck.length; i++) {
+                if (deck[i] == cardID) {
+                    deck[i] = deck[deck.length - 1];
+                    deck.pop();
+                    break;
+                }
+            }
+        }
+    }
+
     function copyDeckIntoDrawpile(
         uint8[] storage draw,
         uint8[] storage deck
