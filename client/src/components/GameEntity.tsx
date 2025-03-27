@@ -50,11 +50,46 @@ interface IntentInfo {
   buffValue?: number;
   healValue?: number;
   animation: string;
+  color?: string;
+  borderColor?: string;
 }
 
 const getIntentInfo = (intent: number, buff: number): IntentInfo => {
+  // Get intent color and border color utility functions
+  const getIntentColor = (type: string) => {
+    switch (type) {
+      case 'block': return 'rgba(112, 255, 112, 0.8)'; // #70ff70
+      case 'block_and_attack': return 'rgba(255, 255, 112, 0.8)'; // #ffff70
+      case 'heal': return 'rgba(255, 112, 255, 0.8)'; // #ff70ff
+      case 'heal_all': return 'rgba(255, 112, 255, 0.8)'; // #ff70ff
+      case 'attack_buff': return 'rgba(255, 144, 112, 0.8)'; // #ff9070
+      case 'block_and_heal': return 'rgba(112, 255, 255, 0.8)'; // #70ffff
+      case 'vampiric_bite': return 'rgba(255, 48, 128, 0.8)'; // #ff3080
+      default: return 'rgba(255, 112, 112, 0.8)'; // #ff7070
+    }
+  };
+
+  const getBorderColor = (type: string) => {
+    switch (type) {
+      case 'block': return '#40ff40';
+      case 'block_and_attack': return '#ffff40';
+      case 'heal': return '#ff40ff';
+      case 'heal_all': return '#ff40ff';
+      case 'attack_buff': return '#ff6040';
+      case 'block_and_heal': return '#40ffff';
+      case 'vampiric_bite': return '#ff1060';
+      default: return '#ff4040';
+    }
+  };
+
   if (intent === INTENT_TYPES.BLOCK_5) {
-    return { type: 'block', value: 5, animation: ANIMATIONS.BLOCK };
+    return { 
+      type: 'block', 
+      value: 5, 
+      animation: ANIMATIONS.BLOCK,
+      color: getIntentColor('block'),
+      borderColor: getBorderColor('block')
+    };
   }
   if (intent === INTENT_TYPES.BLOCK_AND_ATTACK) {
     return { 
@@ -62,28 +97,36 @@ const getIntentInfo = (intent: number, buff: number): IntentInfo => {
       value: 6,
       blockValue: 5,
       buffValue: buff,
-      animation: ANIMATIONS.BLOCK_AND_ATTACK 
+      animation: ANIMATIONS.BLOCK_AND_ATTACK,
+      color: getIntentColor('block_and_attack'),
+      borderColor: getBorderColor('block_and_attack')
     };
   }
   if (intent === INTENT_TYPES.HEAL) {
     return {
       type: 'heal',
       value: 5,
-      animation: ANIMATIONS.HEAL
+      animation: ANIMATIONS.HEAL,
+      color: getIntentColor('heal'),
+      borderColor: getBorderColor('heal')
     };
   }
   if (intent === INTENT_TYPES.HEAL_ALL) {
     return {
       type: 'heal_all',
       value: 5,
-      animation: ANIMATIONS.HEAL
+      animation: ANIMATIONS.HEAL,
+      color: getIntentColor('heal_all'),
+      borderColor: getBorderColor('heal_all')
     };
   }
   if (intent === INTENT_TYPES.ATTACK_BUFF) {
     return {
       type: 'attack_buff',
       value: 2,
-      animation: ANIMATIONS.BUFF
+      animation: ANIMATIONS.BUFF,
+      color: getIntentColor('attack_buff'),
+      borderColor: getBorderColor('attack_buff')
     };
   }
   if (intent === INTENT_TYPES.BLOCK_AND_HEAL) {
@@ -92,7 +135,9 @@ const getIntentInfo = (intent: number, buff: number): IntentInfo => {
       value: 5,
       blockValue: 5,
       healValue: 5,
-      animation: ANIMATIONS.BLOCK
+      animation: ANIMATIONS.BLOCK,
+      color: getIntentColor('block_and_heal'),
+      borderColor: getBorderColor('block_and_heal')
     };
   }
   if (intent === INTENT_TYPES.VAMPIRIC_BITE) {
@@ -100,11 +145,19 @@ const getIntentInfo = (intent: number, buff: number): IntentInfo => {
       type: 'vampiric_bite',
       value: 5,
       healValue: 5,
-      animation: ANIMATIONS.ATTACK
+      animation: ANIMATIONS.ATTACK,
+      color: getIntentColor('vampiric_bite'),
+      borderColor: getBorderColor('vampiric_bite')
     };
   }
   // Any other number is an attack with that damage value
-  return { type: 'attack', value: intent, animation: ANIMATIONS.ATTACK };
+  return { 
+    type: 'attack', 
+    value: intent, 
+    animation: ANIMATIONS.ATTACK,
+    color: getIntentColor('attack'),
+    borderColor: getBorderColor('attack')
+  };
 };
 
 // Import room 1-10 enemy models dynamically
@@ -293,32 +346,6 @@ const GameEntity: React.FC<GameEntityProps> = ({
 
     const intentInfo = intent ? getIntentInfo(intent, buff) : null;
     
-    const getIntentColor = (type: string) => {
-      switch (type) {
-        case 'block': return '#70ff70';
-        case 'block_and_attack': return '#ffff70';
-        case 'heal': return '#ff70ff';
-        case 'heal_all': return '#ff70ff';
-        case 'attack_buff': return '#ff9070';
-        case 'block_and_heal': return '#70ffff';
-        case 'vampiric_bite': return '#ff3080';
-        default: return '#ff7070';
-      }
-    };
-
-    const getBorderColor = (type: string) => {
-      switch (type) {
-        case 'block': return '#40ff40';
-        case 'block_and_attack': return '#ffff40';
-        case 'heal': return '#ff40ff';
-        case 'heal_all': return '#ff40ff';
-        case 'attack_buff': return '#ff6040';
-        case 'block_and_heal': return '#40ffff';
-        case 'vampiric_bite': return '#ff1060';
-        default: return '#ff4040';
-      }
-    };
-
     const getIntentDisplay = (info: IntentInfo): string => {
       switch (info.type) {
         case 'block':
@@ -361,7 +388,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         gap: '4px',
-        border: !isHero && intentInfo ? `1px solid ${getBorderColor(intentInfo.type)}` : '1px solid rgba(255, 255, 255, 0.2)',
+        border: !isHero && intentInfo ? `1px solid ${intentInfo.borderColor}` : '1px solid rgba(255, 255, 255, 0.2)',
         zIndex: 3,
         whiteSpace: 'nowrap',
         width: 'fit-content'
@@ -402,7 +429,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
         {!isHero && intentInfo && (
           <div 
             style={{
-              color: getIntentColor(intentInfo.type),
+              color: intentInfo.color,
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
@@ -438,14 +465,16 @@ const GameEntity: React.FC<GameEntityProps> = ({
   const entityPosition = getEntityPosition();
   
   const getGlowStyle = () => {
+    const intentInfo = intent ? getIntentInfo(intent, buff) : null;
+    
     if (isValidTarget) {
       return {
         boxShadow: '0 0 20px 10px rgba(255, 255, 0, 0.5)'
       };
     }
-    if (isPreAnimation) {
+    if (isPreAnimation && intentInfo) {
       return {
-        boxShadow: '0 0 30px 15px rgba(255, 0, 0, 0.6)'  // Increased size and intensity
+        boxShadow: `0 0 30px 15px ${intentInfo.color}`
       };
     }
     return {};
@@ -600,7 +629,8 @@ const GameEntity: React.FC<GameEntityProps> = ({
               left: '50%',
               width: 'calc(100% + 24px)',
               height: 'calc(100% + 24px)',
-              backgroundColor: isValidTarget ? 'rgba(255, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.6)',
+              backgroundColor: isValidTarget ? 'rgba(255, 255, 0, 0.8)' : 
+                               (intent ? getIntentInfo(intent, buff).color : 'rgba(255, 0, 0, 0.6)'),
               filter: `blur(20px) brightness(${isValidTarget ? '1.5' : '1.4'})`,
               WebkitMaskImage: `url(${isHero ? heroModel : getEnemyModel()})`,
               maskImage: `url(${isHero ? heroModel : getEnemyModel()})`,

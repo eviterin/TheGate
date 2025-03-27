@@ -144,7 +144,6 @@ library CardPlayer {
             data.currentMana--;
             encounters.removeAllEnemyBlock(player);
         } else if (playedCardID == CardLibrary.CARD_ID_RESOLVE && data.currentMana >= 1) {
-            data.currentMana--;
             data.currentHealth = CardEffects.healHero(6, data.currentHealth, data.maxHealth);
             DeckManager.removeCardFromGame(data.hand, data.deck, playedCardIndex);
             return true;

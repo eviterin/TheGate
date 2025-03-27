@@ -113,7 +113,7 @@
             "id": "heal",
             "name": "Resolve",
             "description": "Heal 6 HP. Card is removed from deck after use.",
-            "manaCost": 1,
+            "manaCost": 0,
             "targeted": false,
             "animationType": "flip"
         },
