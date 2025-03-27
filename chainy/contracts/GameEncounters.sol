@@ -262,15 +262,52 @@ contract GameEncounters {
                 seed = uint256(keccak256(abi.encodePacked(seed)));
             }
         } else if (floor == 9) {
-            if (data.currentHealth[0] > 0) {
-                data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+            // Implement alternating behavior for both enemies in floor 9
+            // When one enemy buffs, the other attacks, and vice versa
+            if (data.currentHealth[0] > 0 && data.currentHealth[1] > 0) {
+                // On first turn, enemy 1 buffs and enemy 2 attacks
+                if (previousIntents.length == 0) {
+                    data.intents[0] = INTENT_ATTACK_BUFF;
+                    data.intents[1] = INTENT_BLOCK_AND_ATTACK;
+                } else {
+                    // Then they swap roles each turn
+                    if (previousIntents[0] == INTENT_ATTACK_BUFF) {
+                        data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+                        data.intents[1] = INTENT_ATTACK_BUFF;
+                    } else {
+                        data.intents[0] = INTENT_ATTACK_BUFF;
+                        data.intents[1] = INTENT_BLOCK_AND_ATTACK;
+                    }
+                }
+            } 
+            // If only one enemy is alive, they do both
+            else if (data.currentHealth[0] > 0) {
+                if (previousIntents.length == 0 || previousIntents[0] == INTENT_BLOCK_AND_ATTACK) {
+                    data.intents[0] = INTENT_ATTACK_BUFF;
+                } else {
+                    data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+                }
             }
-            if (data.currentHealth[1] > 0) {
-                data.intents[1] = INTENT_VAMPIRIC_BITE;
+            else if (data.currentHealth[1] > 0) {
+                if (previousIntents.length == 0 || previousIntents[1] == INTENT_BLOCK_AND_ATTACK) {
+                    data.intents[1] = INTENT_ATTACK_BUFF;
+                } else {
+                    data.intents[1] = INTENT_BLOCK_AND_ATTACK;
+                }
             }
         } else if (floor == 10) {
             if (data.currentHealth[0] > 0) {
-                data.intents[0] = INTENT_BLOCK_AND_ATTACK;
+                // Floor 10 enemy alternates between blocking and attacking
+                // Start by blocking
+                if (previousIntents.length == 0) {
+                    data.intents[0] = INTENT_BLOCK_5;
+                } else if (previousIntents[0] == INTENT_BLOCK_5) {
+                    // After blocking, attack
+                    data.intents[0] = 12; // Strong attack
+                } else {
+                    // After attacking, block again
+                    data.intents[0] = INTENT_BLOCK_5;
+                }
             }
         }
     }
