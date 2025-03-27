@@ -80,8 +80,8 @@ contract GameEncounters {
             data.buffs = new uint8[](2);
         } else if (floor == 6) {
             data.types = [ENEMY_TYPE_B];
-            data.maxHealth = [45];
-            data.currentHealth = [45];
+            data.maxHealth = [35];
+            data.currentHealth = [35];
             data.blockAmount = new uint16[](1);
             data.buffs = new uint8[](1);
             data.buffs[0] += 4;
@@ -100,8 +100,8 @@ contract GameEncounters {
             data.buffs = new uint8[](5);
         } else if (floor == 9) {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
-            data.maxHealth = [50, 50];
-            data.currentHealth = [1, 1];
+            data.maxHealth = [30, 30];
+            data.currentHealth = [30, 30];
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
         } else if (floor == 10) {

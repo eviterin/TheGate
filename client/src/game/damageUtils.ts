@@ -170,7 +170,8 @@ export const processEnemyIntent = (
       const healedHealth = allEnemiesHealth.map((health, i) => 
         Math.min(allEnemiesMaxHealth[i], health + 5)
       );
-      newEnemyHealth = healedHealth[enemyHealth] || enemyHealth;
+      // Use the current enemy's index to get their new health
+      newEnemyHealth = healedHealth[allEnemiesHealth.indexOf(enemyHealth)] || enemyHealth;
       return {
         newEnemyBlock,
         newEnemyHealth,
