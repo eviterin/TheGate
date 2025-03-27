@@ -93,7 +93,7 @@
         {
             "numericId": 11,
             "id": "explodicate",
-            "name": "Explodicate",
+            "name": "Righteous Verdict",
             "description": "Deal 4 damage. Ignores block.",
             "manaCost": 1,
             "targeted": true,
