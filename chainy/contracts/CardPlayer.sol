@@ -34,6 +34,7 @@ library CardPlayer {
         bool extraCardDrawEnabled;
         bool hasProtectionBlessing;
         uint8 lastChosenCard;
+        uint8 secondLastChosenCard;
     }
     
     struct CardPlay {

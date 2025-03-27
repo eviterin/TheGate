@@ -51,6 +51,7 @@ contract GameState {
         data.extraCardDrawEnabled = false;
         data.hasProtectionBlessing = false;
         data.lastChosenCard = 0;
+        data.secondLastChosenCard = 0;
         delete data.deck;
         
         data.deck = [CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_SMITE, CardLibrary.CARD_ID_PREACH, CardLibrary.CARD_ID_PRAY, CardLibrary.CARD_ID_PRAY];
@@ -73,6 +74,7 @@ contract GameState {
         data.extraCardDrawEnabled = false;
         data.hasProtectionBlessing = false;
         data.lastChosenCard = 0;
+        data.secondLastChosenCard = 0;
         data.currentFloor = 0;
     }
     
@@ -200,7 +202,7 @@ contract GameState {
     function completeEncounter() private {
         CardPlayer.GameData storage data = playerData[msg.sender];
         data.runState = CardPlayer.RUN_STATE_CARD_REWARD;
-        data.availableCardRewards = CardLibrary.generateRewards(data.lastChosenCard, data.currentFloor);
+        data.availableCardRewards = CardLibrary.generateRewards(data.lastChosenCard, data.secondLastChosenCard, data.currentFloor);
         emit RewardsGenerated(msg.sender, data.currentFloor, data.availableCardRewards);
     }
 
