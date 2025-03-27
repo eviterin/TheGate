@@ -14,12 +14,18 @@ library CardLibrary {
     uint8 constant CARD_ID_SACRED_RITUAL = 9;
     uint8 constant CARD_ID_DIVINE_WRATH = 10;
     uint8 constant CARD_ID_EXPLODICATE = 11;
+    uint8 constant CARD_ID_RADIANCE = 12;
+    uint8 constant CARD_ID_RESOLVE = 13;
+    uint8 constant CARD_ID_BRACE = 14;
 
     function requiresTarget(uint8 cardId) internal pure returns (bool) {
         return cardId != CARD_ID_PRAY && 
                cardId != CARD_ID_SACRED_RITUAL &&
                cardId != CARD_ID_SEEK_GUIDANCE &&
-               cardId != CARD_ID_UNVEIL;
+               cardId != CARD_ID_UNVEIL &&
+               cardId != CARD_ID_RADIANCE &&
+               cardId != CARD_ID_RESOLVE &&
+               cardId != CARD_ID_BRACE;
     }
 
     function isUnimplementedCard(uint8) internal pure returns (bool) {
@@ -27,9 +33,14 @@ library CardLibrary {
     }
 
 
-    function getRewardPair(uint8 lastChosen, uint8 currentFloor) internal pure returns (uint8, uint8) {
+    function getRewardPair(uint8 lastChosen, uint8 currentFloor) internal view returns (uint8, uint8) {
         // Starting deck: 2x Smite, 2x Pray, 1x Preach
         
+        if (currentFloor == 1) {
+            //debug            
+            return (CARD_ID_BRACE, CARD_ID_RESOLVE);
+        }
+
         if (currentFloor == 1) {
             // First choice: Divine Wrath or Explodicate
             return (CARD_ID_DIVINE_WRATH, CARD_ID_EXPLODICATE);
@@ -67,8 +78,16 @@ library CardLibrary {
         }
         
         if (currentFloor == 5) {
-            // Fifth choice: Seek Guidance or Sacred Ritual
-            return (CARD_ID_SEEK_GUIDANCE, CARD_ID_SACRED_RITUAL);
+            // Fifth choice: Seek Guidance or Sacred Ritual or Radiance
+            // Random choice between the three options using a hash of lastChosen
+            uint256 rnd = uint256(keccak256(abi.encodePacked(lastChosen, currentFloor))) % 3;
+            if (rnd == 0) {
+                return (CARD_ID_SEEK_GUIDANCE, CARD_ID_SACRED_RITUAL);
+            } else if (rnd == 1) {
+                return (CARD_ID_SEEK_GUIDANCE, CARD_ID_RADIANCE);
+            } else {
+                return (CARD_ID_SACRED_RITUAL, CARD_ID_RADIANCE);
+            }
         }
         
         if (currentFloor == 6) {
@@ -94,7 +113,7 @@ library CardLibrary {
         return (CARD_ID_SMITE, CARD_ID_PRAY);
     }
 
-    function generateRewards(uint8 lastChosenCard, uint8 currentFloor) internal pure returns (uint8[] memory) {
+    function generateRewards(uint8 lastChosenCard, uint8 currentFloor) internal view returns (uint8[] memory) {
         (uint8 reward1, uint8 reward2) = getRewardPair(lastChosenCard, currentFloor);
         uint8[] memory rewards = new uint8[](2);
         rewards[0] = reward1;

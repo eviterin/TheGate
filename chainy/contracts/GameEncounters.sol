@@ -351,4 +351,11 @@ contract GameEncounters {
     function clearEnemyData(address player) external onlyGameState {
         delete enemyData[player];
     }
+
+    function removeAllEnemyBlock(address player) external onlyGameState {
+        EnemyData storage data = enemyData[player];
+        for (uint8 i = 0; i < data.types.length; i++) {
+            data.blockAmount[i] = 0;
+        }
+    }
 } 

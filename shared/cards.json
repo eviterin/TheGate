@@ -98,6 +98,33 @@
             "manaCost": 1,
             "targeted": true,
             "animationType": "flip"
+        },
+        {
+            "numericId": 12,
+            "id": "radiate",
+            "name": "Radiance",
+            "description": "Remove all block of all enemies.",
+            "manaCost": 1,
+            "targeted": true,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 13,
+            "id": "heal",
+            "name": "Resolve",
+            "description": "Heal 6 HP. Card is removed from deck after use.",
+            "manaCost": 1,
+            "targeted": false,
+            "animationType": "flip"
+        },
+        {
+            "numericId": 14,
+            "id": "brace",
+            "name": "Brace",
+            "description": "Gain 15 block. Card is removed from deck after use.",
+            "manaCost": 0,
+            "targeted": false,
+            "animationType": "flip"
         }
     ]
 } 

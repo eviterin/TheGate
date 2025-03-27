@@ -28,4 +28,6 @@ interface IGameEncounters {
         uint8[] memory buffs
     );
     function clearEnemyData(address player) external;
+    function setGameStateContract(address gameStateContract) external;
+    function removeAllEnemyBlock(address player) external;
 } 

@@ -345,6 +345,26 @@ export const predictCardEffect = (
       enemyDied = explodicateResult.isDead;
       break;
       
+    case 12: // Radiance - Remove all block from all enemies (not targeted despite cards.json entry)
+      manaSpent = 1;
+      // Set block to 0 for all enemies
+      for (let i = 0; i < enemyBlock.length; i++) {
+        enemyBlock[i] = 0;
+      }
+      break;
+      
+    case 13: // Resolve - Heal 6 HP. Card is removed from deck after use.
+      manaSpent = 1;
+      heroHealth = Math.min(gameState.maxHealth, heroHealth + 6);
+      // Card removal handled in contract
+      break;
+      
+    case 14: // Brace - Gain 15 block. Card is removed from deck after use.
+      manaSpent = 0; // Free card
+      heroBlock += 15;
+      // Card removal handled in contract
+      break;
+      
     default:
       // Unimplemented card (from contract fallback)
       if (gameState.currentMana >= 1) {

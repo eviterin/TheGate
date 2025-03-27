@@ -5,6 +5,7 @@ import "./CardLibrary.sol";
 import "./DeckManager.sol";
 import "./IGameEncounters.sol";
 import "./CardEffects.sol";
+import "./CardPlayer.sol";
 
 interface IVictoryTracker {
     function recordVictory(address player) external;
@@ -14,39 +15,15 @@ contract GameState {
     using CardLibrary for uint8;
     using DeckManager for uint8[];
     using CardEffects for uint8;
+    using CardPlayer for CardPlayer.GameData;
 
-    struct GameData {
-        uint8 runState;
-        uint8 currentFloor;
-        uint8 maxHealth;
-        uint8 currentHealth;
-        uint8 currentBlock;
-        uint8 currentMana;
-        uint8 maxMana;
-        uint8[] deck;
-        uint8[] hand;
-        uint8[] draw;
-        uint8[] discard;
-        uint8[] availableCardRewards;
-        bool hasEnabledQuickTransactions;
-        bool extraCardDrawEnabled;
-        bool hasProtectionBlessing;
-        uint8 lastChosenCard;
-    } 
-    
-    mapping(address => GameData) public playerData;
+    // Use the GameData struct from CardPlayer library
+    mapping(address => CardPlayer.GameData) public playerData;
     IGameEncounters public encounters;
     IVictoryTracker public victoryTracker;
 
     event QuickTransactionsEnabled(address indexed user, uint256 timestamp);
     event RewardsGenerated(address indexed user, uint8 floor, uint8[] rewards);
-
-    uint8 constant RUN_STATE_NONE = 0;
-    uint8 constant RUN_STATE_WHALE_ROOM = 1;
-    uint8 constant RUN_STATE_ENCOUNTER = 2;
-    uint8 constant RUN_STATE_CARD_REWARD = 3;
-    uint8 constant RUN_STATE_DEATH = 4;
-    uint8 constant RUN_STATE_VICTORY = 5;
 
     constructor(address _encountersContract, address _victoryTracker) {
         encounters = IGameEncounters(_encountersContract);
@@ -60,12 +37,12 @@ contract GameState {
     }
     
     function startRun() public {
-        GameData storage data = playerData[msg.sender];
-        require(data.runState == RUN_STATE_NONE, "Cannot start new run while one is active");
+        CardPlayer.GameData storage data = playerData[msg.sender];
+        require(data.runState == CardPlayer.RUN_STATE_NONE, "Cannot start new run while one is active");
         
         encounters.clearEnemyData(msg.sender);
         
-        data.runState = RUN_STATE_WHALE_ROOM;
+        data.runState = CardPlayer.RUN_STATE_WHALE_ROOM;
         data.currentFloor = 0;
         data.maxHealth = 32;
         data.currentHealth = 32;
@@ -80,9 +57,9 @@ contract GameState {
     }
     
     function abandonRun() public {
-        GameData storage data = playerData[msg.sender];
+        CardPlayer.GameData storage data = playerData[msg.sender];
         encounters.clearEnemyData(msg.sender);
-        data.runState = RUN_STATE_NONE;
+        data.runState = CardPlayer.RUN_STATE_NONE;
         delete data.hand;
         delete data.draw;
         delete data.discard;
@@ -100,8 +77,8 @@ contract GameState {
     }
     
     function chooseRoom(uint8 option) public {
-        GameData storage data = playerData[msg.sender];
-        require(data.runState == RUN_STATE_WHALE_ROOM, "Not in whale room");
+        CardPlayer.GameData storage data = playerData[msg.sender];
+        require(data.runState == CardPlayer.RUN_STATE_WHALE_ROOM, "Not in whale room");
         require(option >= 1 && option <= 4, "Invalid whale room option");
 
         if (option == 1) {
@@ -117,139 +94,41 @@ contract GameState {
             data.currentHealth += 8;
         }
 
-        data.runState = RUN_STATE_ENCOUNTER;
+        data.runState = CardPlayer.RUN_STATE_ENCOUNTER;
         data.currentFloor = 1; 
         startEncounter();
     }
 
+    // Helper functions to pass to the library
+    function _checkWinCondition() private returns (bool) {
+        return checkWinCondition();
+    }
+
+    function _endTurn() private {
+        endTurn();
+    }
+
     function playCard(uint8 playedCardIndex, uint8 targetIndex) public {
-        GameData storage data = playerData[msg.sender];
-        require(playedCardIndex < data.hand.length, "Invalid card index");
-        uint8 playedCardID = data.hand[playedCardIndex];
-
-        (uint8[] memory types,,uint16[] memory currentHealth,,,) = encounters.getEnemyData(msg.sender);
-
-        if (CardLibrary.requiresTarget(playedCardID)) {
-            require(targetIndex < types.length, "Invalid target");
-            //require(currentHealth[targetIndex] > 0, "Cannot target a dead enemy"); 
-        }
-
-        if (data.currentMana >= 1 && CardLibrary.isUnimplementedCard(playedCardID)) {
-            data.currentMana--;
-            data.currentBlock += 6;
-            DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
-            return;
-        }
-
-        if (playedCardID == CardLibrary.CARD_ID_SMITE && data.currentMana >= 1) {
-            data.currentMana--;
-            if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 6)) {
-                checkWinCondition();
-            }
-        } else if (playedCardID == CardLibrary.CARD_ID_PRAY && data.currentMana >= 1) {
-            data.currentMana--;
-            data.currentBlock += 6;
-        } else if (playedCardID == CardLibrary.CARD_ID_UNFOLD_TRUTH && data.currentMana >= 1) {
-            data.currentMana--;
-            if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 7)) {
-                checkWinCondition();
-            }
-            DeckManager.drawCard(data.hand, data.draw, data.discard);
-        } else if (playedCardID == CardLibrary.CARD_ID_PREACH && data.currentMana >= 2) {
-            data.currentMana -= 2;
-            bool anyKilled = false;
-            for (uint i = 0; i < types.length; i++) {
-                if (currentHealth[i] > 0) {
-                    if (encounters.dealDamageToEnemy(msg.sender, uint8(i), 8)) {
-                        anyKilled = true;
-                    }
-                }
-            }
-            if (anyKilled) {
-                checkWinCondition();
-            }
-        } else if (playedCardID == CardLibrary.CARD_ID_SACRED_RITUAL && data.currentMana >= 2) {
-            data.currentMana -= 2;
-            data.currentBlock += 10;
-            data.currentHealth = CardEffects.healHero(30, data.currentHealth, data.maxHealth);
-            DeckManager.removeCardFromGame(data.hand, data.deck, playedCardIndex);
-            return;
-        } else if (playedCardID == CardLibrary.CARD_ID_DIVINE_WRATH && data.currentMana >= 1) {
-            data.currentMana--;
-            (,uint16[] memory maxHealth, uint16[] memory enemyHealth,,,) = encounters.getEnemyData(msg.sender);
-            uint8 damage = 4;
-            if (enemyHealth[targetIndex] == maxHealth[targetIndex]) {
-                damage = 8;
-            }
-            if (encounters.dealDamageToEnemy(msg.sender, targetIndex, damage)) {
-                checkWinCondition();
-            }
-        } else if (playedCardID == CardLibrary.CARD_ID_BALANCE && data.currentMana >= 1) {
-            data.currentMana--;
-            if (encounters.dealDamageToEnemy(msg.sender, targetIndex, 5)) {
-                checkWinCondition();
-            }
-            data.currentBlock += 5;
-        } else if (playedCardID == CardLibrary.CARD_ID_SEEK_GUIDANCE && data.currentMana >= 1) {
-            data.currentMana--;
-            data.maxMana += 1;
-            data.currentMana += 1;
-            DeckManager.removeCardFromGame(data.hand, data.deck, playedCardIndex);
-            return;
-        } else if (playedCardID == CardLibrary.CARD_ID_UNVEIL && data.currentMana >= 3) {
-            data.currentMana -= 3;
-            data.currentBlock += 10;
-            DeckManager.drawCard(data.hand, data.draw, data.discard);
-            DeckManager.drawCard(data.hand, data.draw, data.discard);
-            DeckManager.drawCard(data.hand, data.draw, data.discard);
-        } else if (playedCardID == CardLibrary.CARD_ID_READ_SCRIPTURE && data.currentMana >= 2) {
-            data.currentMana -= 2;
-            uint8 damage = 8;
-            if (data.hand.length >= 4) {
-                damage = 16;
-            }
-            if (encounters.dealDamageToEnemy(msg.sender, targetIndex, damage)) {
-                checkWinCondition();
-            }
-        } else if (playedCardID == CardLibrary.CARD_ID_EXPLODICATE && data.currentMana >= 1) {
-            data.currentMana -= 1;
-            if (encounters.dealDirectDamage(msg.sender, targetIndex, 4)) {
-                checkWinCondition();
-            }
-        }
-
-        DeckManager.discardCard(data.hand, data.discard, playedCardIndex);
+        CardPlayer.GameData storage data = playerData[msg.sender];
+        CardPlayer.playCard(data, encounters, msg.sender, playedCardIndex, targetIndex, _checkWinCondition);
     }
 
-    struct CardPlay {
-        uint8 cardIndex;
-        uint8 targetIndex;
-    }
-
-    function playCards(CardPlay[] calldata plays) public {
-        GameData storage data = playerData[msg.sender];
-        require(data.runState == RUN_STATE_ENCOUNTER, "Not in encounter");
-        require(plays.length > 0, "No cards to play");
-
+    function playCards(CardPlayer.CardPlay[] calldata plays) public {
+        CardPlayer.GameData storage data = playerData[msg.sender];
+        
+        // Create a new array of the library's CardPlay type
+        CardPlayer.CardPlay[] memory libraryPlays = new CardPlayer.CardPlay[](plays.length);
         for (uint i = 0; i < plays.length; i++) {
-            // If we're no longer in encounter (e.g. due to win), stop processing cards
-            if (data.runState != RUN_STATE_ENCOUNTER) {
-                // Don't call endTurn if we're not in encounter anymore
-                return;
-            }
-            
-            playCard(plays[i].cardIndex, plays[i].targetIndex);
+            libraryPlays[i].cardIndex = plays[i].cardIndex;
+            libraryPlays[i].targetIndex = plays[i].targetIndex;
         }
         
-        // Only end turn if we're still in encounter
-        if (data.runState == RUN_STATE_ENCOUNTER) {
-            endTurn();
-        }
+        CardPlayer.playCards(data, encounters, msg.sender, libraryPlays, _checkWinCondition, _endTurn);
     }
 
     function endTurn() public {
-        GameData storage data = playerData[msg.sender];
-        require(data.runState == RUN_STATE_ENCOUNTER, "Not in encounter");
+        CardPlayer.GameData storage data = playerData[msg.sender];
+        require(data.runState == CardPlayer.RUN_STATE_ENCOUNTER, "Not in encounter");
         
         (uint8[] memory types,,uint16[] memory currentHealth,uint16[] memory intents,,) = encounters.getEnemyData(msg.sender);
 
@@ -265,7 +144,7 @@ contract GameState {
         }
 
         if (data.currentHealth == 0) {
-            data.runState = RUN_STATE_DEATH;
+            data.runState = CardPlayer.RUN_STATE_DEATH;
             shouldContinue = false;
         }
 
@@ -284,12 +163,12 @@ contract GameState {
     }
 
     function dealDamageToHero(uint8 damage) private {
-        GameData storage data = playerData[msg.sender];
+        CardPlayer.GameData storage data = playerData[msg.sender];
         (data.currentHealth, data.currentBlock) = CardEffects.dealDamageToHero(damage, data.currentBlock, data.currentHealth);
     }
 
     function startEncounter() private {
-        GameData storage data = playerData[msg.sender];
+        CardPlayer.GameData storage data = playerData[msg.sender];
         encounters.startEncounter(msg.sender, data.currentFloor);
         delete data.hand;
         delete data.discard;
@@ -307,10 +186,10 @@ contract GameState {
             if (currentHealth[i] > 0) return false;
         }
         
-        GameData storage data = playerData[msg.sender];
+        CardPlayer.GameData storage data = playerData[msg.sender];
         if (data.currentFloor == 10) {
             // Final level victory
-            data.runState = RUN_STATE_VICTORY;
+            data.runState = CardPlayer.RUN_STATE_VICTORY;
             victoryTracker.recordVictory(msg.sender);
         } else {
             completeEncounter();
@@ -319,15 +198,15 @@ contract GameState {
     }
 
     function completeEncounter() private {
-        GameData storage data = playerData[msg.sender];
-        data.runState = RUN_STATE_CARD_REWARD;
+        CardPlayer.GameData storage data = playerData[msg.sender];
+        data.runState = CardPlayer.RUN_STATE_CARD_REWARD;
         data.availableCardRewards = CardLibrary.generateRewards(data.lastChosenCard, data.currentFloor);
         emit RewardsGenerated(msg.sender, data.currentFloor, data.availableCardRewards);
     }
 
     function chooseCardReward(uint8 cardId) public {
-        GameData storage data = playerData[msg.sender];
-        require(data.runState == RUN_STATE_CARD_REWARD, "Not in reward state");
+        CardPlayer.GameData storage data = playerData[msg.sender];
+        require(data.runState == CardPlayer.RUN_STATE_CARD_REWARD, "Not in reward state");
         
         bool isValidChoice = false;
         for (uint i = 0; i < data.availableCardRewards.length; i++) {
@@ -341,7 +220,7 @@ contract GameState {
         data.deck.push(cardId);
         data.lastChosenCard = cardId;
         delete data.availableCardRewards;
-        data.runState = RUN_STATE_ENCOUNTER;
+        data.runState = CardPlayer.RUN_STATE_ENCOUNTER;
         data.currentFloor++;
         startEncounter();
     }
@@ -359,7 +238,7 @@ contract GameState {
 
     function getPlayerData(address player) public view returns (
         uint8[] memory, uint8[] memory, uint8[] memory, uint8[] memory) {
-        GameData storage data = playerData[player];
+        CardPlayer.GameData storage data = playerData[player];
         return (data.deck, data.hand, data.draw, data.discard);
     }
 
