@@ -6,10 +6,10 @@ export default defineConfig({
   plugins: [react()],
   assetsInclude: ['**/*.wav'],
   server: {
-    host: true,
+    host: '0.0.0.0',  // Listen on all network interfaces
     port: 3000,
     strictPort: true,
-    allowedHosts: ['jasinali.com', 'localhost', '*', 'preproductionenvironment.com']
+    allowedHosts: ['jasinali.com', 'localhost', 'preproductionenvironment.com']
   },
   build: {
     rollupOptions: {
