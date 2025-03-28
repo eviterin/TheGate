@@ -97,7 +97,7 @@ library CardPlayer {
             data.currentMana -= 2;
             data.currentBlock += 10;
             data.currentHealth = CardEffects.healHero(30, data.currentHealth, data.maxHealth);
-            DeckManager.removeCardFromGame(data.hand, data.deck, playedCardIndex);
+            DeckManager.removeCardCompletelyFromGame(data.hand, data.deck, data.draw, data.discard, playedCardIndex);
             return true;
         } else if (playedCardID == CardLibrary.CARD_ID_DIVINE_WRATH && data.currentMana >= 1) {
             data.currentMana--;
@@ -119,7 +119,7 @@ library CardPlayer {
             data.currentMana--;
             data.maxMana += 1;
             data.currentMana += 1;
-            DeckManager.removeCardFromGame(data.hand, data.deck, playedCardIndex);
+            DeckManager.removeCardCompletelyFromGame(data.hand, data.deck, data.draw, data.discard, playedCardIndex);
             return true;
         } else if (playedCardID == CardLibrary.CARD_ID_UNVEIL && data.currentMana >= 3) {
             data.currentMana -= 3;
@@ -146,12 +146,12 @@ library CardPlayer {
             encounters.removeAllEnemyBlock(player);
         } else if (playedCardID == CardLibrary.CARD_ID_RESOLVE && data.currentMana >= 1) {
             data.currentHealth = CardEffects.healHero(6, data.currentHealth, data.maxHealth);
-            DeckManager.removeCardFromGame(data.hand, data.deck, playedCardIndex);
+            DeckManager.removeCardCompletelyFromGame(data.hand, data.deck, data.draw, data.discard, playedCardIndex);
             return true;
         } else if (playedCardID == CardLibrary.CARD_ID_BRACE && data.currentMana >= 0) {
             // Brace costs 0 mana
             data.currentBlock += 15;
-            DeckManager.removeCardFromGame(data.hand, data.deck, playedCardIndex);
+            DeckManager.removeCardCompletelyFromGame(data.hand, data.deck, data.draw, data.discard, playedCardIndex);
             return true;
         }
 

@@ -52,16 +52,71 @@ library DeckManager {
     ) internal {
         uint8 cardID = hand[cardIndex];
         if (cardID != CardLibrary.CARD_ID_NONE) {
-            for (uint i = cardIndex; i < hand.length - 1; i++) {
-                hand[i] = hand[i + 1];
+            // Remove from hand
+            for (uint j = cardIndex; j < hand.length - 1; j++) {
+                hand[j] = hand[j + 1];
             }
             hand.pop();
 
-            for (uint i = 0; i < deck.length; i++) {
+            // Remove all instances from deck
+            uint i = 0;
+            while (i < deck.length) {
+                if (deck[i] == cardID) {
+                    // Move last card to current position and pop
+                    deck[i] = deck[deck.length - 1];
+                    deck.pop();
+                } else {
+                    i++;
+                }
+            }
+        }
+    }
+
+    function removeCardCompletelyFromGame(
+        uint8[] storage hand,
+        uint8[] storage deck,
+        uint8[] storage draw,
+        uint8[] storage discard,
+        uint cardIndex
+    ) internal {
+        uint8 cardID = hand[cardIndex];
+        if (cardID != CardLibrary.CARD_ID_NONE) {
+            // Remove from hand
+            for (uint j = cardIndex; j < hand.length - 1; j++) {
+                hand[j] = hand[j + 1];
+            }
+            hand.pop();
+
+            // Remove all instances from deck
+            uint i = 0;
+            while (i < deck.length) {
                 if (deck[i] == cardID) {
                     deck[i] = deck[deck.length - 1];
                     deck.pop();
-                    break;
+                } else {
+                    i++;
+                }
+            }
+
+            // Remove all instances from draw pile
+            uint k = 0;
+            while (k < draw.length) {
+                if (draw[k] == cardID) {
+                    draw[k] = draw[draw.length - 1];
+                    draw.pop();
+                } else {
+                    k++;
+                }
+            }
+
+            // Remove all instances from discard pile
+            uint m = 0;
+            while (m < discard.length) {
+                if (discard[m] == cardID) {
+                    discard[m] = discard[discard.length - 1];
+                    discard.pop();
+                } else {
+                    m++;
                 }
             }
         }
