@@ -109,6 +109,7 @@ const Game: React.FC = () => {
   const [currentIntent, setCurrentIntent] = useState<number | undefined>(undefined);
   const [currentEnemy, setCurrentEnemy] = useState<number | undefined>(undefined);
   const [initialEnemyHealth, setInitialEnemyHealth] = useState<number[]>([]);
+  const [currentTurnIntents, setCurrentTurnIntents] = useState<number[]>([]);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -151,8 +152,8 @@ const Game: React.FC = () => {
         const inGracePeriod = predictedVictoryTime && (Date.now() - predictedVictoryTime < 3000);
         
         // During a turn or grace period, preserve our predicted values
-        if ((inTurn || inGracePeriod) && gameState) {
-          setGameState((prev: any) => {
+        if ((inTurn || turnState === 'enemy' || inGracePeriod) && gameState) {
+          setGameState((prev: GameStateUpdate | null) => {
             if (!prev) return state;
             return {
               ...state,
@@ -162,7 +163,9 @@ const Game: React.FC = () => {
               enemyCurrentHealth: prev.enemyCurrentHealth,
               enemyBlock: prev.enemyBlock,
               hand: optimisticHand.length > 0 ? optimisticHand : state.hand,
-              currentMana: optimisticMana !== null ? optimisticMana : state.currentMana
+              currentMana: optimisticMana !== null ? optimisticMana : state.currentMana,
+              // During enemy turn, use the locked intents instead of new ones from blockchain
+              enemyIntents: turnState === 'enemy' ? currentTurnIntents : state.enemyIntents
             };
           });
         } else {
@@ -170,8 +173,8 @@ const Game: React.FC = () => {
           setGameState(state);
         }
 
-        // Only update optimistic UI when not in a turn AND not in grace period
-        if (!inTurn && !inGracePeriod && turnState !== 'player') {
+        // Only update optimistic UI when not in a turn AND not in grace period AND not in enemy turn
+        if (!inTurn && !inGracePeriod && turnState !== 'enemy') {
           syncWithBlockchain(state);
         }
 
@@ -531,7 +534,6 @@ const Game: React.FC = () => {
     // Still in a turn for enemy actions
     setInTurn(true);
     setTurnState('transitioning');
-    // Removed optimisticUpdatesEnabled state variable
 
     try {
       // Process all queued cards in a single transaction
@@ -624,13 +626,16 @@ const Game: React.FC = () => {
     const currentState = gameState;
     if (!currentState) return;
 
+    // Save current intents before enemy turn starts
+    setCurrentTurnIntents(currentState.enemyIntents);
+
     await processEnemyTurn(currentState, {
       enemyHealth: currentState.enemyCurrentHealth,
       enemyBlock: currentState.enemyBlock,
       heroHealth: currentState.currentHealth,
       heroBlock: currentState.currentBlock,
       mana: currentState.currentMana,
-      enemyBuffs: currentState.enemyBuffs || []  // Include enemy buffs in current state
+      enemyBuffs: currentState.enemyBuffs || []
     });
   };
 
