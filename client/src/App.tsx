@@ -61,13 +61,15 @@ function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
       left: '50%',
       transform: 'translate(-50%, -50%)',
       backgroundColor: '#2d2d2d',
+      color: '#e0e0e0',
       padding: '2rem',
       borderRadius: '8px',
       boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
       maxWidth: '400px',
       width: '90%',
       textAlign: 'center',
-      zIndex: 1000
+      zIndex: 1000,
+      border: '1px solid #3d3d3d'
     }}>
       {isSuccess ? (
         <div style={{ color: '#48bb78', fontSize: '18px' }}>
@@ -89,11 +91,24 @@ function QuickTransactionsPrompt({ onClose }: { onClose: () => void }) {
               padding: '0.75rem 1.5rem',
               backgroundColor: '#2c5282',
               color: '#e0e0e0',
-              border: 'none',
+              border: '1px solid #1a365d',
               borderRadius: '4px',
               cursor: 'pointer',
               opacity: isEnabling ? 0.7 : 1,
-              fontSize: '16px'
+              fontSize: '16px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={e => {
+              if (!isEnabling) {
+                e.currentTarget.style.backgroundColor = '#2b6cb0';
+                e.currentTarget.style.borderColor = '#2c5282';
+              }
+            }}
+            onMouseOut={e => {
+              if (!isEnabling) {
+                e.currentTarget.style.backgroundColor = '#2c5282';
+                e.currentTarget.style.borderColor = '#1a365d';
+              }
             }}
           >
             {isEnabling ? 'Enabling...' : 'Enable Quick Transactions'}

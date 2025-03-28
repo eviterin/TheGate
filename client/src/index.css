@@ -7,6 +7,16 @@
   color: rgba(255, 255, 255, 0.87);
   background-color: #242424;
 
+  /* Theme variables */
+  --background-color: #2d2d2d;
+  --text-color: #e0e0e0;
+  --border-color: #3d3d3d;
+  --button-background: #2c5282;
+  --button-text: #e0e0e0;
+  --button-border: #1a365d;
+  --button-hover-background: #2b6cb0;
+  --button-hover-border: #2c5282;
+
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -58,6 +68,16 @@ button:focus-visible {
   :root {
     color: #213547;
     background-color: #ffffff;
+
+    /* Light theme variables */
+    --background-color: #ffffff;
+    --text-color: #213547;
+    --border-color: #e2e8f0;
+    --button-background: #4299e1;
+    --button-text: #ffffff;
+    --button-border: #3182ce;
+    --button-hover-background: #3182ce;
+    --button-hover-border: #2c5282;
   }
   a:hover {
     color: #747bff;

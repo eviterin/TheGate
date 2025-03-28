@@ -100,14 +100,14 @@ contract GameEncounters {
             data.buffs = new uint8[](5);
         } else if (floor == 9) {
             data.types = [ENEMY_TYPE_A, ENEMY_TYPE_B];
-            data.maxHealth = [30, 30];
-            data.currentHealth = [30, 30];
+            data.maxHealth = [25, 25];
+            data.currentHealth = [25, 25];
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
         } else if (floor == 10) {
             data.types = [ENEMY_TYPE_B];
-            data.maxHealth = [40];
-            data.currentHealth = [1];
+            data.maxHealth = [45];
+            data.currentHealth = [45];
             data.blockAmount = new uint16[](1);
             data.buffs = new uint8[](1);
         }
@@ -297,16 +297,10 @@ contract GameEncounters {
             }
         } else if (floor == 10) {
             if (data.currentHealth[0] > 0) {
-                // Floor 10 enemy alternates between blocking and attacking
-                // Start by blocking
-                if (previousIntents.length == 0) {
-                    data.intents[0] = INTENT_BLOCK_5;
-                } else if (previousIntents[0] == INTENT_BLOCK_5) {
-                    // After blocking, attack
-                    data.intents[0] = 12; // Strong attack
+                if (previousIntents[0] == 0) {
+                    data.intents[0] = 6;
                 } else {
-                    // After attacking, block again
-                    data.intents[0] = INTENT_BLOCK_5;
+                    data.intents[0] = previousIntents[0] + 1;
                 }
             }
         }
