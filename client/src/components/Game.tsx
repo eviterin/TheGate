@@ -195,7 +195,7 @@ const Game: React.FC = () => {
     };
 
     fetchGameState();
-    interval = window.setInterval(fetchGameState, 500);
+    interval = window.setInterval(fetchGameState, 2000);
     
     return () => {
       mounted = false;
