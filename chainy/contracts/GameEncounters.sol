@@ -105,11 +105,11 @@ contract GameEncounters {
             data.blockAmount = new uint16[](2);
             data.buffs = new uint8[](2);
         } else if (floor == 10) {
-            data.types = [ENEMY_TYPE_B];
-            data.maxHealth = [45];
-            data.currentHealth = [45];
-            data.blockAmount = new uint16[](1);
-            data.buffs = new uint8[](1);
+            data.types = [ENEMY_TYPE_B, 2, 3];
+            data.maxHealth = [55, 9, 9];
+            data.currentHealth = [55, 0, 0];
+            data.blockAmount = new uint16[](3);
+            data.buffs = new uint8[](3);
         }
         
         setNewEnemyIntents(player, floor);
@@ -296,11 +296,24 @@ contract GameEncounters {
                 }
             }
         } else if (floor == 10) {
+            // Boss logic
             if (data.currentHealth[0] > 0) {
-                if (previousIntents[0] == 0) {
-                    data.intents[0] = 6;
-                } else {
+                if(previousIntents[0] > 0 && previousIntents[0] < 8) {
                     data.intents[0] = previousIntents[0] + 1;
+                } else if(previousIntents[0] == 8) {
+                    data.currentHealth[1] = 4;
+                    data.currentHealth[2] = 4;
+                    data.intents[0] = 0;
+                }
+                else {
+                    data.intents[0] = 6;
+                }
+            }
+
+            // Minion logic
+            for (uint i = 1; i < 3; i++) {
+                if (data.currentHealth[i] > 0) {
+                    data.intents[i] = 9;
                 }
             }
         }
