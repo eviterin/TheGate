@@ -3,7 +3,7 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   padding: 8px;
@@ -14,6 +14,7 @@
   overflow-y: auto;
   z-index: 150;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
 }
 
 .card-pile-header {
@@ -24,36 +25,37 @@
   margin-bottom: 8px;
 }
 
-.card-pile-viewer h3 {
-  color: white;
+.card-pile-header h3 {
+  color: #ffd700;
   margin: 0 0 8px 0;
   font-size: 16px;
   text-align: center;
   font-family: 'CardFont', sans-serif;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
 .close-button {
   position: absolute;
   right: 10px;
-  top: 0;
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(89, 86, 108, 0.15);
+  border: 1px solid rgba(89, 86, 108, 0.3);
+  color: #cccccc;
+  font-size: 32px;
   cursor: pointer;
-  padding: 0;
-  width: 24px;
-  height: 24px;
+  padding: 0 12px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 4px;
   transition: all 0.2s ease;
 }
 
 .close-button:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(89, 86, 108, 0.25);
+  border-color: rgba(89, 86, 108, 0.5);
 }
 
 .card-pile-subtext {
@@ -78,6 +80,6 @@
 }
 
 .card-pile-grid .card:hover {
-  transform: scale(1);
+  transform: scale(0.95) translateY(-5px);
   z-index: 1;
 } 
