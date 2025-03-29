@@ -53,8 +53,8 @@ library DeckManager {
         uint8 cardID = hand[cardIndex];
         if (cardID != CardLibrary.CARD_ID_NONE) {
             // Remove from hand
-            for (uint i = cardIndex; i < hand.length - 1; i++) {
-                hand[i] = hand[i + 1];
+            for (uint j = cardIndex; j < hand.length - 1; j++) {
+                hand[j] = hand[j + 1];
             }
             hand.pop();
 
@@ -82,8 +82,8 @@ library DeckManager {
         uint8 cardID = hand[cardIndex];
         if (cardID != CardLibrary.CARD_ID_NONE) {
             // Remove from hand
-            for (uint i = cardIndex; i < hand.length - 1; i++) {
-                hand[i] = hand[i + 1];
+            for (uint j = cardIndex; j < hand.length - 1; j++) {
+                hand[j] = hand[j + 1];
             }
             hand.pop();
 
@@ -99,24 +99,24 @@ library DeckManager {
             }
 
             // Remove all instances from draw pile
-            i = 0;
-            while (i < draw.length) {
-                if (draw[i] == cardID) {
-                    draw[i] = draw[draw.length - 1];
+            uint k = 0;
+            while (k < draw.length) {
+                if (draw[k] == cardID) {
+                    draw[k] = draw[draw.length - 1];
                     draw.pop();
                 } else {
-                    i++;
+                    k++;
                 }
             }
 
             // Remove all instances from discard pile
-            i = 0;
-            while (i < discard.length) {
-                if (discard[i] == cardID) {
-                    discard[i] = discard[discard.length - 1];
+            uint m = 0;
+            while (m < discard.length) {
+                if (discard[m] == cardID) {
+                    discard[m] = discard[discard.length - 1];
                     discard.pop();
                 } else {
-                    i++;
+                    m++;
                 }
             }
         }
