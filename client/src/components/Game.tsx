@@ -537,7 +537,6 @@ const Game: React.FC = () => {
 
     soundEffectManager.playEventSound('end_turn');
 
-
     try {
       // Process all queued cards in a single transaction
       if (pendingCardIDs.length > 0) {
