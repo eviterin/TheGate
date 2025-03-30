@@ -4,6 +4,7 @@ import { audioController } from '../components/MusicPlayer';
 // Import enemy sound files
 import enemyAttackSound from '../assets/soundeffects/enemy_attack.wav';
 import enemyBlockSound from '../assets/soundeffects/enemy_block.wav';
+import enemyBlockAndAttackSound from '../assets/soundeffects/enemy_block_and_attack.wav';
 import enemyBuffSound from '../assets/soundeffects/enemy_buff.wav';
 import enemyHealSound from '../assets/soundeffects/enemy_heal.wav';
 import enemyDeathSound from '../assets/soundeffects/enemy_death.wav';
@@ -31,6 +32,7 @@ const EVENT_SOUNDS: Record<string, string> = {
 // Map intent types to their sound files
 const INTENT_SOUNDS: Record<number, string> = {
     1000: enemyBlockSound,  // Block
+    1001: enemyBlockAndAttackSound,
     1002: enemyHealSound,   // Heal
     1003: enemyBuffSound,   // Buff
     1005: enemyHealSound,   // Heal All
@@ -210,6 +212,7 @@ export class SoundEffectManager {
     private getIntentType(intent: number): string {
         switch (intent) {
             case 1000: return 'block';
+            case 1001: return 'block_and_attack';
             case 1002: return 'heal';
             case 1003: return 'buff';
             case 1005: return 'heal';
