@@ -15,6 +15,7 @@ import playerTurnSound from '../assets/soundeffects/player_turn.wav';
 import heroDeathSound from '../assets/soundeffects/hero_death.wav';
 import victorySound from '../assets/soundeffects/victory.wav';
 import defeatSound from '../assets/soundeffects/defeat.wav';
+import endTurnSound from '../assets/soundeffects/end_turn.wav';
 
 // Import cards data
 import cardsData from '../../../shared/cards.json';
@@ -26,7 +27,8 @@ const EVENT_SOUNDS: Record<string, string> = {
     'victory': victorySound,
     'defeat': defeatSound,
     'enemyTurn': enemyTurnSound,
-    'playerTurn': playerTurnSound
+    'playerTurn': playerTurnSound,
+    'end_turn': endTurnSound,
 };
 
 // Map intent types to their sound files
