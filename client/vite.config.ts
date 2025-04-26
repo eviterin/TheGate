@@ -18,6 +18,13 @@ export default defineConfig({
       usePolling: true
     }
   },
+  preview: {
+    host: true,
+    port: 3000,
+    strictPort: true,
+    cors: true,
+    allowedHosts: ['preproductionenvironment.com', 'localhost']
+  },
   build: {
     rollupOptions: {
       output: {
