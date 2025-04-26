@@ -10,6 +10,7 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
     cors: true,
+    allowedHosts: ['preproductionenvironment.com', 'localhost'],
     hmr: {
       clientPort: 443,
       protocol: 'wss'
