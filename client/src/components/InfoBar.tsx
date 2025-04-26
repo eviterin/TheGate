@@ -4,14 +4,14 @@ import { getFloorName } from '../game/encounters';
 import './InfoBar.css';
 
 interface InfoBarProps {
-    clientState?: {
-        turnState: string;
+    clientState: {
+        turnState: 'player' | 'enemy' | 'transitioning';
         pendingCardIDs: number[];
         pendingCardIndices: number[];
         pendingCardTargets: number[];
-        optimisticHand?: number[];
-        optimisticMana?: number;
-        optimisticEnemies?: any[];
+        optimisticHand: number[];
+        optimisticMana: number | undefined;
+        optimisticEnemies: any[];
     };
 }
 
@@ -33,11 +33,25 @@ const InfoBar: React.FC<InfoBarProps> = ({ clientState }) => {
     return (
         <div className="info-bar">
             {gameState && (
-                <div className="location-info">
-                    <span className="location-name">
-                        {getFloorName(gameState.currentFloor)} | Part {gameState.currentFloor}/10
-                    </span>
-                </div>
+                <>
+                    <div className="location-info">
+                        <span className="location-name">
+                            {getFloorName(gameState.currentFloor)} | Part {gameState.currentFloor}/10
+                        </span>
+                    </div>
+                    {clientState && (
+                        <div className="turn-info">
+                            <span className="turn-state">
+                                Turn: {clientState.turnState}
+                            </span>
+                            {clientState.pendingCardIDs.length > 0 && (
+                                <span className="pending-cards">
+                                    Pending Cards: {clientState.pendingCardIDs.length}
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

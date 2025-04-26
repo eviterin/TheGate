@@ -1,14 +1,12 @@
-import './App.css'
-import './styles/fonts.css'
-import { useHappyChain, ConnectButton } from '@happy.tech/react'
-import Playground from './components/Playground'
-import { useState, useEffect } from 'react'
-import { ContractsProvider } from './hooks/ContractsContext'
-import MusicPlayer from './components/MusicPlayer'
-import LoadingIndicator from './components/LoadingIndicator'
-import Game from './components/Game'
-import { useQuickTransactions } from './hooks/QuickTransactions'
-import { useGameState } from './hooks/GameState'
+import { useState, useEffect } from 'react';
+import { useHappyChain, ConnectButton } from '@happy.tech/react';
+import { ContractsProvider } from './hooks/ContractsContext';
+import MusicPlayer from './components/MusicPlayer';
+import LoadingIndicator from './components/LoadingIndicator';
+import Game from './components/Game';
+import { useQuickTransactions } from './hooks/QuickTransactions';
+import './App.css';
+import './styles/fonts.css';
 
 const styles = {
   appContainer: {

@@ -47,14 +47,11 @@ interface GameStateUpdate {
 }
 
 const Game: React.FC = () => {
-  const [hand, setHand] = useState<number[]>([]);
   const [deck, setDeck] = useState<number[]>([]);
   const [draw, setDraw] = useState<number[]>([]);
   const [discard, setDiscard] = useState<number[]>([]);
   const [gameState, setGameState] = useState<any>(null);
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null);
-  const [isHandVisible, setIsHandVisible] = useState(true);
-  const [isGateOpen, setIsGateOpen] = useState(false);
   const { getGameState } = useGameState();
   const { startRun } = useStartRun();
   const { endTurn: endTurnAction } = useEndTurn();
@@ -86,7 +83,6 @@ const Game: React.FC = () => {
   const [pendingCardIDs, setPendingCardIDs] = useState<number[]>([]);
   const [pendingCardIndices, setPendingCardIndices] = useState<number[]>([]);
   const [pendingCardTargets, setPendingCardTargets] = useState<number[]>([]);
-  const [initialHandState, setInitialHandState] = useState<number[]>([]);
   const [showAbandonConfirmation, setShowAbandonConfirmation] = useState(false);
   const [isAbandoning, setIsAbandoning] = useState(false);
   const [isApproaching, setIsApproaching] = useState(false);
@@ -108,7 +104,6 @@ const Game: React.FC = () => {
   const [gameVictoryScreenVisible, setGameVictoryScreenVisible] = useState(false);
   const [currentIntent, setCurrentIntent] = useState<number | undefined>(undefined);
   const [currentEnemy, setCurrentEnemy] = useState<number | undefined>(undefined);
-  const [initialEnemyHealth, setInitialEnemyHealth] = useState<number[]>([]);
   const [currentTurnIntents, setCurrentTurnIntents] = useState<number[]>([]);
 
   useEffect(() => {
@@ -124,13 +119,10 @@ const Game: React.FC = () => {
   }, [getActiveCards]);
 
   useEffect(() => {
-    let mounted = true;
     let interval: number;
     
     const fetchGameState = async () => {
       try {
-        if (!mounted) return;
-
         // Skip fetching during player turn unless explicitly requested
         if (turnState === 'player' && !needsBlockchainSync && gameState && gameState.runState === 2) {
           return;
@@ -138,7 +130,7 @@ const Game: React.FC = () => {
 
         // Always fetch state, but don't always update the UI with it
         const state = await getGameState();
-        if (!mounted || !state) return;
+        if (!state) return;
 
         // Save previous state for animations
         if (gameState) {
@@ -201,7 +193,6 @@ const Game: React.FC = () => {
     interval = window.setInterval(fetchGameState, 2000);
     
     return () => {
-      mounted = false;
       clearInterval(interval);
     };
   }, [getGameState, gameState, inTurn, needsBlockchainSync, predictedVictoryTime]);
@@ -252,7 +243,7 @@ const Game: React.FC = () => {
           setGameState(state);
           setOptimisticHand(state.hand || []);
           setOptimisticMana(state.currentMana || 0);
-          setInitialHandState([...state.hand || []]);
+          setCurrentTurnIntents(state.enemyIntents);
           setNeedsBlockchainSync(false);
           
           // Clear pending card arrays when syncing with blockchain
@@ -271,7 +262,6 @@ const Game: React.FC = () => {
   useEffect(() => {
     if (gameState?.runState === 2) {
       setIsChoosingRoom(false);
-      setIsGateOpen(false);
     }
   }, [gameState?.runState]);
 
@@ -279,7 +269,6 @@ const Game: React.FC = () => {
     if (gameState?.runState === 2) { // Combat state
       setOptimisticHand(gameState.hand || []);
       setOptimisticMana(gameState.currentMana || 0);
-      setIsHandVisible(true);
     }
   }, [gameState?.runState]);
 
@@ -288,21 +277,19 @@ const Game: React.FC = () => {
     
     // Hide hand at the gate (room 0)
     if (gameState.runState === 0 && gameState.currentFloor === 0) {
-      setIsHandVisible(false);
+      // No need to hide hand
     } 
     // Show hand in combat
     else if (gameState.runState === 2) {
-      setIsHandVisible(true);
+      // No need to show hand
     }
     // Show hand in card reward screen
     else if (gameState.runState === 3) {
-      setIsHandVisible(true);
+      // No need to show hand
     }
   }, [gameState?.runState, gameState?.currentFloor]);
 
   useEffect(() => {
-    let mounted = true;
-
     const checkAndApproachGate = async () => {
       if (!gameState || isApproaching) return;
 
@@ -322,23 +309,12 @@ const Game: React.FC = () => {
     };
 
     checkAndApproachGate();
-
-    return () => {
-      mounted = false;
-    };
-  }, [gameState?.runState, isApproaching]);
-
-  useEffect(() => {
-    // Set initial hand state when hand is first loaded
-    if (gameState?.hand && gameState.hand.length > 0) {
-      setInitialHandState(gameState.hand);
-    }
-  }, [gameState?.hand]);
+  }, [gameState?.runState, isApproaching, startRun]);
 
   useEffect(() => {
     if (gameState && gameState.isHeroTurn) {
       // Reset initial enemy health at the start of hero's turn
-      setInitialEnemyHealth([...gameState.enemyCurrentHealth]);
+      setPreviousEnemyHealth([...gameState.enemyCurrentHealth]);
     }
   }, [gameState?.isHeroTurn]);
 
@@ -823,10 +799,6 @@ const Game: React.FC = () => {
     }
   };
 
-  const handleBackToMenu = () => {
-    window.location.href = '/';
-  };
-
   // Determine if an entity is a valid target for the selected card
   const isValidTarget = (entityType: 'hero' | 'enemy', index: number) => {
     if (selectedCardIndex === null) return false;
@@ -1047,10 +1019,10 @@ const Game: React.FC = () => {
                 pendingCardTargets,
                 optimisticHand,
                 optimisticMana: optimisticMana === null ? undefined : optimisticMana,
-                optimisticEnemies: gameState?.enemyCurrentHealth.map((health: number, index: number) => ({
+                optimisticEnemies: gameState.enemyCurrentHealth.map((health: number, index: number) => ({
                   health,
-                  block: gameState?.enemyBlock[index] || 0,
-                  type: gameState?.enemyTypes[index] || 0
+                  block: gameState.enemyBlock[index] || 0,
+                  type: gameState.enemyTypes[index]
                 }))
               }} />
             )}
@@ -1085,7 +1057,7 @@ const Game: React.FC = () => {
                     heroScale={getLevelConfig(gameState.currentFloor).heroScale}
                   />
                 )}
-                {gameState.enemyTypes.map((type: number, index: number) => (
+                {gameState.enemyTypes.map((_: number, index: number) => (
                   <GameEntity
                     key={index}
                     type="enemy"
@@ -1098,8 +1070,8 @@ const Game: React.FC = () => {
                     currentFloor={gameState.currentFloor}
                     intent={gameState.enemyCurrentHealth[index] > 0 ? gameState.enemyIntents[index] : undefined}
                     isAnimating={currentAnimation?.sourceType === 'enemy' && currentAnimation.sourceIndex === index}
-                    animationType={currentAnimation?.sourceType === 'enemy' ? currentAnimation.animationType : undefined}
-                    animationTarget={currentAnimation?.sourceType === 'enemy' ? currentAnimation.targetPosition : undefined}
+                    animationType={currentAnimation?.animationType}
+                    animationTarget={currentAnimation?.targetPosition}
                     previousHealth={previousEnemyHealth[index]}
                     previousBlock={previousEnemyBlock[index]}
                     buff={gameState.enemyBuffs[index]}
@@ -1107,12 +1079,10 @@ const Game: React.FC = () => {
                     invert={getLevelConfig(gameState.currentFloor).enemyInverted?.[index]}
                     runState={gameState.runState}
                     currentEnemy={turnState === 'enemy' ? (
-                      // If currentEnemy is not set yet but we're in enemy turn,
-                      // show for the first enemy that has intent and is alive
                       currentEnemy !== undefined ? currentEnemy :
-                      gameState.enemyTypes.findIndex((type: number, i: number) => 
-                        gameState.enemyCurrentHealth[i] > 0 && gameState.enemyIntents[i]
-                      )
+                      gameState.enemyTypes.findIndex(function(_: number, i: number): boolean {
+                        return gameState.enemyCurrentHealth[i] > 0 && gameState.enemyIntents[i];
+                      })
                     ) : undefined}
                   />
                 ))}

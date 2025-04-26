@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { connect, injected, readContract, simulateContract, writeContract } from '@wagmi/core';
+import { connect, readContract, simulateContract, writeContract } from '@wagmi/core';
 import { config } from '../../wagmi';
 import { useHappyChain } from '@happy.tech/react';
 import { useContracts } from './ContractsContext';

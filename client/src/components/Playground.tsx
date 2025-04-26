@@ -4,7 +4,6 @@ import { useCards, CardData } from '../hooks/CardsContext';
 import './Playground.css';
 import LoadingIndicator from './LoadingIndicator';
 import Card from './Card';
-import { getCurrentUser } from '@happy.tech/core';
 
 interface GameStatus {
     runState: number;
@@ -372,6 +371,7 @@ const Playground: React.FC = () => {
                             <Card
                                 key={card.id}
                                 {...card}
+                                animationType={card.animationType || 'none'}
                                 isSelected={selectedCardId === card.id}
                                 onSelect={(id) => setSelectedCardId(id === selectedCardId ? null : id)}
                             />

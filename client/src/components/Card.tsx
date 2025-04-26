@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
 import './Card.css';
-import { CardData } from '../data/cards';
+import { CardData } from '../game/cards';
 import cardFrame from '../assets/misc/cardframe.png';
 import defaultCardArt from '../assets/cardart/default.png';
 import cardBackground from '../assets/misc/cardbackground.png';
 
-interface CardProps extends Omit<CardData, 'numericId'> {
+interface CardProps {
+  id: string;
+  name: string;
+  description: string;
+  manaCost: number;
+  targeted: boolean;
+  imageUrl?: string;
+  animationType?: CardData['animationType'];
+  soundEffect?: string;
   isSelected?: boolean;
   onSelect?: (id: string) => void;
-  numericId?: number;
 }
 
 const Card: React.FC<CardProps> = ({
@@ -18,8 +25,7 @@ const Card: React.FC<CardProps> = ({
   manaCost,
   imageUrl,
   isSelected = false,
-  onSelect,
-  numericId
+  onSelect
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);

@@ -57,7 +57,6 @@ export class SoundEffectManager {
     private cardSounds: Map<string, string> = new Map();
     private roomSpecificSounds: Map<string, string> = new Map();
     private enemyHasTaunted: Set<string> = new Set(); // Track which enemies have taunted
-    private readonly CLEANUP_DELAY = 500; // ms to wait before cleaning up audio
     private readonly MIN_REPLAY_DELAY = 50; // ms to wait before playing the same sound again
     private readonly MAX_ROOMS = 10;
     private readonly MAX_ENEMIES_PER_ROOM = 10;

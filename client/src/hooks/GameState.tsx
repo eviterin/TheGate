@@ -3,7 +3,6 @@ import { readContract, writeContract, simulateContract, waitForTransaction } fro
 import { config } from '../../wagmi';
 import { getCurrentUser } from '@happy.tech/core';
 import { useContracts } from './ContractsContext';
-import { getContractAddress } from '../utils/contractUtils';
 import { useWalletConnection } from './useWalletConnection';
 
 interface GameStateData {

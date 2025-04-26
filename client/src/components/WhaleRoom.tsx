@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import WhaleRoomOptions, { WHALE_ROOM_OPTIONS } from './WhaleRoomOptions';
+import WhaleRoomOptions from './WhaleRoomOptions';
 import './WhaleRoom.css';
 
 interface WhaleRoomProps {

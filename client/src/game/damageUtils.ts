@@ -107,7 +107,7 @@ export const calculateDamageToHero = (
  */
 export const processEnemyIntent = (
   intentType: number,
-  intentValue: number,
+  _intentValue: number,
   enemyBlock: number,
   enemyHealth: number,
   enemyMaxHealth: number,

@@ -36,11 +36,10 @@ class GlobalAudioController {
 export const audioController = GlobalAudioController.getInstance();
 
 interface AudioControllerProps {
-    track?: string;
     currentFloor?: number;
 }
 
-const AudioController: React.FC<AudioControllerProps> = ({ track }) => {
+const AudioController: React.FC<AudioControllerProps> = () => {
     const [isEnabled, setIsEnabled] = useState(true);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 

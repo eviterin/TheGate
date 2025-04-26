@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback } from 'react';
+import { useCallback } from 'react';
 import { readContract } from '@wagmi/core';
 import { config } from '../../wagmi';
 import { useContracts } from './ContractsContext';

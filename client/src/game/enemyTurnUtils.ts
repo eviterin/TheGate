@@ -90,5 +90,5 @@ export const predictNewEnemyIntents = (gameState: any): number[] => {
   // and may use randomness based on block timestamp
   
   // For now, just return existing intents but with a flag to indicate they're predictions
-  return gameState.enemyIntents.map(intent => intent);
+  return gameState.enemyIntents.map((intent: number) => intent);
 }; 

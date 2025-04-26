@@ -9,7 +9,15 @@ export default defineConfig({
     host: '0.0.0.0',  // Listen on all network interfaces
     port: 3000,
     strictPort: true,
-    allowedHosts: ['jasinali.com', 'localhost', 'preproductionenvironment.com']
+    allowedHosts: ['jasinali.com', 'localhost', 'preproductionenvironment.com'],
+    hmr: {
+      protocol: 'ws',
+      host: '0.0.0.0',
+      port: 3000
+    },
+    watch: {
+      usePolling: true
+    }
   },
   build: {
     rollupOptions: {
