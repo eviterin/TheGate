@@ -12,7 +12,7 @@ npm install
 Modify the `.env` file with your private key (if you're lucky there's one already there preloaded with $HAPPY)
 
 ```bash
-node scripts/deploy-all.js
+node scripts/deploy/deploy-all.js
 ```
 And that's it. 
 

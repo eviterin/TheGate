@@ -1012,19 +1012,7 @@ const Game: React.FC = () => {
 
             {/* Info Bar - Only show when not in whale room */}
             {gameState && gameState.runState !== 1 && (
-              <InfoBar clientState={{
-                turnState,
-                pendingCardIDs,
-                pendingCardIndices,
-                pendingCardTargets,
-                optimisticHand,
-                optimisticMana: optimisticMana === null ? undefined : optimisticMana,
-                optimisticEnemies: gameState.enemyCurrentHealth.map((health: number, index: number) => ({
-                  health,
-                  block: gameState.enemyBlock[index] || 0,
-                  type: gameState.enemyTypes[index]
-                }))
-              }} />
+              <InfoBar />
             )}
 
             {/* Game Entities */}
