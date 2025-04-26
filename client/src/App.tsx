@@ -7,6 +7,7 @@ import Game from './components/Game';
 import { useQuickTransactions } from './hooks/QuickTransactions';
 import './App.css';
 import './styles/fonts.css';
+import room0Bg from './assets/arenas/room_0.png';
 
 const styles = {
   appContainer: {
@@ -14,7 +15,7 @@ const styles = {
     width: '100vw',
     margin: 0,
     padding: 0,
-    backgroundImage: 'url(/src/assets/arenas/room_0.png)',
+    backgroundImage: `url(${room0Bg})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',

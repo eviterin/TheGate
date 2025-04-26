@@ -4,6 +4,23 @@ import { config } from '../../wagmi';
 import { useContracts } from './ContractsContext';
 import { cards as cardDefinitions } from '../game/cards';
 import { CardAnimationType } from '../game/cards';
+import defaultCardImage from '../assets/cardart/default.png';
+
+// Import all card images
+const cardImages: Record<string, string> = {
+  default: defaultCardImage
+};
+
+// Load card images
+cardDefinitions.forEach(async card => {
+  try {
+    const module = await import(`../assets/cardart/${card.id}.png`);
+    cardImages[card.id] = module.default;
+  } catch (error) {
+    console.error(`Error loading card image for ${card.id}:`, error);
+    cardImages[card.id] = defaultCardImage;
+  }
+});
 
 export interface CardData {
   id: string;
@@ -48,7 +65,7 @@ export function useCards() {
           ...card,
           numericId,
           animationType: cardDefinition?.animationType || 'none',
-          imageUrl: cardDefinition ? new URL(`../assets/cardart/${cardDefinition.id}.png`, import.meta.url).href : undefined,
+          imageUrl: cardImages[cardDefinition?.id || ''] || cardImages.default,
           soundEffect: cardDefinition?.soundEffect || 'smite.wav' // Default to smite.wav if no sound effect defined
         };
       });

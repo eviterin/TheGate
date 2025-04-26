@@ -4,11 +4,34 @@ import { Position } from '../game/encounters';
 import { CardAnimationType } from '../game/cards';
 import encountersData from '../../../shared/encounters.json';
 
-// Import all enemy models
-const enemyModels: { [key: string]: string } = {};
+// Import static assets directly
+import heroModelImage from '../assets/misc/hero.png';
 
-// Import hero model
-const heroModel = new URL('../assets/misc/hero.png', import.meta.url).href;
+// Import all enemy models
+import enemy1_1 from '../assets/models/room_1_enemy_1.png';
+import enemy1_2 from '../assets/models/room_1_enemy_2.png';
+import enemy2_1 from '../assets/models/room_2_enemy_1.png';
+import enemy2_2 from '../assets/models/room_2_enemy_2.png';
+import enemy3_1 from '../assets/models/room_3_enemy_1.png';
+import enemy3_2 from '../assets/models/room_3_enemy_2.png';
+import enemy4_1 from '../assets/models/room_4_enemy_1.png';
+import enemy4_2 from '../assets/models/room_4_enemy_2.png';
+import enemy5_1 from '../assets/models/room_5_enemy_1.png';
+import enemy5_2 from '../assets/models/room_5_enemy_2.png';
+import enemy6_1 from '../assets/models/room_6_enemy_1.png';
+import enemy6_2 from '../assets/models/room_6_enemy_2.png';
+import enemy7_1 from '../assets/models/room_7_enemy_1.png';
+import enemy7_2 from '../assets/models/room_7_enemy_2.png';
+import enemy8_1 from '../assets/models/room_8_enemy_1.png';
+import enemy8_2 from '../assets/models/room_8_enemy_2.png';
+import enemy8_3 from '../assets/models/room_8_enemy_3.png';
+import enemy8_4 from '../assets/models/room_8_enemy_4.png';
+import enemy8_5 from '../assets/models/room_8_enemy_5.png';
+import enemy9_1 from '../assets/models/room_9_enemy_1.png';
+import enemy9_2 from '../assets/models/room_9_enemy_2.png';
+import enemy10_1 from '../assets/models/room_10_enemy_1.png';
+import enemy10_2 from '../assets/models/room_10_enemy_2.png';
+import enemy10_3 from '../assets/models/room_10_enemy_3.png';
 
 // Define encounters data structure
 interface EncountersData {
@@ -160,17 +183,33 @@ const getIntentInfo = (intent: number, buff: number): IntentInfo => {
   };
 };
 
-// Import room 1-10 enemy models dynamically
-for (let floor = 1; floor <= 10; floor++) {
-  for (let position = 1; position <= 5; position++) {
-    const modelKey = `room_${floor}_enemy_${position}`;
-    try {
-      enemyModels[modelKey] = new URL(`../assets/models/${modelKey}.png`, import.meta.url).href;
-    } catch (error) {
-      console.error(`Failed to load enemy model: ${modelKey}`, error);
-    }
-  }
-}
+// Map of enemy models
+const enemyModels: { [key: string]: string } = {
+  '1_enemy_1': enemy1_1,
+  '1_enemy_2': enemy1_2,
+  '2_enemy_1': enemy2_1,
+  '2_enemy_2': enemy2_2,
+  '3_enemy_1': enemy3_1,
+  '3_enemy_2': enemy3_2,
+  '4_enemy_1': enemy4_1,
+  '4_enemy_2': enemy4_2,
+  '5_enemy_1': enemy5_1,
+  '5_enemy_2': enemy5_2,
+  '6_enemy_1': enemy6_1,
+  '6_enemy_2': enemy6_2,
+  '7_enemy_1': enemy7_1,
+  '7_enemy_2': enemy7_2,
+  '8_enemy_1': enemy8_1,
+  '8_enemy_2': enemy8_2,
+  '8_enemy_3': enemy8_3,
+  '8_enemy_4': enemy8_4,
+  '8_enemy_5': enemy8_5,
+  '9_enemy_1': enemy9_1,
+  '9_enemy_2': enemy9_2,
+  '10_enemy_1': enemy10_1,
+  '10_enemy_2': enemy10_2,
+  '10_enemy_3': enemy10_3,
+};
 
 interface GameEntityProps {
   type: 'hero' | 'enemy';
@@ -236,72 +275,15 @@ const GameEntity: React.FC<GameEntityProps> = ({
     }
   }, [isAnimating, isHero, intent, currentEnemy, position]);
 
-  // Get animation styles based on type and intent
-  const getAnimationStyles = () => {
-    const styles: React.CSSProperties = {
-      position: 'absolute',
-      left: `${entityPosition.x}%`,
-      top: `${entityPosition.y}%`,
-      transform: 'translate(-50%, -50%)',
-      width: '120px',
-      height: '180px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      padding: '10px',
-      color: 'white',
-      cursor: isValidTarget ? 'pointer' : 'default',
-    };
-
-    // Move animation to sprite container
-    return styles;
-  };
-
-  // Get sprite animation styles
-  const getSpriteStyles = () => {
-    const styles: React.CSSProperties = {
-      position: 'absolute',
-      top: '50%',
-      left: '50%',
-      width: '100%',
-      height: '100%',
-      backgroundImage: `url(${isHero ? heroModel : getEnemyModel()})`,
-      backgroundSize: 'contain',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
-      transform: 'translate(-50%, -50%)',
-      transformOrigin: 'center center',
-      zIndex: !isHero && health <= 0 ? 1 : 2,
-      filter: !isHero && health <= 0 ? 'brightness(0.4) grayscale(0.7)' : 'none',
-      transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.5s ease-out, z-index 0s'
-    };
-
-    if (!isAnimating) return styles;
-
-    if (isHero && isAnimating) {
-      return {
-        ...styles,
-        animation: `${animationType || 'jump'} 0.5s ease-in-out`,
-      };
-    }
-
-    if (!isHero && intent && health > 0) {
-      const intentInfo = getIntentInfo(intent, buff);
-      return {
-        ...styles,
-        animation: `${intentInfo.animation} 0.5s ease-in-out`,
-      };
-    }
-
-    return styles;
-  };
+  // Replace the URL construction with the imported image
+  const heroModel = heroModelImage;
 
   // Get the correct enemy model based on floor and position
   const getEnemyModel = () => {
     if (isHero || currentFloor === 0) return '';
     
     // Enemy positions are 0-based in the game but 1-based in filenames
-    const modelKey = `room_${currentFloor}_enemy_${position + 1}`;
+    const modelKey = `${currentFloor}_enemy_${position + 1}`;
     const modelUrl = enemyModels[modelKey];
     
     if (!modelUrl) {
@@ -472,6 +454,65 @@ const GameEntity: React.FC<GameEntityProps> = ({
     return {};
   };
 
+  // Get animation styles based on type and intent
+  const getAnimationStyles = () => {
+    const styles: React.CSSProperties = {
+      position: 'absolute',
+      left: `${entityPosition.x}%`,
+      top: `${entityPosition.y}%`,
+      transform: 'translate(-50%, -50%)',
+      width: '120px',
+      height: '180px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: '10px',
+      color: 'white',
+      cursor: isValidTarget ? 'pointer' : 'default',
+    };
+
+    return styles;
+  };
+
+  // Get sprite animation styles
+  const getSpriteStyles = () => {
+    const styles: React.CSSProperties = {
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      width: '100%',
+      height: '100%',
+      backgroundImage: `url(${isHero ? heroModel : getEnemyModel()})`,
+      backgroundSize: 'contain',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      transform: 'translate(-50%, -50%)',
+      transformOrigin: 'center center',
+      zIndex: !isHero && health <= 0 ? 1 : 2,
+      filter: !isHero && health <= 0 ? 'brightness(0.4) grayscale(0.7)' : 'none',
+      transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.5s ease-out, z-index 0s'
+    };
+
+    if (!isAnimating) return styles;
+
+    if (isHero && isAnimating) {
+      return {
+        ...styles,
+        animation: `${animationType || 'jump'} 0.5s ease-in-out`,
+      };
+    }
+
+    if (!isHero && intent && health > 0) {
+      const intentInfo = getIntentInfo(intent, buff);
+      return {
+        ...styles,
+        animation: `${intentInfo.animation} 0.5s ease-in-out`,
+      };
+    }
+
+    return styles;
+  };
+
   return (
     <>
       <style>
@@ -623,7 +664,7 @@ const GameEntity: React.FC<GameEntityProps> = ({
               width: 'calc(100% + 24px)',
               height: 'calc(100% + 24px)',
               backgroundColor: isValidTarget ? 'rgba(255, 255, 0, 0.8)' : 
-                               (intent ? getIntentInfo(intent, buff).color : 'rgba(255, 0, 0, 0.6)'),
+                             (intent ? getIntentInfo(intent, buff).color : 'rgba(255, 0, 0, 0.6)'),
               filter: `blur(20px) brightness(${isValidTarget ? '1.5' : '1.4'})`,
               WebkitMaskImage: `url(${isHero ? heroModel : getEnemyModel()})`,
               maskImage: `url(${isHero ? heroModel : getEnemyModel()})`,

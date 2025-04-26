@@ -1,5 +1,18 @@
 import encounterData from '../../../shared/encounters.json';
 
+// Import all background images
+import room0Bg from '../assets/arenas/room_0.png';
+import room1Bg from '../assets/arenas/room_1.png';
+import room2Bg from '../assets/arenas/room_2.png';
+import room3Bg from '../assets/arenas/room_3.png';
+import room4Bg from '../assets/arenas/room_4.png';
+import room5Bg from '../assets/arenas/room_5.png';
+import room6Bg from '../assets/arenas/room_6.png';
+import room7Bg from '../assets/arenas/room_7.png';
+import room8Bg from '../assets/arenas/room_8.png';
+import room9Bg from '../assets/arenas/room_9.png';
+import room10Bg from '../assets/arenas/room_10.png';
+
 // Types for the JSON data
 interface EncounterJson {
     constants: {
@@ -208,7 +221,21 @@ export function getFloorName(level: number): string {
     return encounter.name;
 }
 
-// New helper for backgrounds
+const backgroundImages: Record<number, string> = {
+    0: room0Bg,
+    1: room1Bg,
+    2: room2Bg,
+    3: room3Bg,
+    4: room4Bg,
+    5: room5Bg,
+    6: room6Bg,
+    7: room7Bg,
+    8: room8Bg,
+    9: room9Bg,
+    10: room10Bg,
+};
+
+// Update the background image helper
 export function getBackgroundImage(level: number): string {
-    return `/src/assets/arenas/room_${level}.png`;
+    return backgroundImages[level] || backgroundImages[0];
 } 
