@@ -2,7 +2,7 @@
 
 APP_NAME=TheGate
 COMMAND="npm run dev"
-WORKDIR="/home/ec2-user/TheGate"
+WORKDIR="/home/ec2-user/TheGate/client"
 
 cd $WORKDIR || exit
 pm2 delete $APP_NAME || true
